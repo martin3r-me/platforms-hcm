@@ -1,0 +1,26 @@
+{
+    "name": "martin3r/platform-hcm",
+    "description": "HCM Module for Platform",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Platform Team",
+            "email": "team@platform.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Platform\\Hcm\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Platform\\Hcm\\HcmServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

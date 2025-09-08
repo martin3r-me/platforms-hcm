@@ -1,0 +1,167 @@
+<div class="p-3">
+    <h1 class="text-2xl font-bold mb-4">Mitarbeiter</h1>
+
+    <div class="d-flex justify-between mb-4">
+        <x-ui-input-text 
+            name="search" 
+            placeholder="Suche Mitarbeiter..." 
+            class="w-64"
+        />
+        <x-ui-button variant="primary" wire:click="openCreateModal">
+            Neuer Mitarbeiter
+        </x-ui-button>
+    </div>
+    
+    <x-ui-table compact="true">
+        <x-ui-table-header>
+            <x-ui-table-header-cell compact="true" sortable="true" sortField="employee_number" :currentSort="$sortField" :sortDirection="$sortDirection">Mitarbeiternummer</x-ui-table-header-cell>
+            <x-ui-table-header-cell compact="true">Verknüpfte Kontakte</x-ui-table-header-cell>
+            <x-ui-table-header-cell compact="true">Unternehmen</x-ui-table-header-cell>
+            <x-ui-table-header-cell compact="true" sortable="true" sortField="is_active" :currentSort="$sortField" :sortDirection="$sortDirection">Status</x-ui-table-header-cell>
+            <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
+        </x-ui-table-header>
+        
+        <x-ui-table-body>
+            @foreach($this->employees as $employee)
+                <x-ui-table-row 
+                    compact="true"
+                    clickable="true" 
+                    :href="route('hcm.employees.show', ['employee' => $employee->id]) . '?edit=1'"
+                >
+                    <x-ui-table-cell compact="true">
+                        <div class="font-medium">{{ $employee->employee_number }}</div>
+                    </x-ui-table-cell>
+                    <x-ui-table-cell compact="true">
+                        @if($employee->crmContactLinks->count() > 0)
+                            <div class="space-y-1">
+                                @foreach($employee->crmContactLinks->take(2) as $link)
+                                    <div class="text-xs d-flex items-center gap-1">
+                                        @svg('heroicon-o-user', 'w-3 h-3 text-muted')
+                                        {{ $link->contact?->full_name ?? 'Unbekannt' }}
+                                    </div>
+                                @endforeach
+                                @if($employee->crmContactLinks->count() > 2)
+                                    <div class="text-xs text-muted">+{{ $employee->crmContactLinks->count() - 2 }} weitere</div>
+                                @endif
+                            </div>
+                        @else
+                            <span class="text-xs text-muted">–</span>
+                        @endif
+                    </x-ui-table-cell>
+                    <x-ui-table-cell compact="true">
+                        @if($employee->employer)
+                            <div class="text-xs d-flex items-center gap-1">
+                                @svg('heroicon-o-building-office', 'w-3 h-3 text-muted')
+                                {{ $employee->employer->display_name }}
+                            </div>
+                        @else
+                            <span class="text-xs text-muted">–</span>
+                        @endif
+                    </x-ui-table-cell>
+                    <x-ui-table-cell compact="true">
+                        <x-ui-badge variant="{{ $employee->is_active ? 'success' : 'secondary' }}" size="sm">
+                            {{ $employee->is_active ? 'Aktiv' : 'Inaktiv' }}
+                        </x-ui-badge>
+                    </x-ui-table-cell>
+                    <x-ui-table-cell compact="true" align="right">
+                        <x-ui-button 
+                            size="sm" 
+                            variant="secondary" 
+                            href="{{ route('hcm.employees.show', ['employee' => $employee->id]) }}" 
+                            wire:navigate
+                        >
+                            Bearbeiten
+                        </x-ui-button>
+                    </x-ui-table-cell>
+                </x-ui-table-row>
+            @endforeach
+        </x-ui-table-body>
+    </x-ui-table>
+
+    <!-- Create Employee Modal -->
+    <x-ui-modal
+        wire:model="modalShow"
+        size="md"
+    >
+        <x-slot name="header">
+            Mitarbeiter anlegen
+        </x-slot>
+
+        <div class="space-y-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="d-flex items-center gap-2 mb-1">
+                    @svg('heroicon-o-information-circle', 'w-5 h-5 text-blue-600')
+                    <h4 class="font-medium text-blue-900">Kurzinfo</h4>
+                </div>
+                <p class="text-blue-700 text-sm">Die Mitarbeiter-Nummer wird automatisch aus den Einstellungen des gewählten Arbeitgebers generiert. Optional kannst du im nächsten Schritt einen CRM‑Kontakt verknüpfen.</p>
+            </div>
+
+            @if($createStep === 1)
+                <div class="space-y-4">
+                    <x-ui-input-select
+                        name="employer_id"
+                        label="Arbeitgeber"
+                        :options="$this->availableEmployers"
+                        optionValue="id"
+                        optionLabel="display_name"
+                        :nullable="false"
+                        wire:model.live="employer_id"
+                        required
+                    />
+                </div>
+            @elseif($createStep === 2)
+                <div class="space-y-4">
+                    <x-ui-input-select
+                        name="contact_id"
+                        label="CRM‑Kontakt (optional)"
+                        :options="$this->availableContacts"
+                        optionValue="id"
+                        optionLabel="display_name"
+                        :nullable="true"
+                        nullLabel="Ohne Kontakt"
+                        wire:model.live="contact_id"
+                    />
+                </div>
+            @endif
+        </div>
+
+        <x-slot name="footer">
+            <div class="d-flex justify-between items-center w-100">
+                <div></div>
+                <div class="d-flex justify-end gap-2">
+                    @if($createStep === 1)
+                        <x-ui-button 
+                            type="button" 
+                            variant="secondary-outline" 
+                            @click="$wire.closeCreateModal()"
+                        >
+                            Abbrechen
+                        </x-ui-button>
+                        <x-ui-button type="button" variant="primary" wire:click="nextStep">
+                            Weiter
+                        </x-ui-button>
+                    @elseif($createStep === 2)
+                        <x-ui-button 
+                            type="button" 
+                            variant="secondary-outline" 
+                            @click="$wire.prevStep()"
+                        >
+                            Zurück
+                        </x-ui-button>
+                        <x-ui-button 
+                            type="button" 
+                            variant="secondary-outline" 
+                            @click="$wire.finalizeCreateEmployee()"
+                        >
+                            Überspringen
+                        </x-ui-button>
+                        <x-ui-button type="button" variant="primary" wire:click="finalizeCreateEmployee">
+                            Anlegen
+                        </x-ui-button>
+                    @endif
+                </div>
+            </div>
+        </x-slot>
+    </x-ui-modal>
+</div>
+
