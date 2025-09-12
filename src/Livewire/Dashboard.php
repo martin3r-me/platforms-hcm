@@ -12,35 +12,42 @@ class Dashboard extends Component
 
     public function render()
     {
-        // Basis-Statistiken über HCM Interface
-        $totalEmployees = HcmEmployee::active()->count();
+        $teamId = auth()->user()->currentTeam->id;
+        
+        // Basis-Statistiken über HCM Interface - mit Team-Filter
+        $totalEmployees = HcmEmployee::active()->forTeam($teamId)->count();
         $employeesWithContacts = HcmEmployee::active()
+            ->forTeam($teamId)
             ->whereHas('crmContactLinks')
             ->count();
         $employeesWithoutContacts = $totalEmployees - $employeesWithContacts;
 
-        // Arbeitgeber-Statistiken (neue Struktur)
-        $totalEmployers = HcmEmployer::active()->count();
+        // Arbeitgeber-Statistiken (neue Struktur) - mit Team-Filter
+        $totalEmployers = HcmEmployer::active()->forTeam($teamId)->count();
         $employersWithEmployees = HcmEmployer::active()
+            ->forTeam($teamId)
             ->whereHas('employees')
             ->count();
 
-        // Top Arbeitgeber nach Mitarbeiter-Anzahl
+        // Top Arbeitgeber nach Mitarbeiter-Anzahl - mit Team-Filter
         $topEmployersByEmployees = HcmEmployer::active()
+            ->forTeam($teamId)
             ->withCount('employees')
             ->orderByDesc('employees_count')
             ->take(5)
             ->get();
 
-        // Neueste Mitarbeiter
+        // Neueste Mitarbeiter - mit Team-Filter
         $recentEmployees = HcmEmployee::active()
+            ->forTeam($teamId)
             ->with(['employer', 'crmContactLinks.contact'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
 
-        // Mitarbeiter mit Mitarbeiter-Nummern (employee_number)
+        // Mitarbeiter mit Mitarbeiter-Nummern (employee_number) - mit Team-Filter
         $employeesWithNumbers = HcmEmployee::active()
+            ->forTeam($teamId)
             ->whereNotNull('employee_number')
             ->where('employee_number', '!=', '')
             ->count();
