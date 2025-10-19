@@ -31,6 +31,10 @@
             @svg('heroicon-o-clipboard-document', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Tätigkeiten</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.payroll-types.index')">
+            @svg('heroicon-o-currency-euro', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Lohnarten</span>
+        </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
     {{-- Collapsed: Icons-only für Allgemein --}}
@@ -53,6 +57,9 @@
             </a>
             <a href="{{ route('hcm.job-activities.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
                 @svg('heroicon-o-clipboard-document', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.payroll-types.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-currency-euro', 'w-5 h-5')
             </a>
         </div>
     </div>

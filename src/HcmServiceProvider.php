@@ -63,6 +63,13 @@ class HcmServiceProvider extends ServiceProvider
         // Schritt 6: Views & Livewire
         $this->loadViewsFrom(__DIR__ . '/../resources/views', 'hcm');
         $this->registerLivewireComponents();
+        
+        // Schritt 7: Artisan Commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Platform\Hcm\Console\Commands\ImportBhgData::class,
+            ]);
+        }
     }
 
     protected function registerLivewireComponents(): void
