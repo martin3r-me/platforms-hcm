@@ -1,16 +1,21 @@
-<div class="p-3">
-    <h1 class="text-2xl font-bold mb-4">Mitarbeiter</h1>
+<x-ui-page>
+    <x-slot name="navbar">
+        <x-ui-page-navbar title="Mitarbeiter" icon="heroicon-o-user-group">
+            <x-ui-button variant="primary" wire:click="openCreateModal">
+                @svg('heroicon-o-plus', 'w-4 h-4')
+                Neuer Mitarbeiter
+            </x-ui-button>
+        </x-ui-page-navbar>
+    </x-slot>
 
-    <div class="d-flex justify-between mb-4">
-        <x-ui-input-text 
-            name="search" 
-            placeholder="Suche Mitarbeiter..." 
-            class="w-64"
-        />
-        <x-ui-button variant="primary" wire:click="openCreateModal">
-            Neuer Mitarbeiter
-        </x-ui-button>
-    </div>
+    <x-ui-page-container>
+        <div class="mb-6">
+            <x-ui-input-text 
+                name="search" 
+                placeholder="Suche Mitarbeiter..." 
+                class="w-64"
+            />
+        </div>
     
     <x-ui-table compact="true">
         <x-ui-table-header>
@@ -163,5 +168,6 @@
             </div>
         </x-slot>
     </x-ui-modal>
-</div>
+    </x-ui-page-container>
+</x-ui-page>
 

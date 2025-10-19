@@ -1,18 +1,14 @@
-<div>
-    <div class="h-full overflow-y-auto p-6">
-        <!-- Header mit Datum -->
-        <div class="mb-6">
-            <div class="d-flex justify-between items-center">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-900">Arbeitgeber</h1>
-                    <p class="text-gray-600">{{ now()->format('l') }}, {{ now()->format('d.m.Y') }}</p>
-                </div>
-                <x-ui-button variant="primary" wire:click="openCreateModal">
-                    @svg('heroicon-o-plus', 'w-4 h-4 mr-2')
-                    Neuer Arbeitgeber
-                </x-ui-button>
-            </div>
-        </div>
+<x-ui-page>
+    <x-slot name="navbar">
+        <x-ui-page-navbar title="Arbeitgeber" icon="heroicon-o-building-office">
+            <x-ui-button variant="primary" wire:click="openCreateModal">
+                @svg('heroicon-o-plus', 'w-4 h-4')
+                Neuer Arbeitgeber
+            </x-ui-button>
+        </x-ui-page-navbar>
+    </x-slot>
+
+    <x-ui-page-container>
 
         <!-- Haupt-Statistiken (4x1 Grid) -->
         <div class="grid grid-cols-4 gap-4 mb-8">
@@ -154,9 +150,8 @@
                 </table>
             </div>
         </div>
-    </div>
 
-    <!-- Create Employer Modal -->
+        <!-- Create Employer Modal -->
     <x-ui-modal
         wire:model="modalShow"
         size="lg"
@@ -235,4 +230,5 @@
             </div>
         </x-slot>
     </x-ui-modal>
-</div>
+    </x-ui-page-container>
+</x-ui-page>

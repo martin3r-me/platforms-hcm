@@ -1,31 +1,25 @@
-<div class="d-flex h-full">
-    <!-- Linke Spalte -->
-    <div class="flex-grow-1 d-flex flex-col">
-        <!-- Header oben (fix) -->
-        <div class="border-top-1 border-bottom-1 border-muted border-top-solid border-bottom-solid p-2 flex-shrink-0">
-            <div class="d-flex gap-1">
-                <div class="d-flex">
-                    <a href="{{ route('hcm.employees.index') }}" class="d-flex px-3 border-right-solid border-right-1 border-right-muted underline" wire:navigate>
-                        Mitarbeiter
-                    </a>
-                </div>
-                <div class="flex-grow-1 text-right d-flex items-center justify-end gap-2">
-                    <span>{{ $employee->employee_number }}</span>
-                    @if($this->isDirty)
-                        <x-ui-button 
-                            variant="primary" 
-                            size="sm"
-                            wire:click="save"
-                        >
-                            <div class="d-flex items-center gap-2">
-                                @svg('heroicon-o-check', 'w-4 h-4')
-                                Speichern
-                            </div>
-                        </x-ui-button>
-                    @endif
-                </div>
+<x-ui-page>
+    <x-slot name="navbar">
+        <x-ui-page-navbar title="{{ $employee->employee_number }}" icon="heroicon-o-user">
+            <div class="flex items-center gap-2">
+                <a href="{{ route('hcm.employees.index') }}" class="text-sm text-[var(--ui-muted)] hover:text-[var(--ui-secondary)]" wire:navigate>
+                    ← Mitarbeiter
+                </a>
+                @if($this->isDirty)
+                    <x-ui-button 
+                        variant="primary" 
+                        size="sm"
+                        wire:click="save"
+                    >
+                        @svg('heroicon-o-check', 'w-4 h-4')
+                        Speichern
+                    </x-ui-button>
+                @endif
             </div>
-        </div>
+        </x-ui-page-navbar>
+    </x-slot>
+
+    <x-ui-page-container>
 
         <!-- Haupt-Content (nimmt Restplatz, scrollt) -->
         <div class="flex-grow-1 overflow-y-auto p-4">
@@ -406,5 +400,5 @@
             </div>
         </x-slot>
     </x-ui-modal>
-
-</div>
+    </x-ui-page-container>
+</x-ui-page>
