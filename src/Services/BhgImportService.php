@@ -298,24 +298,44 @@ class BhgImportService
     private function createCrmContact($row)
     {
         try {
-            // Create CRM Contact
-            $contact = CrmContact::create([
-                'team_id' => $this->teamId,
-                'first_name' => $row['vorname'],
-                'last_name' => $row['nachname'],
-                'is_active' => true,
-                'created_by_user_id' => $this->userId,
-            ]);
+            // Prüfen ob Kontakt bereits existiert (basierend auf Name und E-Mail)
+            $contact = CrmContact::where('team_id', $this->teamId)
+                ->where('first_name', $row['vorname'])
+                ->where('last_name', $row['nachname'])
+                ->when(!empty($row['email']), function($query) use ($row) {
+                    return $query->whereHas('emailAddresses', function($q) use ($row) {
+                        $q->where('email_address', $row['email']);
+                    });
+                })
+                ->first();
 
-            // Add email if available
-            if (!empty($row['email'])) {
-                CrmEmailAddress::create([
-                    'emailable_id' => $contact->id,
-                    'emailable_type' => CrmContact::class,
-                    'email_address' => $row['email'],
-                    'email_type_id' => 1, // Standard E-Mail-Typ
-                    'is_primary' => true,
+            if (!$contact) {
+                // Create CRM Contact
+                $contact = CrmContact::create([
+                    'team_id' => $this->teamId,
+                    'first_name' => $row['vorname'],
+                    'last_name' => $row['nachname'],
+                    'is_active' => true,
+                    'created_by_user_id' => $this->userId,
                 ]);
+            }
+
+            // Add email if available and not already exists
+            if (!empty($row['email'])) {
+                $existingEmail = CrmEmailAddress::where('emailable_id', $contact->id)
+                    ->where('emailable_type', CrmContact::class)
+                    ->where('email_address', $row['email'])
+                    ->first();
+                
+                if (!$existingEmail) {
+                    CrmEmailAddress::create([
+                        'emailable_id' => $contact->id,
+                        'emailable_type' => CrmContact::class,
+                        'email_address' => $row['email'],
+                        'email_type_id' => 1, // Standard E-Mail-Typ
+                        'is_primary' => true,
+                    ]);
+                }
             }
 
             // Add phone numbers
@@ -351,6 +371,7 @@ class BhgImportService
                     'contact_id' => $contact->id,
                     'linkable_id' => $employee->id,
                     'linkable_type' => HcmEmployee::class,
+                    'team_id' => $this->teamId,
                 ]);
             }
 
@@ -408,6 +429,17 @@ class BhgImportService
     private function createPhoneNumber($contact, $phoneInput, $phoneTypeId, $isPrimary)
     {
         try {
+            // Prüfen ob Telefonnummer bereits existiert
+            $existingPhone = CrmPhoneNumber::where('phoneable_id', $contact->id)
+                ->where('phoneable_type', CrmContact::class)
+                ->where('raw_input', $phoneInput)
+                ->where('phone_type_id', $phoneTypeId)
+                ->first();
+            
+            if ($existingPhone) {
+                return; // Telefonnummer bereits vorhanden
+            }
+            
             $phoneUtil = PhoneNumberUtil::getInstance();
             
             // Versuche deutsche Nummer zu parsen (DE als Standard)
