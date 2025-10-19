@@ -115,6 +115,7 @@ class Index extends Component
     public function render()
     {
         $payrollTypes = HcmPayrollType::query()
+            ->with(['debitFinanceAccount', 'creditFinanceAccount'])
             ->where('team_id', auth()->user()->currentTeam->id)
             ->when($this->search !== '', function ($q) {
                 $q->where(function ($qq) {
@@ -124,7 +125,7 @@ class Index extends Component
                 });
             })
             ->orderBy('code')
-            ->paginate(12);
+            ->get();
 
         return view('hcm::livewire.payroll-type.index', [
             'payrollTypes' => $payrollTypes,

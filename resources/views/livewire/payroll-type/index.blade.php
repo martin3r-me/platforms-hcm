@@ -21,7 +21,8 @@
                             <th class="px-4 py-2">Bezeichnung</th>
                             <th class="px-4 py-2">Kategorie</th>
                             <th class="px-4 py-2">Art</th>
-                            <th class="px-4 py-2">Satz</th>
+                            <th class="px-4 py-2">Soll-Konto</th>
+                            <th class="px-4 py-2">Haben-Konto</th>
                             <th class="px-4 py-2">Status</th>
                         </tr>
                     </thead>
@@ -61,8 +62,21 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2">
-                                    @if($type->default_rate)
-                                        <span class="font-medium">{{ number_format($type->default_rate, 2) }}</span>
+                                    @if($type->debitFinanceAccount)
+                                        <div class="text-xs">
+                                            <div class="font-medium">{{ $type->debitFinanceAccount->number }}</div>
+                                            <div class="text-[var(--ui-muted)]">{{ $type->debitFinanceAccount->name }}</div>
+                                        </div>
+                                    @else
+                                        <span class="text-[var(--ui-muted)]">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-2">
+                                    @if($type->creditFinanceAccount)
+                                        <div class="text-xs">
+                                            <div class="font-medium">{{ $type->creditFinanceAccount->number }}</div>
+                                            <div class="text-[var(--ui-muted)]">{{ $type->creditFinanceAccount->name }}</div>
+                                        </div>
                                     @else
                                         <span class="text-[var(--ui-muted)]">-</span>
                                     @endif
@@ -75,7 +89,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center">
+                                <td colspan="8" class="px-4 py-8 text-center">
                                     @svg('heroicon-o-currency-euro', 'w-10 h-10 text-[var(--ui-muted)] mx-auto mb-2')
                                     <div class="text-sm text-[var(--ui-muted)]">Keine Lohnarten gefunden</div>
                                 </td>
@@ -84,7 +98,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">{{ $payrollTypes->links() }}</div>
         </x-ui-panel>
     </x-ui-page-container>
 

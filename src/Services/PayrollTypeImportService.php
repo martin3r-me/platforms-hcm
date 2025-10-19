@@ -99,11 +99,11 @@ class PayrollTypeImportService
                     'mandant_nr' => trim($row[0]),
                     'pers_nr' => trim($row[1]),
                     'lohnart_nr' => trim($row[2]),
-                    'lohnart' => trim($row[3]),
+                    'lohnart' => mb_convert_encoding(trim($row[3]), 'UTF-8', 'auto'),
                     'soll_konto' => trim($row[4]),
-                    'soll_konto_bezeichnung' => trim($row[5]),
+                    'soll_konto_bezeichnung' => mb_convert_encoding(trim($row[5]), 'UTF-8', 'auto'),
                     'haben_konto' => trim($row[6]),
-                    'haben_konto_bezeichnung' => trim($row[7]),
+                    'haben_konto_bezeichnung' => mb_convert_encoding(trim($row[7]), 'UTF-8', 'auto'),
                 ];
             }
         }
@@ -315,9 +315,12 @@ class PayrollTypeImportService
         // Erstelle Kurzname aus den ersten Wörtern
         $words = explode(' ', $lohnartName);
         if (count($words) >= 2) {
-            return substr($words[0], 0, 3) . ' ' . substr($words[1], 0, 3);
+            $short = substr($words[0], 0, 3) . ' ' . substr($words[1], 0, 3);
+        } else {
+            $short = substr($lohnartName, 0, 10);
         }
         
-        return substr($lohnartName, 0, 10);
+        // UTF-8 sichere Verkürzung
+        return mb_substr($short, 0, 20, 'UTF-8');
     }
 }
