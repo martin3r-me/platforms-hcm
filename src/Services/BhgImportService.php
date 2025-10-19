@@ -195,6 +195,17 @@ class BhgImportService
     private function createEmployee($row)
     {
         try {
+            // Prüfen ob Mitarbeiter bereits existiert
+            $existingEmployee = HcmEmployee::where('team_id', $this->teamId)
+                ->where('employee_number', $row['personalnummer'])
+                ->where('employer_id', $this->employerId)
+                ->first();
+            
+            if ($existingEmployee) {
+                // Mitarbeiter existiert bereits - überspringen
+                return $existingEmployee;
+            }
+            
             $employee = HcmEmployee::create([
                 'team_id' => $this->teamId,
                 'employee_number' => $row['personalnummer'],
@@ -367,12 +378,20 @@ class BhgImportService
                 ->first();
 
             if ($employee) {
-                CrmContactLink::create([
-                    'contact_id' => $contact->id,
-                    'linkable_id' => $employee->id,
-                    'linkable_type' => HcmEmployee::class,
-                    'team_id' => $this->teamId,
-                ]);
+                // Prüfen ob Link bereits existiert
+                $existingLink = CrmContactLink::where('contact_id', $contact->id)
+                    ->where('linkable_id', $employee->id)
+                    ->where('linkable_type', HcmEmployee::class)
+                    ->first();
+                
+                if (!$existingLink) {
+                    CrmContactLink::create([
+                        'contact_id' => $contact->id,
+                        'linkable_id' => $employee->id,
+                        'linkable_type' => HcmEmployee::class,
+                        'team_id' => $this->teamId,
+                    ]);
+                }
             }
 
             // Create company relation if employer exists
