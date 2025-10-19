@@ -95,6 +95,9 @@ class BhgImportService
             
             // 4. Analyze CRM Contacts
             $this->analyzeCrmContacts($data);
+            
+            // 5. Test actual database operations (but rollback)
+            $this->testDatabaseOperations($data);
 
             return $this->stats;
         } catch (\Exception $e) {
@@ -448,6 +451,7 @@ class BhgImportService
                 $company = CrmCompany::create([
                     'team_id' => $this->teamId,
                     'name' => $employer->display_name,
+                    'contact_status_id' => 1, // Standard Contact Status
                     'is_active' => true,
                     'created_by_user_id' => $this->userId,
                 ]);
@@ -648,6 +652,87 @@ class BhgImportService
             if ($this->employerId) {
                 $this->stats['crm_company_relations_created']++;
             }
+        }
+    }
+
+    private function testDatabaseOperations($data)
+    {
+        // Test mit einer kleinen Stichprobe der Daten
+        $sampleData = array_slice($data, 0, 3); // Nur die ersten 3 Einträge testen
+        
+        try {
+            DB::transaction(function () use ($sampleData) {
+                // Test Job Titles
+                foreach ($sampleData as $row) {
+                    if (!empty($row['stellenbezeichnung'])) {
+                        $jobTitle = new HcmJobTitle();
+                        $jobTitle->team_id = $this->teamId;
+                        $jobTitle->code = 'TEST_' . substr(md5($row['stellenbezeichnung']), 0, 8);
+                        $jobTitle->name = $row['stellenbezeichnung'];
+                        $jobTitle->is_active = true;
+                        $jobTitle->created_by_user_id = $this->userId;
+                        $jobTitle->save();
+                    }
+                }
+                
+                // Test Job Activities
+                foreach ($sampleData as $row) {
+                    if (!empty($row['tätigkeit'])) {
+                        $jobActivity = new HcmJobActivity();
+                        $jobActivity->team_id = $this->teamId;
+                        $jobActivity->code = 'TEST_' . substr(md5($row['tätigkeit']), 0, 8);
+                        $jobActivity->name = $row['tätigkeit'];
+                        $jobActivity->is_active = true;
+                        $jobActivity->created_by_user_id = $this->userId;
+                        $jobActivity->save();
+                    }
+                }
+                
+                // Test Employees
+                foreach ($sampleData as $row) {
+                    $employee = new HcmEmployee();
+                    $employee->team_id = $this->teamId;
+                    $employee->employee_number = $row['personalnummer'];
+                    $employee->employer_id = $this->employerId;
+                    $employee->is_active = empty($row['austrittsdatum']);
+                    $employee->created_by_user_id = $this->userId;
+                    $employee->save();
+                }
+                
+                // Test CRM Contacts
+                foreach ($sampleData as $row) {
+                    $contact = new CrmContact();
+                    $contact->team_id = $this->teamId;
+                    $contact->first_name = $row['vorname'];
+                    $contact->last_name = $row['nachname'];
+                    $contact->is_active = true;
+                    $contact->created_by_user_id = $this->userId;
+                    $contact->save();
+                }
+                
+                // Test CRM Company
+                $employer = HcmEmployer::find($this->employerId);
+                if ($employer) {
+                    $company = new CrmCompany();
+                    $company->team_id = $this->teamId;
+                    $company->name = $employer->display_name;
+                    $company->contact_status_id = 1; // Test mit Standard Status
+                    $company->is_active = true;
+                    $company->created_by_user_id = $this->userId;
+                    $company->save();
+                }
+                
+                // Rollback - alle Änderungen werden rückgängig gemacht
+                throw new \Exception('DRY_RUN_ROLLBACK');
+            });
+        } catch (\Exception $e) {
+            if ($e->getMessage() === 'DRY_RUN_ROLLBACK') {
+                // Das ist der erwartete Rollback - alles OK
+                return;
+            }
+            
+            // Echter Fehler - weiterleiten
+            throw $e;
         }
     }
 }
