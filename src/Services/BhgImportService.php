@@ -79,6 +79,31 @@ class BhgImportService
         }
     }
 
+    public function dryRunFromCsv($csvPath)
+    {
+        try {
+            $data = $this->parseCsv($csvPath);
+            
+            // 1. Analyze Job Titles and Activities
+            $this->analyzeJobTitlesAndActivities($data);
+            
+            // 2. Analyze Employees
+            $this->analyzeEmployees($data);
+            
+            // 3. Analyze Contracts
+            $this->analyzeContracts($data);
+            
+            // 4. Analyze CRM Contacts
+            $this->analyzeCrmContacts($data);
+
+            return $this->stats;
+        } catch (\Exception $e) {
+            Log::error('BHG Dry Run failed: ' . $e->getMessage());
+            $this->stats['errors'][] = $e->getMessage();
+            return $this->stats;
+        }
+    }
+
     private function parseCsv($csvPath)
     {
         $data = [];
@@ -385,13 +410,13 @@ class BhgImportService
                     ->first();
                 
                 if (!$existingLink) {
-                    $link = new CrmContactLink();
-                    $link->contact_id = $contact->id;
-                    $link->linkable_id = $employee->id;
-                    $link->linkable_type = HcmEmployee::class;
-                    $link->team_id = $this->teamId;
-                    $link->created_by_user_id = $this->userId;
-                    $link->save();
+                    CrmContactLink::create([
+                        'contact_id' => $contact->id,
+                        'linkable_id' => $employee->id,
+                        'linkable_type' => HcmEmployee::class,
+                        'team_id' => $this->teamId,
+                        'created_by_user_id' => $this->userId,
+                    ]);
                 }
             }
 
@@ -509,6 +534,111 @@ class BhgImportService
                 'phone_type_id' => $phoneTypeId,
                 'is_primary' => $isPrimary,
             ]);
+        }
+    }
+
+    private function analyzeJobTitlesAndActivities($data)
+    {
+        $jobTitles = [];
+        $jobActivities = [];
+
+        foreach ($data as $row) {
+            // Collect unique job titles
+            if (!empty($row['stellenbezeichnung']) && !in_array($row['stellenbezeichnung'], $jobTitles)) {
+                $jobTitles[] = $row['stellenbezeichnung'];
+            }
+
+            // Collect unique job activities
+            if (!empty($row['tätigkeit']) && !in_array($row['tätigkeit'], $jobActivities)) {
+                $jobActivities[] = $row['tätigkeit'];
+            }
+        }
+
+        // Count Job Titles that would be created
+        foreach ($jobTitles as $title) {
+            $existing = HcmJobTitle::where('team_id', $this->teamId)
+                ->where('name', $title)
+                ->first();
+
+            if (!$existing) {
+                $this->stats['job_titles_created']++;
+            }
+        }
+
+        // Count Job Activities that would be created
+        foreach ($jobActivities as $activity) {
+            $existing = HcmJobActivity::where('team_id', $this->teamId)
+                ->where('name', $activity)
+                ->first();
+
+            if (!$existing) {
+                $this->stats['job_activities_created']++;
+            }
+        }
+    }
+
+    private function analyzeEmployees($data)
+    {
+        foreach ($data as $row) {
+            $existingEmployee = HcmEmployee::where('team_id', $this->teamId)
+                ->where('employee_number', $row['personalnummer'])
+                ->where('employer_id', $this->employerId)
+                ->first();
+            
+            if (!$existingEmployee) {
+                $this->stats['employees_created']++;
+            }
+        }
+    }
+
+    private function analyzeContracts($data)
+    {
+        foreach ($data as $row) {
+            $employee = HcmEmployee::where('team_id', $this->teamId)
+                ->where('employee_number', $row['personalnummer'])
+                ->first();
+
+            if ($employee) {
+                $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
+                
+                $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
+                    ->where('start_date', $startDate)
+                    ->first();
+                
+                if (!$existingContract) {
+                    $this->stats['contracts_created']++;
+                    
+                    // Count activity links
+                    if (!empty($row['tätigkeit'])) {
+                        $this->stats['contract_activity_links_created']++;
+                    }
+                }
+            }
+        }
+    }
+
+    private function analyzeCrmContacts($data)
+    {
+        foreach ($data as $row) {
+            // Check if contact would be created
+            $contact = CrmContact::where('team_id', $this->teamId)
+                ->where('first_name', $row['vorname'])
+                ->where('last_name', $row['nachname'])
+                ->when(!empty($row['email']), function($query) use ($row) {
+                    return $query->whereHas('emailAddresses', function($q) use ($row) {
+                        $q->where('email_address', $row['email']);
+                    });
+                })
+                ->first();
+
+            if (!$contact) {
+                $this->stats['crm_contacts_created']++;
+            }
+
+            // Count company relations
+            if ($this->employerId) {
+                $this->stats['crm_company_relations_created']++;
+            }
         }
     }
 }

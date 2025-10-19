@@ -7,13 +7,14 @@ use Platform\Hcm\Services\BhgImportService;
 
 class ImportBhgData extends Command
 {
-    protected $signature = 'hcm:import-bhg {csv_path} {--employer-id=}';
+    protected $signature = 'hcm:import-bhg {csv_path} {--employer-id=} {--dry-run : Show what would be imported without actually importing}';
     protected $description = 'Import BHG employee data from CSV file';
 
     public function handle()
     {
         $csvPath = $this->argument('csv_path');
         $employerId = $this->option('employer-id');
+        $dryRun = $this->option('dry-run');
 
         // Validierung der erforderlichen Parameter
         if (!$employerId) {
@@ -33,20 +34,34 @@ class ImportBhgData extends Command
             return 1;
         }
 
+        if ($dryRun) {
+            $this->info("DRY RUN MODE - No data will be written");
+        }
+
         $this->info("Starting BHG import from: {$csvPath}");
         $this->info("Employer: {$employer->display_name} (Team: {$employer->team_id})");
 
         $importService = new BhgImportService($employer->team_id, $employer->created_by_user_id, $employerId);
-        $stats = $importService->importFromCsv($csvPath);
+        
+        if ($dryRun) {
+            $stats = $importService->dryRunFromCsv($csvPath);
+        } else {
+            $stats = $importService->importFromCsv($csvPath);
+        }
 
-        $this->info("Import completed!");
-        $this->info("Employees created: {$stats['employees_created']}");
-        $this->info("Job titles created: {$stats['job_titles_created']}");
-        $this->info("Job activities created: {$stats['job_activities_created']}");
-        $this->info("Contracts created: {$stats['contracts_created']}");
-        $this->info("Contract activity links created: {$stats['contract_activity_links_created']}");
-        $this->info("CRM contacts created: {$stats['crm_contacts_created']}");
-        $this->info("CRM company relations created: {$stats['crm_company_relations_created']}");
+        if ($dryRun) {
+            $this->info("DRY RUN completed - No data was written!");
+        } else {
+            $this->info("Import completed!");
+        }
+        
+        $this->info("Employees that would be created: {$stats['employees_created']}");
+        $this->info("Job titles that would be created: {$stats['job_titles_created']}");
+        $this->info("Job activities that would be created: {$stats['job_activities_created']}");
+        $this->info("Contracts that would be created: {$stats['contracts_created']}");
+        $this->info("Contract activity links that would be created: {$stats['contract_activity_links_created']}");
+        $this->info("CRM contacts that would be created: {$stats['crm_contacts_created']}");
+        $this->info("CRM company relations that would be created: {$stats['crm_company_relations_created']}");
 
         if (!empty($stats['errors'])) {
             $this->error("Errors encountered:");
