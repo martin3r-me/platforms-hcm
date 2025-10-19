@@ -48,7 +48,7 @@ class Index extends Component
                 });
             })
             ->orderBy('code')
-            ->paginate(12);
+            ->get();
 
         return view('hcm::livewire.job-activity.index', [ 'activities' => $activities ])
             ->layout('platform::layouts.app');

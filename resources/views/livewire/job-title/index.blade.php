@@ -43,7 +43,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-4">{{ $titles->links() }}</div>
         </x-ui-panel>
     </x-ui-page-container>
 
