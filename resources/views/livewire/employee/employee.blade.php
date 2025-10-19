@@ -20,52 +20,126 @@
     </x-slot>
 
     <x-ui-page-container>
+        <!-- Mitarbeiter-Daten -->
+        <div class="mb-8">
+            <h3 class="text-lg font-semibold mb-4 text-[var(--ui-secondary)]">Mitarbeiter-Daten</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <x-ui-input-text 
+                    name="employee.employee_number"
+                    label="Mitarbeiternummer"
+                    wire:model.live.debounce.500ms="employee.employee_number"
+                    placeholder="Mitarbeiternummer eingeben..."
+                    required
+                    :errorKey="'employee.employee_number'"
+                />
+            </div>
+        </div>
 
-        <!-- Haupt-Content (nimmt Restplatz, scrollt) -->
-        <div class="flex-grow-1 overflow-y-auto p-4">
-            
-            {{-- Mitarbeiter-Daten --}}
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-4 text-secondary">Mitarbeiter-Daten</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <x-ui-input-text 
-                        name="employee.employee_number"
-                        label="Mitarbeiternummer"
-                        wire:model.live.debounce.500ms="employee.employee_number"
-                        placeholder="Mitarbeiternummer eingeben..."
-                        required
-                        :errorKey="'employee.employee_number'"
-                    />
+        <!-- Verknüpfte Kontakte -->
+        <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Mitarbeiter verknüpft sind">
+            @if($employee->crmContactLinks->count() > 0)
+                <div class="space-y-4">
+                    @foreach($employee->crmContactLinks as $link)
+                        <div class="flex items-center justify-between p-4 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-[var(--ui-primary)] text-[var(--ui-on-primary)] rounded-lg flex items-center justify-center">
+                                    @svg('heroicon-o-user', 'w-5 h-5')
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-[var(--ui-secondary)]">
+                                        <a href="{{ route('crm.contacts.show', ['contact' => $link->contact->id]) }}" 
+                                           class="hover:underline text-[var(--ui-primary)]" 
+                                           wire:navigate>
+                                            {{ $link->contact->full_name }}
+                                        </a>
+                                    </h4>
+                                    @if($link->contact->emailAddresses->where('is_primary', true)->first())
+                                        <p class="text-sm text-[var(--ui-muted)]">
+                                            {{ $link->contact->emailAddresses->where('is_primary', true)->first()->email_address }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <x-ui-badge variant="primary" size="sm">Kontakt</x-ui-badge>
+                                <x-ui-button 
+                                    size="sm" 
+                                    variant="danger-outline" 
+                                    wire:click="unlinkContact({{ $link->contact->id }})"
+                                    wire:confirm="Kontakt-Verknüpfung wirklich entfernen?"
+                                >
+                                    @svg('heroicon-o-x-mark', 'w-4 h-4')
+                                </x-ui-button>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
-            </div>
-        </div>
+            @else
+                <div class="text-center py-8">
+                    @svg('heroicon-o-user', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
+                    <h4 class="text-lg font-medium text-[var(--ui-secondary)] mb-2">Keine Kontakte verknüpft</h4>
+                    <p class="text-[var(--ui-muted)] mb-4">Dieser Mitarbeiter hat noch keine CRM-Kontakte.</p>
+                    <div class="flex gap-3 justify-center">
+                        <x-ui-button variant="secondary" wire:click="linkContact">
+                            @svg('heroicon-o-link', 'w-4 h-4')
+                            Kontakt verknüpfen
+                        </x-ui-button>
+                        <x-ui-button variant="secondary" wire:click="addContact">
+                            @svg('heroicon-o-plus', 'w-4 h-4')
+                            Neuen Kontakt erstellen
+                        </x-ui-button>
+                    </div>
+                </div>
+            @endif
+        </x-ui-panel>
 
-        <!-- Aktivitäten (immer unten) -->
-        <div x-data="{ open: false }" class="flex-shrink-0 border-t border-muted">
-            <div 
-                @click="open = !open" 
-                class="cursor-pointer border-top-1 border-top-solid border-top-muted border-bottom-1 border-bottom-solid border-bottom-muted p-2 text-center d-flex items-center justify-center gap-1 mx-2 shadow-lg"
-            >
-                AKTIVITÄTEN 
-                <span class="text-xs">
-                    {{$employee->activities->count()}}
-                </span>
-                <x-heroicon-o-chevron-double-down 
-                    class="w-3 h-3" 
-                    x-show="!open"
-                />
-                <x-heroicon-o-chevron-double-up 
-                    class="w-3 h-3" 
-                    x-show="open"
-                />
-            </div>
-            <div x-show="open" class="p-2 max-h-xs overflow-y-auto">
-                <livewire:activity-log.index
-                    :model="$employee"
-                    :key="get_class($employee) . '_' . $employee->id"
-                />
-            </div>
-        </div>
+        <!-- Arbeitgeber-Informationen -->
+        <x-ui-panel title="Arbeitgeber" subtitle="Zugewiesener Arbeitgeber und Vertragshinweise">
+            @if($employee->employer)
+                <div class="flex items-center justify-between p-4 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-[var(--ui-secondary)] text-[var(--ui-on-secondary)] rounded-lg flex items-center justify-center">
+                            @svg('heroicon-o-building-office', 'w-5 h-5')
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-[var(--ui-secondary)]">
+                                <a href="{{ route('hcm.employers.show', ['employer' => $employee->employer->id]) }}" 
+                                   class="hover:underline text-[var(--ui-primary)]" 
+                                   wire:navigate>
+                                    {{ $employee->employer->display_name }}
+                                </a>
+                            </h4>
+                            <p class="text-sm text-[var(--ui-muted)]">
+                                Arbeitgeber-Nummer: {{ $employee->employer->employer_number }}
+                            </p>
+                        </div>
+                    </div>
+                    <x-ui-badge variant="secondary" size="sm">Arbeitgeber</x-ui-badge>
+                </div>
+                
+                <!-- Vertragshinweise -->
+                <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="flex items-center gap-2 mb-2">
+                        @svg('heroicon-o-document-text', 'w-5 h-5 text-blue-600')
+                        <h4 class="font-medium text-blue-900">Vertragsverwaltung</h4>
+                    </div>
+                    <p class="text-blue-700 text-sm mb-3">
+                        Für detaillierte Vertragsverwaltung (Start-/Enddatum, Arbeitszeit, Steuerklasse, etc.) 
+                        können Verträge im HCM-System verwaltet werden.
+                    </p>
+                    <div class="text-xs text-blue-600">
+                        <strong>Verfügbare Vertragsfelder:</strong> Start-/Enddatum, Vertragstyp, Beschäftigungsstatus, 
+                        Arbeitszeit pro Monat, Jahresurlaub, Steuerklasse, Sozialversicherungsnummer
+                    </div>
+                </div>
+            @else
+                <div class="text-center py-8">
+                    @svg('heroicon-o-building-office', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
+                    <h4 class="text-lg font-medium text-[var(--ui-secondary)] mb-2">Kein Arbeitgeber zugewiesen</h4>
+                    <p class="text-[var(--ui-muted)]">Dieser Mitarbeiter ist noch keinem Arbeitgeber zugewiesen.</p>
+                </div>
+            @endif
+        </x-ui-panel>
 
     <!-- Contact Link Modal -->
     <x-ui-modal

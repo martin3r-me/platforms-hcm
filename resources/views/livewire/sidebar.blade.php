@@ -19,6 +19,10 @@
             @svg('heroicon-o-user-group', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Mitarbeiter</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.tariffs.index')">
+            @svg('heroicon-o-scale', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarifklassen</span>
+        </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
     {{-- Collapsed: Icons-only für Allgemein --}}
@@ -32,6 +36,9 @@
             </a>
             <a href="{{ route('hcm.employees.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
                 @svg('heroicon-o-user-group', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.tariffs.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-scale', 'w-5 h-5')
             </a>
         </div>
     </div>
