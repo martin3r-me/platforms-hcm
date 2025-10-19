@@ -78,7 +78,7 @@
     </x-slot>
 
     <x-ui-modal wire:model="modalShow" size="md">
-        <x-slot name="header">Neue Tarifklasse</x-ui-slot>
+        <x-slot name="header">Neue Tarifklasse</x-slot>
         <div class="space-y-4">
             <x-ui-input-text name="form.code" label="Code" wire:model.live="form.code" required />
             <x-ui-input-text name="form.name" label="Bezeichnung" wire:model.live="form.name" required />

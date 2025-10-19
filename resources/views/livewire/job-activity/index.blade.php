@@ -48,7 +48,7 @@
     </x-ui-page-container>
 
     <x-ui-modal wire:model="modalShow" size="md">
-        <x-slot name="header">Neue Tätigkeit</x-ui-slot>
+        <x-slot name="header">Neue Tätigkeit</x-slot>
         <div class="space-y-4">
             <x-ui-input-text name="form.code" label="Code" wire:model.live="form.code" required />
             <x-ui-input-text name="form.name" label="Bezeichnung" wire:model.live="form.name" required />
