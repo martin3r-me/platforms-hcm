@@ -1,91 +1,93 @@
-<div class="h-full bg-white border-r border-gray-200 w-64 flex flex-col">
-    <!-- Header -->
-    <div class="p-4 border-b border-gray-200">
-        <div class="d-flex items-center gap-3">
-            @svg('heroicon-o-users', 'w-6 h-6 text-primary')
-            <h2 class="text-lg font-semibold text-gray-900">HCM</h2>
+{{-- resources/views/vendor/hcm/livewire/sidebar-content.blade.php --}}
+<div>
+    {{-- Modul Header --}}
+    <div x-show="!collapsed" class="p-3 text-sm italic text-[var(--ui-secondary)] uppercase border-b border-[var(--ui-border)] mb-2">
+        HCM
+    </div>
+    
+    {{-- Abschnitt: Allgemein (über UI-Komponenten) --}}
+    <x-ui-sidebar-list label="Allgemein">
+        <x-ui-sidebar-item :href="route('hcm.dashboard')">
+            @svg('heroicon-o-home', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Dashboard</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.employers.index')">
+            @svg('heroicon-o-building-office', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Arbeitgeber</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.employees.index')">
+            @svg('heroicon-o-user-group', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Mitarbeiter</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
+    {{-- Collapsed: Icons-only für Allgemein --}}
+    <div x-show="collapsed" class="px-2 py-2 border-b border-[var(--ui-border)]">
+        <div class="flex flex-col gap-2">
+            <a href="{{ route('hcm.dashboard') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-home', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.employers.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-building-office', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.employees.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-user-group', 'w-5 h-5')
+            </a>
         </div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="flex-1 p-4 space-y-2">
-        <!-- Hauptnavigation -->
-        <div class="space-y-1">
-            <a href="{{ route('hcm.dashboard') }}" 
-               class="d-flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors {{ request()->routeIs('hcm.dashboard') ? 'bg-primary text-on-primary' : 'text-gray-700 hover:bg-gray-100' }}">
-                @svg('heroicon-o-home', 'w-5 h-5')
-                Dashboard
-            </a>
-            
-            <a href="{{ route('hcm.employers.index') }}" 
-               class="d-flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors {{ request()->routeIs('hcm.employers.*') ? 'bg-primary text-on-primary' : 'text-gray-700 hover:bg-gray-100' }}">
-                @svg('heroicon-o-building-office', 'w-5 h-5')
-                Arbeitgeber
-            </a>
-            
-            <a href="{{ route('hcm.employees.index') }}" 
-               class="d-flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors {{ request()->routeIs('hcm.employees.*') ? 'bg-primary text-on-primary' : 'text-gray-700 hover:bg-gray-100' }}">
-                @svg('heroicon-o-user-group', 'w-5 h-5')
-                Mitarbeiter
-            </a>
+    {{-- Abschnitt: Arbeitgeber --}}
+    <div>
+        <div class="mt-2" x-show="!collapsed">
+            @if($this->recentEmployers->count() > 0)
+                <x-ui-sidebar-list label="Neueste Arbeitgeber">
+                    @foreach($this->recentEmployers as $employer)
+                        <x-ui-sidebar-item :href="route('hcm.employers.show', ['employer' => $employer->id])">
+                            @svg('heroicon-o-building-office', 'w-5 h-5 flex-shrink-0 text-[var(--ui-secondary)]')
+                            <span class="truncate text-sm ml-2">{{ $employer->display_name }}</span>
+                        </x-ui-sidebar-item>
+                    @endforeach
+                </x-ui-sidebar-list>
+            @else
+                <div class="px-3 py-1 text-xs text-[var(--ui-muted)]">Keine Arbeitgeber</div>
+            @endif
         </div>
+    </div>
 
-        <!-- Statistiken -->
-        <div class="pt-4 border-t border-gray-200">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Übersicht</h3>
-            <div class="space-y-2">
-                <div class="d-flex justify-between items-center px-3 py-2 text-sm">
-                    <span class="text-gray-600">Arbeitgeber</span>
-                    <span class="font-medium text-gray-900">{{ $this->stats['total_employers'] }}</span>
-                </div>
-                <div class="d-flex justify-between items-center px-3 py-2 text-sm">
-                    <span class="text-gray-600">Mitarbeiter</span>
-                    <span class="font-medium text-gray-900">{{ $this->stats['total_employees'] }}</span>
-                </div>
-                <div class="d-flex justify-between items-center px-3 py-2 text-sm">
-                    <span class="text-gray-600">Aktiv</span>
-                    <span class="font-medium text-green-600">{{ $this->stats['active_employees'] }}</span>
-                </div>
+    {{-- Abschnitt: Mitarbeiter --}}
+    <div>
+        <div class="mt-2" x-show="!collapsed">
+            @if($this->recentEmployees->count() > 0)
+                <x-ui-sidebar-list label="Neueste Mitarbeiter">
+                    @foreach($this->recentEmployees as $employee)
+                        <x-ui-sidebar-item :href="route('hcm.employees.show', ['employee' => $employee->id])">
+                            @svg('heroicon-o-user', 'w-5 h-5 flex-shrink-0 text-[var(--ui-secondary)]')
+                            <span class="truncate text-sm ml-2">{{ $employee->full_name ?? 'Unbekannt' }}</span>
+                        </x-ui-sidebar-item>
+                    @endforeach
+                </x-ui-sidebar-list>
+            @else
+                <div class="px-3 py-1 text-xs text-[var(--ui-muted)]">Keine Mitarbeiter</div>
+            @endif
+        </div>
+    </div>
+
+    {{-- Statistiken --}}
+    <div x-show="!collapsed" class="mt-4 p-3 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
+        <div class="text-xs font-semibold text-[var(--ui-secondary)] uppercase tracking-wider mb-2">Übersicht</div>
+        <div class="space-y-2">
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-[var(--ui-muted)]">Arbeitgeber</span>
+                <span class="font-medium text-[var(--ui-secondary)]">{{ $this->stats['total_employers'] }}</span>
             </div>
-        </div>
-
-        <!-- Neueste Arbeitgeber -->
-        @if($this->recentEmployers->count() > 0)
-        <div class="pt-4 border-t border-gray-200">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Neueste Arbeitgeber</h3>
-            <div class="space-y-1">
-                @foreach($this->recentEmployers as $employer)
-                    <a href="{{ route('hcm.employers.show', ['employer' => $employer->id]) }}" 
-                       class="d-flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors text-gray-700 hover:bg-gray-100">
-                        @svg('heroicon-o-building-office', 'w-4 h-4 text-gray-400')
-                        <span class="truncate">{{ $employer->display_name }}</span>
-                    </a>
-                @endforeach
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-[var(--ui-muted)]">Mitarbeiter</span>
+                <span class="font-medium text-[var(--ui-secondary)]">{{ $this->stats['total_employees'] }}</span>
             </div>
-        </div>
-        @endif
-
-        <!-- Neueste Mitarbeiter -->
-        @if($this->recentEmployees->count() > 0)
-        <div class="pt-4 border-t border-gray-200">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Neueste Mitarbeiter</h3>
-            <div class="space-y-1">
-                @foreach($this->recentEmployees as $employee)
-                    <a href="{{ route('hcm.employees.show', ['employee' => $employee->id]) }}" 
-                       class="d-flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors text-gray-700 hover:bg-gray-100">
-                        @svg('heroicon-o-user', 'w-4 h-4 text-gray-400')
-                        <span class="truncate">{{ $employee->full_name ?? 'Unbekannt' }}</span>
-                    </a>
-                @endforeach
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-[var(--ui-muted)]">Aktiv</span>
+                <span class="font-medium text-green-600">{{ $this->stats['active_employees'] }}</span>
             </div>
-        </div>
-        @endif
-    </nav>
-
-    <!-- Footer -->
-    <div class="p-4 border-t border-gray-200">
-        <div class="text-xs text-gray-500 text-center">
-            HCM Module v1.0
         </div>
     </div>
 </div>

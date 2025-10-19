@@ -76,8 +76,7 @@ class Index extends Component
 
     public function render()
     {
-        return view('hcm::livewire.employer.index')
-            ->layout('platform::layouts.app');
+        return view('hcm::livewire.employer.index');
     }
 
     public function createEmployer()

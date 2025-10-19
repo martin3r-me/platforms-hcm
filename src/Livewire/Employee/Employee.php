@@ -232,8 +232,7 @@ class Employee extends Component
 
     public function render()
     {
-        return view('hcm::livewire.employee.employee')
-            ->layout('platform::layouts.app');
+        return view('hcm::livewire.employee.employee');
     }
 }
 
