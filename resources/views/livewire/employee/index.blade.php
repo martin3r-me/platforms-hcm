@@ -1,11 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Mitarbeiter" icon="heroicon-o-user-group">
-            <x-ui-button variant="primary" wire:click="openCreateModal">
-                @svg('heroicon-o-plus', 'w-4 h-4')
-                Neuer Mitarbeiter
-            </x-ui-button>
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="Mitarbeiter" icon="heroicon-o-user-group" />
     </x-slot>
 
     <x-ui-page-container>
@@ -169,5 +164,43 @@
         </x-slot>
     </x-ui-modal>
     </x-ui-page-container>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Schnellzugriff" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary" size="sm" wire:click="openCreateModal" class="w-full justify-start">
+                            @svg('heroicon-o-plus', 'w-4 h-4')
+                            <span class="ml-2">Neuer Mitarbeiter</span>
+                        </x-ui-button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Hinweise</h3>
+                    <div class="space-y-3 text-sm text-[var(--ui-muted)]">
+                        <div class="p-3 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
+                            Mitarbeiter-Nummern werden aus den Arbeitgeber-Einstellungen generiert.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--ui-muted)] mb-3">Letzte Aktivitäten</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>
 

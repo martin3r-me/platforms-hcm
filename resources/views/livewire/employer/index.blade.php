@@ -1,11 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Arbeitgeber" icon="heroicon-o-building-office">
-            <x-ui-button variant="primary" wire:click="openCreateModal">
-                @svg('heroicon-o-plus', 'w-4 h-4')
-                Neuer Arbeitgeber
-            </x-ui-button>
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="Arbeitgeber" icon="heroicon-o-building-office" />
     </x-slot>
 
     <x-ui-page-container>
