@@ -16,6 +16,9 @@ use Platform\Crm\Models\CrmContactLink;
 use Platform\Crm\Models\CrmContactRelation;
 use Platform\Crm\Models\CrmCompany;
 use Carbon\Carbon;
+use libphonenumber\PhoneNumberUtil;
+use libphonenumber\PhoneNumberFormat;
+use libphonenumber\NumberParseException;
 
 class BhgImportService
 {
@@ -226,29 +229,18 @@ class BhgImportService
                     'emailable_id' => $contact->id,
                     'emailable_type' => CrmContact::class,
                     'email_address' => $row['email'],
+                    'email_type_id' => 1, // Standard E-Mail-Typ
                     'is_primary' => true,
                 ]);
             }
 
             // Add phone numbers
             if (!empty($row['telefon'])) {
-                CrmPhoneNumber::create([
-                    'phoneable_id' => $contact->id,
-                    'phoneable_type' => CrmContact::class,
-                    'phone_number' => $row['telefon'],
-                    'is_primary' => true,
-                    'type' => 'work',
-                ]);
+                $this->createPhoneNumber($contact, $row['telefon'], 1, true);
             }
 
             if (!empty($row['mobil'])) {
-                CrmPhoneNumber::create([
-                    'phoneable_id' => $contact->id,
-                    'phoneable_type' => CrmContact::class,
-                    'phone_number' => $row['mobil'],
-                    'is_primary' => false,
-                    'type' => 'mobile',
-                ]);
+                $this->createPhoneNumber($contact, $row['mobil'], 2, false);
             }
 
             // Add address
@@ -259,9 +251,9 @@ class BhgImportService
                     'street' => $row['straße'],
                     'postal_code' => $row['plz'],
                     'city' => $row['ort'],
-                    'address_line_2' => $row['adresszusatz'],
+                    'additional_info' => $row['adresszusatz'],
+                    'address_type_id' => 1, // Standard Adress-Typ
                     'is_primary' => true,
-                    'type' => 'work',
                 ]);
             }
 
@@ -326,6 +318,61 @@ class BhgImportService
             $this->stats['crm_company_relations_created']++;
         } catch (\Exception $e) {
             $this->stats['errors'][] = "Company relation {$row['personalnummer']}: " . $e->getMessage();
+        }
+    }
+
+    private function createPhoneNumber($contact, $phoneInput, $phoneTypeId, $isPrimary)
+    {
+        try {
+            $phoneUtil = PhoneNumberUtil::getInstance();
+            
+            // Versuche deutsche Nummer zu parsen (DE als Standard)
+            $phoneNumber = $phoneUtil->parse($phoneInput, 'DE');
+            
+            if (!$phoneUtil->isValidNumber($phoneNumber)) {
+                // Fallback: Nur raw_input speichern
+                CrmPhoneNumber::create([
+                    'phoneable_id' => $contact->id,
+                    'phoneable_type' => CrmContact::class,
+                    'raw_input' => $phoneInput,
+                    'phone_type_id' => $phoneTypeId,
+                    'is_primary' => $isPrimary,
+                ]);
+                return;
+            }
+            
+            // Telefonnummer korrekt formatieren
+            $phoneData = [
+                'phoneable_id' => $contact->id,
+                'phoneable_type' => CrmContact::class,
+                'raw_input' => $phoneInput,
+                'international' => $phoneUtil->format($phoneNumber, PhoneNumberFormat::E164),
+                'national' => $phoneUtil->format($phoneNumber, PhoneNumberFormat::NATIONAL),
+                'country_code' => $phoneUtil->getRegionCodeForNumber($phoneNumber),
+                'phone_type_id' => $phoneTypeId,
+                'is_primary' => $isPrimary,
+            ];
+            
+            CrmPhoneNumber::create($phoneData);
+            
+        } catch (NumberParseException $e) {
+            // Fallback: Nur raw_input speichern bei Parsing-Fehlern
+            CrmPhoneNumber::create([
+                'phoneable_id' => $contact->id,
+                'phoneable_type' => CrmContact::class,
+                'raw_input' => $phoneInput,
+                'phone_type_id' => $phoneTypeId,
+                'is_primary' => $isPrimary,
+            ]);
+        } catch (\Exception $e) {
+            // Fallback: Nur raw_input speichern bei anderen Fehlern
+            CrmPhoneNumber::create([
+                'phoneable_id' => $contact->id,
+                'phoneable_type' => CrmContact::class,
+                'raw_input' => $phoneInput,
+                'phone_type_id' => $phoneTypeId,
+                'is_primary' => $isPrimary,
+            ]);
         }
     }
 }
