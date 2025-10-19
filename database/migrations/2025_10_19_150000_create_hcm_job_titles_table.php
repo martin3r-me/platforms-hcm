@@ -8,6 +8,9 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hcm_job_titles')) {
+            return;
+        }
         Schema::create('hcm_job_titles', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
