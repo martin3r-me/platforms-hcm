@@ -401,4 +401,27 @@
         </x-slot>
     </x-ui-modal>
     </x-ui-page-container>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Aktionen" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-3">
+                <x-ui-button variant="secondary" size="sm" wire:click="linkContact" class="w-full justify-start">
+                    @svg('heroicon-o-link', 'w-4 h-4')
+                    <span class="ml-2">Kontakt verknüpfen</span>
+                </x-ui-button>
+                <x-ui-button variant="secondary" size="sm" wire:click="addContact" class="w-full justify-start">
+                    @svg('heroicon-o-user-plus', 'w-4 h-4')
+                    <span class="ml-2">Kontakt erstellen</span>
+                </x-ui-button>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-6 space-y-3 text-sm">
+                <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>

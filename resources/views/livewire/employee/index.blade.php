@@ -26,7 +26,7 @@
                 <x-ui-table-row 
                     compact="true"
                     clickable="true" 
-                    :href="route('hcm.employees.show', ['employee' => $employee->id]) . '?edit=1'"
+                    :href="route('hcm.employees.show', ['employee' => $employee->id])"
                 >
                     <x-ui-table-cell compact="true">
                         <div class="font-medium">{{ $employee->employee_number }}</div>
