@@ -188,8 +188,14 @@ class PayrollTypeImportService
 
     private function findFinanceAccount(string $accountNumber): ?FinanceAccount
     {
+        $number = (int) $accountNumber;
+        
         return FinanceAccount::where('team_id', $this->teamId)
-            ->where('account_number', $accountNumber)
+            ->where('number_from', '<=', $number)
+            ->where(function ($query) use ($number) {
+                $query->whereNull('number_to')
+                      ->orWhere('number_to', '>=', $number);
+            })
             ->first();
     }
 
