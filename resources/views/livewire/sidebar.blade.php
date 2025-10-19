@@ -23,6 +23,14 @@
             @svg('heroicon-o-scale', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Tarifklassen</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.job-titles.index')">
+            @svg('heroicon-o-briefcase', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Stellenbezeichnungen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.job-activities.index')">
+            @svg('heroicon-o-clipboard-document', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tätigkeiten</span>
+        </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
     {{-- Collapsed: Icons-only für Allgemein --}}
@@ -39,6 +47,12 @@
             </a>
             <a href="{{ route('hcm.tariffs.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
                 @svg('heroicon-o-scale', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.job-titles.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-briefcase', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.job-activities.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-clipboard-document', 'w-5 h-5')
             </a>
         </div>
     </div>

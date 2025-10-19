@@ -8,6 +8,8 @@ use Platform\Hcm\Livewire\Employee\Employee as EmployeeShow;
 use Platform\Hcm\Livewire\Employer\Index as EmployerIndex;
 use Platform\Hcm\Livewire\Employer\Show as EmployerShow;
 use Platform\Hcm\Livewire\Tariff\Index as TariffIndex;
+use Platform\Hcm\Livewire\JobTitle\Index as JobTitleIndex;
+use Platform\Hcm\Livewire\JobActivity\Index as JobActivityIndex;
 
 Route::get('/', Platform\Hcm\Livewire\Dashboard::class)->name('hcm.dashboard');
 
@@ -21,6 +23,10 @@ Route::get('/employees/{employee}', EmployeeShow::class)->name('hcm.employees.sh
 
 // Tarife / Steuerklassen
 Route::get('/tariffs', TariffIndex::class)->name('hcm.tariffs.index');
+
+// Stellenbezeichnungen & Tätigkeiten
+Route::get('/job-titles', JobTitleIndex::class)->name('hcm.job-titles.index');
+Route::get('/job-activities', JobActivityIndex::class)->name('hcm.job-activities.index');
 
 // Arbeitgeber-spezifische Mitarbeiter
 Route::get('/employers/{employer}/employees', EmployeeIndex::class)->name('hcm.employers.employees.index');
