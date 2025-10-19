@@ -28,8 +28,17 @@ class PayrollTypeImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            DB::transaction(function () use ($data) {
-                foreach ($data as $row) {
+            // Gruppiere nach Lohnart-Nummer, um Duplikate zu vermeiden
+            $uniquePayrollTypes = [];
+            foreach ($data as $row) {
+                $lanr = $row['lohnart_nr'];
+                if (!isset($uniquePayrollTypes[$lanr])) {
+                    $uniquePayrollTypes[$lanr] = $row;
+                }
+            }
+            
+            DB::transaction(function () use ($uniquePayrollTypes) {
+                foreach ($uniquePayrollTypes as $row) {
                     $this->createPayrollType($row);
                 }
             });
@@ -47,7 +56,20 @@ class PayrollTypeImportService
         try {
             $data = $this->parseCsv($csvPath);
             
+            // Gruppiere nach Lohnart-Nummer, um Duplikate zu vermeiden
+            $uniquePayrollTypes = [];
             foreach ($data as $row) {
+                $lanr = $row['lohnart_nr'];
+                if (!isset($uniquePayrollTypes[$lanr])) {
+                    $uniquePayrollTypes[$lanr] = $row;
+                }
+            }
+            
+            $this->stats['total_rows'] = count($data);
+            $this->stats['unique_lanr_count'] = count($uniquePayrollTypes);
+            $this->stats['duplicate_rows'] = count($data) - count($uniquePayrollTypes);
+            
+            foreach ($uniquePayrollTypes as $row) {
                 $this->analyzePayrollType($row);
             }
 
@@ -147,6 +169,20 @@ class PayrollTypeImportService
             $this->stats['payroll_types_updated']++;
         } else {
             $this->stats['payroll_types_created']++;
+        }
+        
+        // Zusätzliche Analyse für bessere Insights
+        if (!isset($this->stats['unique_lanr'])) {
+            $this->stats['unique_lanr'] = [];
+        }
+        
+        if (!in_array($row['lohnart_nr'], $this->stats['unique_lanr'])) {
+            $this->stats['unique_lanr'][] = $row['lohnart_nr'];
+        } else {
+            if (!isset($this->stats['duplicates'])) {
+                $this->stats['duplicates'] = [];
+            }
+            $this->stats['duplicates'][] = $row['lohnart_nr'];
         }
     }
 

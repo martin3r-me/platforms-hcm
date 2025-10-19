@@ -48,11 +48,23 @@ class ImportPayrollTypes extends Command
         $this->table(
             ['Metric', 'Count'],
             [
+                ['Total CSV Rows', $stats['total_rows'] ?? 0],
+                ['Unique LANR Numbers', $stats['unique_lanr_count'] ?? 0],
+                ['Duplicate Rows Skipped', $stats['duplicate_rows'] ?? 0],
                 ['Payroll Types Created', $stats['payroll_types_created']],
                 ['Payroll Types Updated', $stats['payroll_types_updated']],
                 ['Errors', count($stats['errors'])],
             ]
         );
+
+        // Show duplicate analysis if there are duplicates
+        if (!empty($stats['duplicates'])) {
+            $this->warn("Found duplicate LANR numbers:");
+            $duplicateCounts = array_count_values($stats['duplicates']);
+            foreach ($duplicateCounts as $lanr => $count) {
+                $this->line("- LANR {$lanr}: {$count} duplicates");
+            }
+        }
 
         if (!empty($stats['errors'])) {
             $this->error("Errors encountered:");
