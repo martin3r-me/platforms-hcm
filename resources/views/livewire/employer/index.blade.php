@@ -230,5 +230,50 @@
             </div>
         </x-slot>
     </x-ui-modal>
+        
+        {{-- weitere Inhalte oben ... --}}
     </x-ui-page-container>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Schnellzugriff" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary" size="sm" wire:click="openCreateModal" class="w-full justify-start">
+                            @svg('heroicon-o-plus', 'w-4 h-4')
+                            <span class="ml-2">Neuer Arbeitgeber</span>
+                        </x-ui-button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Statistiken</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40 p-3 text-center">
+                            <div class="text-lg font-bold text-[var(--ui-primary)]">{{ $this->stats['total'] ?? 0 }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Gesamt</div>
+                        </div>
+                        <div class="bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40 p-3 text-center">
+                            <div class="text-lg font-bold text-green-600">{{ $this->stats['active'] ?? 0 }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Aktiv</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-xs font-semibold uppercase tracking-wide text-[var(--ui-muted)] mb-3">Letzte Aktivitäten</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>
