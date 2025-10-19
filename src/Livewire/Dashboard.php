@@ -65,6 +65,6 @@ class Dashboard extends Component
             'recentEmployees' => $recentEmployees,
             'employeesWithCompanyNumbers' => $employeesWithNumbers,
             'employeesWithoutCompanyNumbers' => $employeesWithoutNumbers,
-        ]);
+        ])->layout('platform::layouts.app');
     }
 }

@@ -103,6 +103,7 @@ class Show extends Component
 
     public function render()
     {
-        return view('hcm::livewire.employer.show');
+        return view('hcm::livewire.employer.show')
+            ->layout('platform::layouts.app');
     }
 }
