@@ -4,6 +4,7 @@ namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Platform\Organization\Traits\HasCostCenterLinksTrait;
 use Platform\Organization\Contracts\CostCenterLinkableInterface;
 use Symfony\Component\Uid\UuidV7;
@@ -68,6 +69,21 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     public function taxFactor(): BelongsTo
     {
         return $this->belongsTo(\Platform\Hcm\Models\HcmTaxFactor::class, 'tax_factor_id');
+    }
+
+    public function jobTitle(): BelongsTo
+    {
+        return $this->belongsTo(HcmJobTitle::class, 'job_title_id');
+    }
+
+    public function jobActivities(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            HcmJobActivity::class,
+            'hcm_employee_contract_activity_links',
+            'contract_id',
+            'job_activity_id'
+        );
     }
 
     // CostCenterLinkableInterface
