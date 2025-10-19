@@ -594,16 +594,25 @@ class BhgImportService
     private function analyzeContracts($data)
     {
         foreach ($data as $row) {
+            // Im Dry Run prüfen wir, ob der Mitarbeiter existiert ODER erstellt werden würde
             $employee = HcmEmployee::where('team_id', $this->teamId)
                 ->where('employee_number', $row['personalnummer'])
+                ->where('employer_id', $this->employerId)
                 ->first();
 
-            if ($employee) {
+            // Wenn Mitarbeiter nicht existiert, wird er im Import erstellt
+            $employeeWillBeCreated = !$employee;
+            
+            if ($employee || $employeeWillBeCreated) {
                 $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
                 
-                $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
-                    ->where('start_date', $startDate)
-                    ->first();
+                // Prüfen ob Vertrag bereits existiert (nur wenn Mitarbeiter bereits existiert)
+                $existingContract = null;
+                if ($employee) {
+                    $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
+                        ->where('start_date', $startDate)
+                        ->first();
+                }
                 
                 if (!$existingContract) {
                     $this->stats['contracts_created']++;
