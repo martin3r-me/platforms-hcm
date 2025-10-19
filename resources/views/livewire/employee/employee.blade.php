@@ -93,6 +93,79 @@
             @endif
         </x-ui-panel>
 
+        <!-- Verträge -->
+        <x-ui-panel title="Verträge" subtitle="Arbeitsverträge und Beschäftigungsverhältnisse">
+            @if($employee->contracts->count() > 0)
+                <div class="space-y-4">
+                    @foreach($employee->contracts as $contract)
+                        <div class="flex items-center justify-between p-4 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-[var(--ui-primary)] text-[var(--ui-on-primary)] rounded-lg flex items-center justify-center">
+                                    @svg('heroicon-o-document-text', 'w-5 h-5')
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-[var(--ui-secondary)]">
+                                        Vertrag #{{ $contract->id }}
+                                    </h4>
+                                    <div class="text-sm text-[var(--ui-muted)] space-y-1">
+                                        @if($contract->start_date)
+                                            <div><strong>Start:</strong> {{ \Carbon\Carbon::parse($contract->start_date)->format('d.m.Y') }}</div>
+                                        @endif
+                                        @if($contract->end_date)
+                                            <div><strong>Ende:</strong> {{ \Carbon\Carbon::parse($contract->end_date)->format('d.m.Y') }}</div>
+                                        @endif
+                                        @if($contract->jobTitle)
+                                            <div><strong>Stelle:</strong> {{ $contract->jobTitle->name }}</div>
+                                        @endif
+                                        @if($contract->cost_center)
+                                            <div><strong>Kostenstelle:</strong> {{ $contract->cost_center }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                @if($contract->end_date && \Carbon\Carbon::parse($contract->end_date)->isPast())
+                                    <x-ui-badge variant="danger" size="sm">Beendet</x-ui-badge>
+                                @elseif($contract->end_date && \Carbon\Carbon::parse($contract->end_date)->isFuture())
+                                    <x-ui-badge variant="warning" size="sm">Läuft aus</x-ui-badge>
+                                @else
+                                    <x-ui-badge variant="success" size="sm">Aktiv</x-ui-badge>
+                                @endif
+                                <x-ui-button 
+                                    size="sm" 
+                                    variant="secondary-outline" 
+                                    wire:click="editContract({{ $contract->id }})"
+                                >
+                                    @svg('heroicon-o-pencil', 'w-4 h-4')
+                                </x-ui-button>
+                            </div>
+                        </div>
+                        
+                        @if($contract->jobActivities->count() > 0)
+                            <div class="ml-14">
+                                <h5 class="text-sm font-medium text-[var(--ui-secondary)] mb-2">Tätigkeiten:</h5>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach($contract->jobActivities as $activity)
+                                        <x-ui-badge variant="secondary" size="sm">{{ $activity->name }}</x-ui-badge>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            @else
+                <div class="text-center py-8">
+                    @svg('heroicon-o-document-text', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
+                    <h4 class="text-lg font-medium text-[var(--ui-secondary)] mb-2">Keine Verträge vorhanden</h4>
+                    <p class="text-[var(--ui-muted)] mb-4">Dieser Mitarbeiter hat noch keine Arbeitsverträge.</p>
+                    <x-ui-button variant="secondary" wire:click="addContract">
+                        @svg('heroicon-o-plus', 'w-4 h-4')
+                        Neuen Vertrag erstellen
+                    </x-ui-button>
+                </div>
+            @endif
+        </x-ui-panel>
+
         <!-- Arbeitgeber-Informationen -->
         <x-ui-panel title="Arbeitgeber" subtitle="Zugewiesener Arbeitgeber und Vertragshinweise">
             @if($employee->employer)
@@ -341,6 +414,11 @@
                 <x-ui-button variant="secondary" size="sm" wire:click="addContact" class="w-full justify-start">
                     @svg('heroicon-o-user-plus', 'w-4 h-4')
                     <span class="ml-2">Kontakt erstellen</span>
+                </x-ui-button>
+                <div class="border-t border-[var(--ui-border)] my-3"></div>
+                <x-ui-button variant="primary" size="sm" wire:click="addContract" class="w-full justify-start">
+                    @svg('heroicon-o-document-plus', 'w-4 h-4')
+                    <span class="ml-2">Vertrag erstellen</span>
                 </x-ui-button>
             </div>
         </x-ui-page-sidebar>

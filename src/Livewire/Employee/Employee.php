@@ -45,7 +45,13 @@ class Employee extends Component
 
     public function mount(HcmEmployee $employee)
     {
-        $this->employee = $employee->load(['crmContactLinks.contact', 'employer', 'activities']);
+        $this->employee = $employee->load([
+            'crmContactLinks.contact', 
+            'employer', 
+            'activities',
+            'contracts.jobTitle',
+            'contracts.jobActivities'
+        ]);
         
         // Verfügbare Kontakte für Verknüpfung laden
         $this->loadAvailableContacts();
@@ -228,6 +234,18 @@ class Employee extends Component
     public function isDirty()
     {
         return $this->employee->isDirty();
+    }
+
+    public function addContract(): void
+    {
+        // TODO: Implement contract creation modal
+        session()->flash('message', 'Vertragserstellung wird implementiert.');
+    }
+
+    public function editContract($contractId): void
+    {
+        // TODO: Implement contract editing modal
+        session()->flash('message', 'Vertragsbearbeitung wird implementiert.');
     }
 
     public function render()
