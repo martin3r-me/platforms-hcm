@@ -385,12 +385,13 @@ class BhgImportService
                     ->first();
                 
                 if (!$existingLink) {
-                    CrmContactLink::create([
-                        'contact_id' => $contact->id,
-                        'linkable_id' => $employee->id,
-                        'linkable_type' => HcmEmployee::class,
-                        'team_id' => $this->teamId,
-                    ]);
+                    $link = new CrmContactLink();
+                    $link->contact_id = $contact->id;
+                    $link->linkable_id = $employee->id;
+                    $link->linkable_type = HcmEmployee::class;
+                    $link->team_id = $this->teamId;
+                    $link->created_by_user_id = $this->userId;
+                    $link->save();
                 }
             }
 
