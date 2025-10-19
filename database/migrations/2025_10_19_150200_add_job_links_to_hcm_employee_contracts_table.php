@@ -17,7 +17,8 @@ return new class extends Migration
             $table->foreignId('contract_id')->constrained('hcm_employee_contracts')->cascadeOnDelete();
             $table->foreignId('job_activity_id')->constrained('hcm_job_activities')->cascadeOnDelete();
             $table->timestamps();
-            $table->unique(['contract_id', 'job_activity_id']);
+            // Custom index name to avoid MySQL's 64-char limit
+            $table->unique(['contract_id', 'job_activity_id'], 'contract_activity_unique');
         });
     }
 
