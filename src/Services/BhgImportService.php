@@ -8,6 +8,7 @@ use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmJobActivity;
 use Platform\Hcm\Models\HcmEmployer;
+use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Models\CrmEmailAddress;
 use Platform\Crm\Models\CrmPhoneNumber;
@@ -29,6 +30,8 @@ class BhgImportService
         'employees_created' => 0,
         'job_titles_created' => 0,
         'job_activities_created' => 0,
+        'contracts_created' => 0,
+        'contract_activity_links_created' => 0,
         'crm_contacts_created' => 0,
         'crm_company_relations_created' => 0,
         'errors' => []
@@ -61,7 +64,10 @@ class BhgImportService
                 // 2. Import Employees
                 $this->importEmployees($data);
                 
-                // 3. Create CRM Contacts
+                // 3. Create Contracts
+                $this->createContracts($data);
+                
+                // 4. Create CRM Contacts
                 $this->createCrmContacts($data);
             });
 
@@ -201,6 +207,84 @@ class BhgImportService
             return $employee;
         } catch (\Exception $e) {
             $this->stats['errors'][] = "Employee {$row['personalnummer']}: " . $e->getMessage();
+        }
+    }
+
+    private function createContracts($data)
+    {
+        foreach ($data as $row) {
+            $this->createContract($row);
+        }
+    }
+
+    private function createContract($row)
+    {
+        try {
+            $employee = HcmEmployee::where('team_id', $this->teamId)
+                ->where('employee_number', $row['personalnummer'])
+                ->first();
+
+            if (!$employee) {
+                return;
+            }
+
+            // Prüfen ob Vertrag bereits existiert (basierend auf Eintrittsdatum)
+            $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
+            $endDate = $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null;
+            
+            $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
+                ->where('start_date', $startDate)
+                ->first();
+            
+            if ($existingContract) {
+                // Vertrag existiert bereits - überspringen
+                return;
+            }
+            
+            // Neuen Vertrag erstellen
+            $contract = HcmEmployeeContract::create([
+                'employee_id' => $employee->id,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'contract_type' => 'unbefristet', // Standard
+                'employment_status' => 'aktiv',
+                'cost_center' => $row['ks_schlüssel'], // Kostenstelle aus CSV
+                'is_active' => empty($row['austrittsdatum']),
+                'created_by_user_id' => $this->userId,
+                'team_id' => $this->teamId,
+            ]);
+
+            // Job Title verknüpfen
+            if (!empty($row['stellenbezeichnung'])) {
+                $jobTitle = HcmJobTitle::where('team_id', $this->teamId)
+                    ->where('name', $row['stellenbezeichnung'])
+                    ->first();
+                
+                if ($jobTitle) {
+                    $contract->update(['job_title_id' => $jobTitle->id]);
+                }
+            }
+
+            // Job Activities verknüpfen
+            if (!empty($row['tätigkeit'])) {
+                $jobActivity = HcmJobActivity::where('team_id', $this->teamId)
+                    ->where('name', $row['tätigkeit'])
+                    ->first();
+                
+                if ($jobActivity) {
+                    DB::table('hcm_employee_contract_activity_links')->insert([
+                        'contract_id' => $contract->id,
+                        'job_activity_id' => $jobActivity->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $this->stats['contract_activity_links_created']++;
+                }
+            }
+
+            $this->stats['contracts_created']++;
+        } catch (\Exception $e) {
+            $this->stats['errors'][] = "Contract {$row['personalnummer']}: " . $e->getMessage();
         }
     }
 

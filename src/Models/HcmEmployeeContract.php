@@ -30,7 +30,7 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'social_security_number',
         'department_id',
         'location_id',
-        'cost_center_id',
+        'cost_center',
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
