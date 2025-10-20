@@ -29,17 +29,20 @@ class PayrollTypeImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            // Gruppiere nach Lohnart-Nummer, um Duplikate zu vermeiden
-            $uniquePayrollTypes = [];
+            // Gruppiere nach LANR + Soll-Konto + Haben-Konto Kombination
+            $uniqueCombinations = [];
             foreach ($data as $row) {
-                $lanr = $row['lohnart_nr'];
-                if (!isset($uniquePayrollTypes[$lanr])) {
-                    $uniquePayrollTypes[$lanr] = $row;
+                $combinationKey = $row['lohnart_nr'] . '-' . 
+                    $row['soll_konto'] . '-' . 
+                    $row['haben_konto'];
+                
+                if (!isset($uniqueCombinations[$combinationKey])) {
+                    $uniqueCombinations[$combinationKey] = $row;
                 }
             }
             
-            DB::transaction(function () use ($uniquePayrollTypes) {
-                foreach ($uniquePayrollTypes as $row) {
+            DB::transaction(function () use ($uniqueCombinations) {
+                foreach ($uniqueCombinations as $row) {
                     $this->createPayrollType($row);
                 }
             });
