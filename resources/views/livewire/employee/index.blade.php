@@ -17,6 +17,8 @@
             <x-ui-table-header-cell compact="true" sortable="true" sortField="employee_number" :currentSort="$sortField" :sortDirection="$sortDirection">Mitarbeiternummer</x-ui-table-header-cell>
             <x-ui-table-header-cell compact="true">Verknüpfte Kontakte</x-ui-table-header-cell>
             <x-ui-table-header-cell compact="true">Unternehmen</x-ui-table-header-cell>
+            <x-ui-table-header-cell compact="true">Stelle</x-ui-table-header-cell>
+            <x-ui-table-header-cell compact="true">Tätigkeiten</x-ui-table-header-cell>
             <x-ui-table-header-cell compact="true" sortable="true" sortField="is_active" :currentSort="$sortField" :sortDirection="$sortDirection">Status</x-ui-table-header-cell>
             <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
         </x-ui-table-header>
@@ -53,6 +55,33 @@
                             <div class="text-xs d-flex items-center gap-1">
                                 @svg('heroicon-o-building-office', 'w-3 h-3 text-muted')
                                 {{ $employee->employer->display_name }}
+                            </div>
+                        @else
+                            <span class="text-xs text-muted">–</span>
+                        @endif
+                    </x-ui-table-cell>
+                    <x-ui-table-cell compact="true">
+                        @if($employee->contracts->isNotEmpty() && $employee->contracts->first()->jobTitle)
+                            <div class="text-xs">
+                                <div class="font-medium">{{ $employee->contracts->first()->jobTitle->name }}</div>
+                                <div class="text-muted">{{ $employee->contracts->first()->jobTitle->code }}</div>
+                            </div>
+                        @else
+                            <span class="text-xs text-muted">–</span>
+                        @endif
+                    </x-ui-table-cell>
+                    <x-ui-table-cell compact="true">
+                        @if($employee->contracts->isNotEmpty() && $employee->contracts->first()->jobActivities->isNotEmpty())
+                            <div class="space-y-1">
+                                @foreach($employee->contracts->first()->jobActivities->take(2) as $activity)
+                                    <div class="text-xs d-flex items-center gap-1">
+                                        @svg('heroicon-o-clipboard-document', 'w-3 h-3 text-muted')
+                                        {{ $activity->name }}
+                                    </div>
+                                @endforeach
+                                @if($employee->contracts->first()->jobActivities->count() > 2)
+                                    <div class="text-xs text-muted">+{{ $employee->contracts->first()->jobActivities->count() - 2 }} weitere</div>
+                                @endif
                             </div>
                         @else
                             <span class="text-xs text-muted">–</span>

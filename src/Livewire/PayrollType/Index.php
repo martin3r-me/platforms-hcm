@@ -5,6 +5,7 @@ namespace Platform\Hcm\Livewire\PayrollType;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Platform\Hcm\Models\HcmPayrollType;
+use Platform\Hcm\Services\PayrollTypeExportService;
 
 class Index extends Component
 {
@@ -110,6 +111,22 @@ class Index extends Component
 
         $this->modalShow = false;
         session()->flash('message', 'Lohnart gespeichert.');
+    }
+
+    public function exportCsv()
+    {
+        $exportService = new PayrollTypeExportService(auth()->user()->currentTeam->id);
+        $filepath = $exportService->exportToCsv();
+        
+        return response()->download(storage_path('app/public/' . $filepath));
+    }
+
+    public function exportPdf()
+    {
+        $exportService = new PayrollTypeExportService(auth()->user()->currentTeam->id);
+        $filepath = $exportService->exportToPdf();
+        
+        return response()->download(storage_path('app/public/' . $filepath));
     }
 
     public function render()

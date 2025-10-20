@@ -69,6 +69,7 @@ class HcmServiceProvider extends ServiceProvider
             $this->commands([
                 \Platform\Hcm\Console\Commands\ImportBhgData::class,
                 \Platform\Hcm\Console\Commands\ImportPayrollTypes::class,
+                \Platform\Hcm\Console\Commands\ExportPayrollTypes::class,
             ]);
         }
     }

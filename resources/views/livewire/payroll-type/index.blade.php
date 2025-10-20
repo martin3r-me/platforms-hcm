@@ -7,7 +7,17 @@
 
     <x-ui-page-container>
         <x-ui-panel title="Übersicht" subtitle="Lohnarten verwalten">
-            <div class="flex justify-end mb-4">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex gap-2">
+                    <a href="{{ route('hcm.payroll-types.export-csv') }}" 
+                       class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        @svg('heroicon-o-document-arrow-down', 'w-4 h-4') CSV Download
+                    </a>
+                    <a href="{{ route('hcm.payroll-types.export-pdf') }}" 
+                       class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        @svg('heroicon-o-document-text', 'w-4 h-4') PDF Download
+                    </a>
+                </div>
                 <x-ui-button variant="primary" size="sm" wire:click="openCreateModal">
                     @svg('heroicon-o-plus', 'w-4 h-4') Neu
                 </x-ui-button>

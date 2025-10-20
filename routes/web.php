@@ -31,6 +31,8 @@ Route::get('/job-activities', JobActivityIndex::class)->name('hcm.job-activities
 
 // Lohnarten
 Route::get('/payroll-types', PayrollTypeIndex::class)->name('hcm.payroll-types.index');
+Route::get('/payroll-types/export/csv', [PayrollTypeIndex::class, 'exportCsv'])->name('hcm.payroll-types.export-csv');
+Route::get('/payroll-types/export/pdf', [PayrollTypeIndex::class, 'exportPdf'])->name('hcm.payroll-types.export-pdf');
 
 // Arbeitgeber-spezifische Mitarbeiter
 Route::get('/employers/{employer}/employees', EmployeeIndex::class)->name('hcm.employers.employees.index');

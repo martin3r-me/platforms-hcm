@@ -35,7 +35,15 @@ class Index extends Component
     #[Computed]
     public function employees()
     {
-        $query = HcmEmployee::with(['employer', 'crmContactLinks.contact'])
+        $query = HcmEmployee::with([
+            'employer', 
+            'crmContactLinks.contact',
+            'contracts' => function ($q) {
+                $q->orderBy('start_date', 'desc')->limit(1);
+            },
+            'contracts.jobTitle',
+            'contracts.jobActivities'
+        ])
             ->forTeam(auth()->user()->currentTeam->id);
 
         if ($this->sortField === 'employee_number') {
