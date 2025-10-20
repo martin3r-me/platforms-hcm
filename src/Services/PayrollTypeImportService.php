@@ -63,9 +63,10 @@ class PayrollTypeImportService
                 $debitAccount = $this->findFinanceAccount($row['soll_konto']);
                 $creditAccount = $this->findFinanceAccount($row['haben_konto']);
                 
+                // Verwende Konto-Nummern statt IDs für bessere Gruppierung
                 $combinationKey = $row['lohnart_nr'] . '-' . 
-                    ($debitAccount?->id ?? 'null') . '-' . 
-                    ($creditAccount?->id ?? 'null');
+                    $row['soll_konto'] . '-' . 
+                    $row['haben_konto'];
                 
                 if (!isset($uniqueCombinations[$combinationKey])) {
                     $uniqueCombinations[$combinationKey] = $row;
@@ -129,11 +130,24 @@ class PayrollTypeImportService
             $creditAccount = $this->findFinanceAccount($row['haben_konto']);
 
             // Prüfe auf Duplikate - LANR + Soll-Konto + Haben-Konto müssen identisch sein
-            $existingPayrollType = HcmPayrollType::where('team_id', $this->teamId)
-                ->where('lanr', $row['lohnart_nr'])
-                ->where('debit_finance_account_id', $debitAccount?->id)
-                ->where('credit_finance_account_id', $creditAccount?->id)
-                ->first();
+            $query = HcmPayrollType::where('team_id', $this->teamId)
+                ->where('lanr', $row['lohnart_nr']);
+            
+            // Prüfe Soll-Konto
+            if ($debitAccount) {
+                $query->where('debit_finance_account_id', $debitAccount->id);
+            } else {
+                $query->whereNull('debit_finance_account_id');
+            }
+            
+            // Prüfe Haben-Konto
+            if ($creditAccount) {
+                $query->where('credit_finance_account_id', $creditAccount->id);
+            } else {
+                $query->whereNull('credit_finance_account_id');
+            }
+            
+            $existingPayrollType = $query->first();
 
             if ($existingPayrollType) {
                 $this->stats['payroll_types_updated']++;
@@ -343,32 +357,19 @@ class PayrollTypeImportService
         // Basis-Code ist die LANR
         $baseCode = $lohnartNr;
         
-        // Wenn verschiedene Konten, füge Konto-Identifikatoren hinzu
+        // Wenn Konten vorhanden, füge Suffix hinzu für Eindeutigkeit
         if ($debitAccount && $creditAccount) {
             $debitSuffix = substr($debitAccount->number, -2); // Letzte 2 Ziffern
             $creditSuffix = substr($creditAccount->number, -2); // Letzte 2 Ziffern
-            
-            // Prüfe ob bereits ein Code mit dieser Kombination existiert
-            $existingCount = HcmPayrollType::where('team_id', $this->teamId)
-                ->where('lanr', $lohnartNr)
-                ->where('debit_finance_account_id', $debitAccount->id)
-                ->where('credit_finance_account_id', $creditAccount->id)
-                ->count();
-            
-            if ($existingCount > 0) {
-                // Kombination existiert bereits, verwende einfachen Code
-                return $baseCode;
-            }
-            
-            // Prüfe ob andere Kombinationen mit gleicher LANR existieren
-            $otherCombinations = HcmPayrollType::where('team_id', $this->teamId)
-                ->where('lanr', $lohnartNr)
-                ->count();
-            
-            if ($otherCombinations > 0) {
-                // Es gibt bereits andere Kombinationen, füge Suffix hinzu
-                return $baseCode . '-' . $debitSuffix . $creditSuffix;
-            }
+            return $baseCode . '-' . $debitSuffix . $creditSuffix;
+        } elseif ($debitAccount) {
+            // Nur Soll-Konto
+            $debitSuffix = substr($debitAccount->number, -2);
+            return $baseCode . '-S' . $debitSuffix;
+        } elseif ($creditAccount) {
+            // Nur Haben-Konto
+            $creditSuffix = substr($creditAccount->number, -2);
+            return $baseCode . '-H' . $creditSuffix;
         }
         
         return $baseCode;
