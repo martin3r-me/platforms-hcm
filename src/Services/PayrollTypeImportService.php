@@ -359,22 +359,16 @@ class PayrollTypeImportService
     {
         // Basis-Code ist die LANR
         $baseCode = $lohnartNr;
-        
-        // Wenn Konten vorhanden, füge Suffix hinzu für Eindeutigkeit
+
+        // Verwende vollständige Kontonummern im Code, um Kollisionen sicher zu vermeiden
         if ($debitAccount && $creditAccount) {
-            $debitSuffix = substr($debitAccount->number, -2); // Letzte 2 Ziffern
-            $creditSuffix = substr($creditAccount->number, -2); // Letzte 2 Ziffern
-            return $baseCode . '-' . $debitSuffix . $creditSuffix;
+            return $baseCode . '-' . $debitAccount->number . '-' . $creditAccount->number;
         } elseif ($debitAccount) {
-            // Nur Soll-Konto
-            $debitSuffix = substr($debitAccount->number, -2);
-            return $baseCode . '-S' . $debitSuffix;
+            return $baseCode . '-S' . $debitAccount->number;
         } elseif ($creditAccount) {
-            // Nur Haben-Konto
-            $creditSuffix = substr($creditAccount->number, -2);
-            return $baseCode . '-H' . $creditSuffix;
+            return $baseCode . '-H' . $creditAccount->number;
         }
-        
+
         return $baseCode;
     }
 }
