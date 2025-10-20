@@ -19,6 +19,10 @@ class PayrollTypeExportService
         $filepath = 'exports/hcm/' . $filename;
 
         $csvData = $this->generateCsvContent($payrollTypes);
+        
+        // UTF-8 BOM hinzufügen für bessere Excel-Kompatibilität
+        $csvData = "\xEF\xBB\xBF" . $csvData;
+        
         Storage::disk('public')->put($filepath, $csvData);
 
         return $filepath;
@@ -67,10 +71,10 @@ class PayrollTypeExportService
         ];
 
         $csvData = [];
-        $csvData[] = implode(';', $headers);
+        $csvData[] = $this->escapeCsvRow($headers);
 
         foreach ($payrollTypes as $type) {
-            $csvData[] = implode(';', [
+            $csvData[] = $this->escapeCsvRow([
                 $type->code,
                 $type->lanr ?? '',
                 $type->name,
@@ -91,6 +95,30 @@ class PayrollTypeExportService
         }
 
         return implode("\n", $csvData);
+    }
+
+    private function escapeCsvRow(array $row): string
+    {
+        $escapedRow = [];
+        foreach ($row as $field) {
+            // Konvertiere zu String und trimme
+            $field = trim((string) $field);
+            
+            // Escape Anführungszeichen (verdoppeln)
+            $field = str_replace('"', '""', $field);
+            
+            // Wenn das Feld Semikolons, Anführungszeichen, Zeilenumbrüche oder sehr lang ist, in Anführungszeichen setzen
+            if (strpos($field, ';') !== false || 
+                strpos($field, '"') !== false || 
+                strpos($field, "\n") !== false || 
+                strpos($field, "\r") !== false ||
+                strlen($field) > 50) {
+                $escapedRow[] = '"' . $field . '"';
+            } else {
+                $escapedRow[] = $field;
+            }
+        }
+        return implode(';', $escapedRow);
     }
 
     private function generatePdfContent(Collection $payrollTypes): string
