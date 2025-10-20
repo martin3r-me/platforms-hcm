@@ -357,18 +357,25 @@ class PayrollTypeImportService
 
     private function generateUniqueCode(string $lohnartNr, $debitAccount, $creditAccount): string
     {
-        // Basis-Code ist die LANR
-        $baseCode = $lohnartNr;
-
-        // Verwende vollständige Kontonummern im Code, um Kollisionen sicher zu vermeiden
-        if ($debitAccount && $creditAccount) {
-            return $baseCode . '-' . $debitAccount->number . '-' . $creditAccount->number;
-        } elseif ($debitAccount) {
-            return $baseCode . '-S' . $debitAccount->number;
-        } elseif ($creditAccount) {
-            return $baseCode . '-H' . $creditAccount->number;
+        // Basis-Code aus LANR und verfügbaren Kontoinformationen (vollständige Nummern)
+        $parts = [$lohnartNr];
+        if ($debitAccount) {
+            $parts[] = 'D' . $debitAccount->number; // Debit/Soll
+        }
+        if ($creditAccount) {
+            $parts[] = 'C' . $creditAccount->number; // Credit/Haben
         }
 
-        return $baseCode;
+        $proposed = implode('-', $parts);
+
+        // Sicherstellen, dass der Code innerhalb des Teams eindeutig ist
+        $uniqueCode = $proposed;
+        $counter = 2;
+        while (\Platform\Hcm\Models\HcmPayrollType::where('team_id', $this->teamId)->where('code', $uniqueCode)->exists()) {
+            $uniqueCode = $proposed . '-v' . $counter;
+            $counter++;
+        }
+
+        return $uniqueCode;
     }
 }
