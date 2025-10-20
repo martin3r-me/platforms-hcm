@@ -50,6 +50,7 @@ class ImportPayrollTypes extends Command
             [
                 ['Total CSV Rows', $stats['total_rows'] ?? 0],
                 ['Unique LANR Numbers', $stats['unique_lanr_count'] ?? 0],
+                ['Unique Combinations (LANR+Konten)', $stats['unique_combinations'] ?? 0],
                 ['Duplicate Rows Skipped', $stats['duplicate_rows'] ?? 0],
                 ['Payroll Types Created', $stats['payroll_types_created']],
                 ['Payroll Types Updated', $stats['payroll_types_updated']],

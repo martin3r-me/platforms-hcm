@@ -14,6 +14,7 @@ class PayrollTypeImportService
     private array $stats = [
         'payroll_types_created' => 0,
         'payroll_types_updated' => 0,
+        'unique_combinations' => 0,
         'errors' => []
     ];
 
@@ -56,20 +57,27 @@ class PayrollTypeImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            // Gruppiere nach Lohnart-Nummer, um Duplikate zu vermeiden
-            $uniquePayrollTypes = [];
+            // Gruppiere nach LANR + Soll-Konto + Haben-Konto Kombination
+            $uniqueCombinations = [];
             foreach ($data as $row) {
-                $lanr = $row['lohnart_nr'];
-                if (!isset($uniquePayrollTypes[$lanr])) {
-                    $uniquePayrollTypes[$lanr] = $row;
+                $debitAccount = $this->findFinanceAccount($row['soll_konto']);
+                $creditAccount = $this->findFinanceAccount($row['haben_konto']);
+                
+                $combinationKey = $row['lohnart_nr'] . '-' . 
+                    ($debitAccount?->id ?? 'null') . '-' . 
+                    ($creditAccount?->id ?? 'null');
+                
+                if (!isset($uniqueCombinations[$combinationKey])) {
+                    $uniqueCombinations[$combinationKey] = $row;
                 }
             }
             
             $this->stats['total_rows'] = count($data);
-            $this->stats['unique_lanr_count'] = count($uniquePayrollTypes);
-            $this->stats['duplicate_rows'] = count($data) - count($uniquePayrollTypes);
+            $this->stats['unique_lanr_count'] = count(array_unique(array_column($data, 'lohnart_nr')));
+            $this->stats['unique_combinations'] = count($uniqueCombinations);
+            $this->stats['duplicate_rows'] = count($data) - count($uniqueCombinations);
             
-            foreach ($uniquePayrollTypes as $row) {
+            foreach ($uniqueCombinations as $row) {
                 $this->analyzePayrollType($row);
             }
 
@@ -116,8 +124,15 @@ class PayrollTypeImportService
     {
         try {
             // Prüfe ob Lohnart bereits existiert
+            // Finde Finance Accounts
+            $debitAccount = $this->findFinanceAccount($row['soll_konto']);
+            $creditAccount = $this->findFinanceAccount($row['haben_konto']);
+
+            // Prüfe auf Duplikate - LANR + Soll-Konto + Haben-Konto müssen identisch sein
             $existingPayrollType = HcmPayrollType::where('team_id', $this->teamId)
                 ->where('lanr', $row['lohnart_nr'])
+                ->where('debit_finance_account_id', $debitAccount?->id)
+                ->where('credit_finance_account_id', $creditAccount?->id)
                 ->first();
 
             if ($existingPayrollType) {
@@ -125,19 +140,18 @@ class PayrollTypeImportService
                 return;
             }
 
-            // Finde Finance Accounts
-            $debitAccount = $this->findFinanceAccount($row['soll_konto']);
-            $creditAccount = $this->findFinanceAccount($row['haben_konto']);
-
             // Bestimme Kategorie basierend auf Lohnart-Nummer
             $category = $this->determineCategory($row['lohnart_nr'], $row['lohnart']);
             
             // Bestimme Art (Zuschlag/Abzug)
             $additionDeduction = $this->determineAdditionDeduction($row['lohnart_nr'], $row['lohnart']);
 
+            // Generiere eindeutigen Code: LANR + Soll-Konto + Haben-Konto
+            $uniqueCode = $this->generateUniqueCode($row['lohnart_nr'], $debitAccount, $creditAccount);
+
             HcmPayrollType::create([
                 'team_id' => $this->teamId,
-                'code' => $row['lohnart_nr'],
+                'code' => $uniqueCode,
                 'lanr' => $row['lohnart_nr'],
                 'name' => $row['lohnart'],
                 'short_name' => $this->generateShortName($row['lohnart']),
@@ -322,5 +336,41 @@ class PayrollTypeImportService
         
         // UTF-8 sichere Verkürzung
         return mb_substr($short, 0, 20, 'UTF-8');
+    }
+
+    private function generateUniqueCode(string $lohnartNr, $debitAccount, $creditAccount): string
+    {
+        // Basis-Code ist die LANR
+        $baseCode = $lohnartNr;
+        
+        // Wenn verschiedene Konten, füge Konto-Identifikatoren hinzu
+        if ($debitAccount && $creditAccount) {
+            $debitSuffix = substr($debitAccount->number, -2); // Letzte 2 Ziffern
+            $creditSuffix = substr($creditAccount->number, -2); // Letzte 2 Ziffern
+            
+            // Prüfe ob bereits ein Code mit dieser Kombination existiert
+            $existingCount = HcmPayrollType::where('team_id', $this->teamId)
+                ->where('lanr', $lohnartNr)
+                ->where('debit_finance_account_id', $debitAccount->id)
+                ->where('credit_finance_account_id', $creditAccount->id)
+                ->count();
+            
+            if ($existingCount > 0) {
+                // Kombination existiert bereits, verwende einfachen Code
+                return $baseCode;
+            }
+            
+            // Prüfe ob andere Kombinationen mit gleicher LANR existieren
+            $otherCombinations = HcmPayrollType::where('team_id', $this->teamId)
+                ->where('lanr', $lohnartNr)
+                ->count();
+            
+            if ($otherCombinations > 0) {
+                // Es gibt bereits andere Kombinationen, füge Suffix hinzu
+                return $baseCode . '-' . $debitSuffix . $creditSuffix;
+            }
+        }
+        
+        return $baseCode;
     }
 }
