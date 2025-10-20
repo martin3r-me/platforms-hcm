@@ -27,11 +27,12 @@ class PayrollTypeExportService
     public function exportToPdf(): string
     {
         $payrollTypes = $this->getPayrollTypes();
-        $filename = 'lohnarten_export_' . date('Y-m-d_H-i-s') . '.pdf';
+        $filename = 'lohnarten_export_' . date('Y-m-d_H-i-s') . '.html';
         $filepath = 'exports/hcm/' . $filename;
 
-        $pdfContent = $this->generatePdfContent($payrollTypes);
-        Storage::disk('public')->put($filepath, $pdfContent);
+        // Erstelle HTML-Dokument das als PDF gedruckt werden kann
+        $html = $this->generatePdfHtml($payrollTypes);
+        Storage::disk('public')->put($filepath, $html);
 
         return $filepath;
     }
@@ -109,45 +110,98 @@ class PayrollTypeExportService
     <meta charset="UTF-8">
     <title>Lohnarten Export</title>
     <style>
-        body { font-family: Arial, sans-serif; font-size: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 4px; text-align: left; }
-        th { background-color: #f5f5f5; font-weight: bold; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .footer { margin-top: 20px; font-size: 8px; color: #666; }
+        @page { 
+            size: A4 landscape; 
+            margin: 1cm; 
+        }
+        body { 
+            font-family: Arial, sans-serif; 
+            font-size: 9px; 
+            line-height: 1.2;
+            margin: 0;
+            padding: 0;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 15px; 
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 18px; 
+            color: #333;
+        }
+        .header p { 
+            margin: 5px 0 0 0; 
+            font-size: 10px; 
+            color: #666;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px;
+            font-size: 8px;
+        }
+        th, td { 
+            border: 1px solid #333; 
+            padding: 3px; 
+            text-align: left; 
+            vertical-align: top;
+        }
+        th { 
+            background-color: #f0f0f0; 
+            font-weight: bold; 
+            font-size: 8px;
+        }
+        tr:nth-child(even) { 
+            background-color: #f9f9f9; 
+        }
+        .footer { 
+            margin-top: 15px; 
+            font-size: 8px; 
+            color: #666; 
+            text-align: center;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+        }
+        .code { font-weight: bold; }
+        .lanr { font-family: monospace; }
+        .status-active { color: green; font-weight: bold; }
+        .status-inactive { color: red; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>Lohnarten Export</h1>
-        <p>Exportiert am: ' . date('d.m.Y H:i') . '</p>
+        <p>Exportiert am: ' . date('d.m.Y H:i') . ' | Team: ' . $this->teamId . '</p>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>Code</th>
-                <th>LANR</th>
-                <th>Name</th>
-                <th>Kategorie</th>
-                <th>Art</th>
-                <th>Soll-Konto</th>
-                <th>Haben-Konto</th>
-                <th>Status</th>
+                <th width="8%">Code</th>
+                <th width="8%">LANR</th>
+                <th width="25%">Name</th>
+                <th width="12%">Kategorie</th>
+                <th width="8%">Art</th>
+                <th width="12%">Soll-Konto</th>
+                <th width="12%">Haben-Konto</th>
+                <th width="8%">Status</th>
             </tr>
         </thead>
         <tbody>';
 
         foreach ($payrollTypes as $type) {
             $html .= '<tr>
-                <td>' . htmlspecialchars($type->code) . '</td>
-                <td>' . htmlspecialchars($type->lanr ?? '') . '</td>
+                <td class="code">' . htmlspecialchars($type->code) . '</td>
+                <td class="lanr">' . htmlspecialchars($type->lanr ?? '') . '</td>
                 <td>' . htmlspecialchars($type->name) . '</td>
                 <td>' . htmlspecialchars($type->category ?? '') . '</td>
                 <td>' . htmlspecialchars($this->getAdditionDeductionLabel($type->addition_deduction)) . '</td>
                 <td>' . htmlspecialchars($type->debitFinanceAccount?->number ?? '') . '</td>
                 <td>' . htmlspecialchars($type->creditFinanceAccount?->number ?? '') . '</td>
-                <td>' . ($type->is_active ? 'Aktiv' : 'Inaktiv') . '</td>
+                <td class="' . ($type->is_active ? 'status-active' : 'status-inactive') . '">' . ($type->is_active ? 'Aktiv' : 'Inaktiv') . '</td>
             </tr>';
         }
 
@@ -155,7 +209,7 @@ class PayrollTypeExportService
     </table>
 
     <div class="footer">
-        <p>Insgesamt: ' . $payrollTypes->count() . ' Lohnarten</p>
+        <p>Insgesamt: ' . $payrollTypes->count() . ' Lohnarten | ' . date('d.m.Y H:i') . '</p>
     </div>
 </body>
 </html>';
