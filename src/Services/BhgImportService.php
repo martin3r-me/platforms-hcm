@@ -311,49 +311,22 @@ class BhgImportService
                 return;
             }
 
-            // Prüfen ob Vertrag bereits existiert (basierend auf Eintrittsdatum, Kostenstelle, Job Title und Job Activity)
+            // Prüfen ob Vertrag bereits existiert (Personalnummer + Eintrittsdatum + Tätigkeit + Job Title)
             $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
             $endDate = $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null;
             
-            // Job Title und Job Activity für Prüfung laden
-            $jobTitle = null;
-            $jobActivity = null;
-            
-            if (!empty($row['stellenbezeichnung'])) {
-                $jobTitle = HcmJobTitle::where('team_id', $this->teamId)
-                    ->where('name', $row['stellenbezeichnung'])
-                    ->first();
-            }
-            
-            if (!empty($row['tätigkeit'])) {
-                $jobActivity = HcmJobActivity::where('team_id', $this->teamId)
-                    ->where('name', $row['tätigkeit'])
-                    ->first();
-            }
-            
-            // Prüfen ob Vertrag mit gleichen Daten bereits existiert
+            // Einfache Prüfung: Gleicher Mitarbeiter, gleiches Startdatum, gleiche Tätigkeit, gleicher Job Title
             $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
                 ->where('start_date', $startDate)
-                ->where('cost_center', $row['ks_schlüssel'])
-                ->get()
-                ->filter(function ($contract) use ($jobTitle, $jobActivity) {
-                    // Prüfen ob Job Title übereinstimmt
-                    $hasMatchingTitle = true;
-                    if ($jobTitle) {
-                        $hasMatchingTitle = $contract->jobTitles()->where('job_title_id', $jobTitle->id)->exists();
-                    } else {
-                        $hasMatchingTitle = $contract->jobTitles()->count() === 0;
+                ->whereHas('jobActivities', function($query) use ($row) {
+                    if (!empty($row['tätigkeit'])) {
+                        $query->where('name', $row['tätigkeit']);
                     }
-                    
-                    // Prüfen ob Job Activity übereinstimmt
-                    $hasMatchingActivity = true;
-                    if ($jobActivity) {
-                        $hasMatchingActivity = $contract->jobActivities()->where('job_activity_id', $jobActivity->id)->exists();
-                    } else {
-                        $hasMatchingActivity = $contract->jobActivities()->count() === 0;
+                })
+                ->whereHas('jobTitles', function($query) use ($row) {
+                    if (!empty($row['stellenbezeichnung'])) {
+                        $query->where('name', $row['stellenbezeichnung']);
                     }
-                    
-                    return $hasMatchingTitle && $hasMatchingActivity;
                 })
                 ->first();
             
@@ -701,45 +674,17 @@ class BhgImportService
                 // Prüfen ob Vertrag bereits existiert (nur wenn Mitarbeiter bereits existiert)
                 $existingContract = null;
                 if ($employee) {
-                    // Job Title und Job Activity für Prüfung laden
-                    $jobTitle = null;
-                    $jobActivity = null;
-                    
-                    if (!empty($row['stellenbezeichnung'])) {
-                        $jobTitle = HcmJobTitle::where('team_id', $this->teamId)
-                            ->where('name', $row['stellenbezeichnung'])
-                            ->first();
-                    }
-                    
-                    if (!empty($row['tätigkeit'])) {
-                        $jobActivity = HcmJobActivity::where('team_id', $this->teamId)
-                            ->where('name', $row['tätigkeit'])
-                            ->first();
-                    }
-                    
-                    // Prüfen ob Vertrag mit gleichen Daten bereits existiert
                     $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
                         ->where('start_date', $startDate)
-                        ->where('cost_center', $row['ks_schlüssel'])
-                        ->get()
-                        ->filter(function ($contract) use ($jobTitle, $jobActivity) {
-                            // Prüfen ob Job Title übereinstimmt
-                            $hasMatchingTitle = true;
-                            if ($jobTitle) {
-                                $hasMatchingTitle = $contract->jobTitles()->where('job_title_id', $jobTitle->id)->exists();
-                            } else {
-                                $hasMatchingTitle = $contract->jobTitles()->count() === 0;
+                        ->whereHas('jobActivities', function($query) use ($row) {
+                            if (!empty($row['tätigkeit'])) {
+                                $query->where('name', $row['tätigkeit']);
                             }
-                            
-                            // Prüfen ob Job Activity übereinstimmt
-                            $hasMatchingActivity = true;
-                            if ($jobActivity) {
-                                $hasMatchingActivity = $contract->jobActivities()->where('job_activity_id', $jobActivity->id)->exists();
-                            } else {
-                                $hasMatchingActivity = $contract->jobActivities()->count() === 0;
+                        })
+                        ->whereHas('jobTitles', function($query) use ($row) {
+                            if (!empty($row['stellenbezeichnung'])) {
+                                $query->where('name', $row['stellenbezeichnung']);
                             }
-                            
-                            return $hasMatchingTitle && $hasMatchingActivity;
                         })
                         ->first();
                 }
