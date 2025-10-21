@@ -38,6 +38,7 @@ class BhgImportService
         'contract_title_links_created' => 0,
         'contract_activity_links_created' => 0,
         'crm_contacts_created' => 0,
+        'crm_contacts_updated' => 0,
         'crm_company_relations_created' => 0,
         'errors' => []
     ];
@@ -400,14 +401,30 @@ class BhgImportService
     private function createCrmContact($row)
     {
         try {
-            // Prüfen ob Kontakt bereits existiert (basierend auf Name)
-            $contact = CrmContact::where('team_id', $this->teamId)
-                ->where('first_name', $row['vorname'])
-                ->where('last_name', $row['nachname'])
+            // Mitarbeiter finden
+            $employee = HcmEmployee::where('team_id', $this->teamId)
+                ->where('employee_number', $row['personalnummer'])
                 ->first();
 
-            if (!$contact) {
-                // Create CRM Contact
+            if (!$employee) {
+                return;
+            }
+
+            // Prüfen ob Mitarbeiter bereits einen verknüpften CRM Kontakt hat
+            $existingLink = CrmContactLink::where('linkable_id', $employee->id)
+                ->where('linkable_type', HcmEmployee::class)
+                ->first();
+
+            if ($existingLink) {
+                // Mitarbeiter hat bereits einen CRM Kontakt - Update
+                $contact = $existingLink->contact;
+                $contact->update([
+                    'first_name' => $row['vorname'],
+                    'last_name' => $row['nachname'],
+                ]);
+                echo "DEBUG: Update CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
+            } else {
+                // Neuer CRM Kontakt erstellen
                 $contact = CrmContact::create([
                     'team_id' => $this->teamId,
                     'first_name' => $row['vorname'],
@@ -415,6 +432,7 @@ class BhgImportService
                     'is_active' => true,
                     'created_by_user_id' => $this->userId,
                 ]);
+                echo "DEBUG: Erstelle CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
             }
 
             // Add address
@@ -464,12 +482,26 @@ class BhgImportService
                 }
             }
 
+            // Create link between employee and CRM contact
+            if (!$existingLink) {
+                CrmContactLink::create([
+                    'contact_id' => $contact->id,
+                    'linkable_id' => $employee->id,
+                    'linkable_type' => HcmEmployee::class,
+                    'team_id' => $this->teamId,
+                ]);
+            }
+
             // Create company relation if employer exists
             if ($this->employerId) {
                 $this->createCompanyRelation($contact, $row);
             }
 
-            $this->stats['crm_contacts_created']++;
+            if (!$existingLink) {
+                $this->stats['crm_contacts_created']++;
+            } else {
+                $this->stats['crm_contacts_updated']++;
+            }
         } catch (\Exception $e) {
             $this->stats['errors'][] = "CRM Contact {$row['personalnummer']}: " . $e->getMessage();
         }

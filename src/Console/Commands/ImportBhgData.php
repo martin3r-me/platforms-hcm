@@ -65,6 +65,7 @@ class ImportBhgData extends Command
         $this->info("Contract title links that would be created: {$stats['contract_title_links_created']}");
         $this->info("Contract activity links that would be created: {$stats['contract_activity_links_created']}");
         $this->info("CRM contacts that would be created: {$stats['crm_contacts_created']}");
+        $this->info("CRM contacts that would be updated: {$stats['crm_contacts_updated']}");
         $this->info("CRM company relations that would be created: {$stats['crm_company_relations_created']}");
 
         if (!empty($stats['errors'])) {
