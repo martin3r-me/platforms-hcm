@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,7 +12,19 @@ return new class extends Migration
         // Remove direct foreign key from contracts table
         Schema::table('hcm_employee_contracts', function (Blueprint $table) {
             if (Schema::hasColumn('hcm_employee_contracts', 'job_title_id')) {
-                $table->dropConstrainedForeignId('job_title_id');
+                // Check if foreign key exists before dropping
+                $foreignKeys = DB::select("
+                    SELECT CONSTRAINT_NAME 
+                    FROM information_schema.KEY_COLUMN_USAGE 
+                    WHERE TABLE_NAME = 'hcm_employee_contracts' 
+                    AND COLUMN_NAME = 'job_title_id' 
+                    AND CONSTRAINT_NAME != 'PRIMARY'
+                ");
+                
+                if (!empty($foreignKeys)) {
+                    $table->dropForeign($foreignKeys[0]->CONSTRAINT_NAME);
+                }
+                $table->dropColumn('job_title_id');
             }
         });
 
