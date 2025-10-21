@@ -16,6 +16,7 @@ use Platform\Crm\Models\CrmPostalAddress;
 use Platform\Crm\Models\CrmContactLink;
 use Platform\Crm\Models\CrmContactRelation;
 use Platform\Crm\Models\CrmCompany;
+use Platform\Organization\Models\OrganizationCostCenter;
 use Carbon\Carbon;
 use libphonenumber\PhoneNumberUtil;
 use libphonenumber\PhoneNumberFormat;
@@ -28,9 +29,12 @@ class BhgImportService
     private $employerId;
     private $stats = [
         'employees_created' => 0,
+        'employees_updated' => 0,
         'job_titles_created' => 0,
         'job_activities_created' => 0,
+        'cost_centers_created' => 0,
         'contracts_created' => 0,
+        'contracts_updated' => 0,
         'contract_activity_links_created' => 0,
         'crm_contacts_created' => 0,
         'crm_company_relations_created' => 0,
@@ -58,16 +62,19 @@ class BhgImportService
             $data = $this->parseCsv($csvPath);
             
             DB::transaction(function () use ($data) {
-                // 1. Import Job Titles and Activities first
+                // 1. Import Cost Centers first
+                $this->importCostCenters($data);
+                
+                // 2. Import Job Titles and Activities
                 $this->importJobTitlesAndActivities($data);
                 
-                // 2. Import Employees
+                // 3. Import Employees
                 $this->importEmployees($data);
                 
-                // 3. Create Contracts
+                // 4. Create Contracts
                 $this->createContracts($data);
                 
-                // 4. Create CRM Contacts
+                // 5. Create CRM Contacts
                 $this->createCrmContacts($data);
             });
 
@@ -84,16 +91,19 @@ class BhgImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            // 1. Analyze Job Titles and Activities
+            // 1. Analyze Cost Centers
+            $this->analyzeCostCenters($data);
+            
+            // 2. Analyze Job Titles and Activities
             $this->analyzeJobTitlesAndActivities($data);
             
-            // 2. Analyze Employees
+            // 3. Analyze Employees
             $this->analyzeEmployees($data);
             
-            // 3. Analyze Contracts
+            // 4. Analyze Contracts
             $this->analyzeContracts($data);
             
-            // 4. Analyze CRM Contacts
+            // 5. Analyze CRM Contacts
             $this->analyzeCrmContacts($data);
             
             // 5. Test actual database operations (but rollback)
@@ -120,7 +130,7 @@ class BhgImportService
         fgetcsv($handle, 0, ';');
 
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            if (count($row) >= 17) {
+            if (count($row) >= 15) {
                 $data[] = [
                     'personalnummer' => $row[0],
                     'nachname' => $row[1],
@@ -133,18 +143,46 @@ class BhgImportService
                     'tätigkeit' => $row[8],
                     'stellenbezeichnung' => $row[9],
                     'ks_schlüssel' => $row[10],
-                    'eintrittsdatum' => $row[11],
-                    'austrittsdatum' => $row[12],
-                    'konzerneintritt' => $row[13],
-                    'telefon' => $row[14],
-                    'mobil' => $row[15],
-                    'email' => $row[16],
+                    'soll_stunden' => $row[11],
+                    'eintrittsdatum' => $row[12],
+                    'austrittsdatum' => $row[13],
+                    'konzerneintritt' => $row[14],
                 ];
             }
         }
 
         fclose($handle);
         return $data;
+    }
+
+    private function importCostCenters($data)
+    {
+        $costCenters = [];
+        
+        foreach ($data as $row) {
+            $ksSchlüssel = trim($row['ks_schlüssel']);
+            if (!empty($ksSchlüssel) && !in_array($ksSchlüssel, $costCenters)) {
+                $costCenters[] = $ksSchlüssel;
+                
+                // Prüfe ob Kostenstelle bereits existiert
+                $existingCostCenter = OrganizationCostCenter::where('team_id', $this->teamId)
+                    ->where('code', $ksSchlüssel)
+                    ->first();
+                
+                if (!$existingCostCenter) {
+                    OrganizationCostCenter::create([
+                        'code' => $ksSchlüssel,
+                        'name' => $ksSchlüssel, // Code und Name gleich halten
+                        'team_id' => $this->teamId,
+                        'user_id' => $this->userId,
+                        'description' => 'Importiert aus Mitarbeiterliste',
+                        'is_active' => true,
+                    ]);
+                    
+                    $this->stats['cost_centers_created']++;
+                }
+            }
+        }
     }
 
     private function importJobTitlesAndActivities($data)
@@ -230,7 +268,12 @@ class BhgImportService
                 ->first();
             
             if ($existingEmployee) {
-                // Mitarbeiter existiert bereits - überspringen
+                // Mitarbeiter existiert bereits - prüfen ob Status aktualisiert werden muss
+                $isActive = empty($row['austrittsdatum']);
+                if ($existingEmployee->is_active !== $isActive) {
+                    $existingEmployee->update(['is_active' => $isActive]);
+                    $this->stats['employees_updated']++;
+                }
                 return $existingEmployee;
             }
             
@@ -276,8 +319,21 @@ class BhgImportService
                 ->first();
             
             if ($existingContract) {
-                // Vertrag existiert bereits - überspringen
+                // Bestehender Vertrag - prüfen ob Austrittsdatum aktualisiert werden muss
+                if ($endDate && !$existingContract->end_date) {
+                    $existingContract->update([
+                        'end_date' => $endDate,
+                        'is_active' => false,
+                    ]);
+                    $this->stats['contracts_updated']++;
+                }
                 return;
+            }
+            
+            // Soll-Stunden aus CSV parsen (Komma zu Punkt konvertieren)
+            $sollStunden = null;
+            if (!empty($row['soll_stunden'])) {
+                $sollStunden = (float) str_replace(',', '.', $row['soll_stunden']);
             }
             
             // Neuen Vertrag erstellen
@@ -287,6 +343,7 @@ class BhgImportService
                 'end_date' => $endDate,
                 'contract_type' => 'unbefristet', // Standard
                 'employment_status' => 'aktiv',
+                'hours_per_month' => $sollStunden, // Soll-Stunden aus CSV
                 'cost_center' => $row['ks_schlüssel'], // Kostenstelle aus CSV
                 'is_active' => empty($row['austrittsdatum']),
                 'created_by_user_id' => $this->userId,
@@ -337,15 +394,10 @@ class BhgImportService
     private function createCrmContact($row)
     {
         try {
-            // Prüfen ob Kontakt bereits existiert (basierend auf Name und E-Mail)
+            // Prüfen ob Kontakt bereits existiert (basierend auf Name)
             $contact = CrmContact::where('team_id', $this->teamId)
                 ->where('first_name', $row['vorname'])
                 ->where('last_name', $row['nachname'])
-                ->when(!empty($row['email']), function($query) use ($row) {
-                    return $query->whereHas('emailAddresses', function($q) use ($row) {
-                        $q->where('email_address', $row['email']);
-                    });
-                })
                 ->first();
 
             if (!$contact) {
@@ -359,45 +411,28 @@ class BhgImportService
                 ]);
             }
 
-            // Add email if available and not already exists
-            if (!empty($row['email'])) {
-                $existingEmail = CrmEmailAddress::where('emailable_id', $contact->id)
-                    ->where('emailable_type', CrmContact::class)
-                    ->where('email_address', $row['email'])
+            // Add address
+            if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
+                // Prüfen ob Adresse bereits existiert
+                $existingAddress = CrmPostalAddress::where('addressable_id', $contact->id)
+                    ->where('addressable_type', CrmContact::class)
+                    ->where('street', $row['straße'])
+                    ->where('postal_code', $row['plz'])
+                    ->where('city', $row['ort'])
                     ->first();
                 
-                if (!$existingEmail) {
-                    CrmEmailAddress::create([
-                        'emailable_id' => $contact->id,
-                        'emailable_type' => CrmContact::class,
-                        'email_address' => $row['email'],
-                        'email_type_id' => 1, // Standard E-Mail-Typ
+                if (!$existingAddress) {
+                    CrmPostalAddress::create([
+                        'addressable_id' => $contact->id,
+                        'addressable_type' => CrmContact::class,
+                        'street' => $row['straße'],
+                        'postal_code' => $row['plz'],
+                        'city' => $row['ort'],
+                        'additional_info' => $row['adresszusatz'],
+                        'address_type_id' => 1, // Standard Adress-Typ
                         'is_primary' => true,
                     ]);
                 }
-            }
-
-            // Add phone numbers
-            if (!empty($row['telefon'])) {
-                $this->createPhoneNumber($contact, $row['telefon'], 1, true);
-            }
-
-            if (!empty($row['mobil'])) {
-                $this->createPhoneNumber($contact, $row['mobil'], 2, false);
-            }
-
-            // Add address
-            if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
-                CrmPostalAddress::create([
-                    'addressable_id' => $contact->id,
-                    'addressable_type' => CrmContact::class,
-                    'street' => $row['straße'],
-                    'postal_code' => $row['plz'],
-                    'city' => $row['ort'],
-                    'additional_info' => $row['adresszusatz'],
-                    'address_type_id' => 1, // Standard Adress-Typ
-                    'is_primary' => true,
-                ]);
             }
 
             // Link to employee if exists
@@ -630,6 +665,27 @@ class BhgImportService
         }
     }
 
+    private function analyzeCostCenters($data)
+    {
+        $costCenters = [];
+        
+        foreach ($data as $row) {
+            $ksSchlüssel = trim($row['ks_schlüssel']);
+            if (!empty($ksSchlüssel) && !in_array($ksSchlüssel, $costCenters)) {
+                $costCenters[] = $ksSchlüssel;
+                
+                // Prüfe ob Kostenstelle bereits existiert
+                $existingCostCenter = OrganizationCostCenter::where('team_id', $this->teamId)
+                    ->where('code', $ksSchlüssel)
+                    ->first();
+                
+                if (!$existingCostCenter) {
+                    $this->stats['cost_centers_created']++;
+                }
+            }
+        }
+    }
+
     private function analyzeCrmContacts($data)
     {
         foreach ($data as $row) {
@@ -637,11 +693,6 @@ class BhgImportService
             $contact = CrmContact::where('team_id', $this->teamId)
                 ->where('first_name', $row['vorname'])
                 ->where('last_name', $row['nachname'])
-                ->when(!empty($row['email']), function($query) use ($row) {
-                    return $query->whereHas('emailAddresses', function($q) use ($row) {
-                        $q->where('email_address', $row['email']);
-                    });
-                })
                 ->first();
 
             if (!$contact) {

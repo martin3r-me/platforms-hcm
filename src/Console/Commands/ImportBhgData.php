@@ -55,10 +55,13 @@ class ImportBhgData extends Command
             $this->info("Import completed!");
         }
         
+        $this->info("Cost centers that would be created: {$stats['cost_centers_created']}");
         $this->info("Employees that would be created: {$stats['employees_created']}");
+        $this->info("Employees that would be updated: {$stats['employees_updated']}");
         $this->info("Job titles that would be created: {$stats['job_titles_created']}");
         $this->info("Job activities that would be created: {$stats['job_activities_created']}");
         $this->info("Contracts that would be created: {$stats['contracts_created']}");
+        $this->info("Contracts that would be updated: {$stats['contracts_updated']}");
         $this->info("Contract activity links that would be created: {$stats['contract_activity_links_created']}");
         $this->info("CRM contacts that would be created: {$stats['crm_contacts_created']}");
         $this->info("CRM company relations that would be created: {$stats['crm_company_relations_created']}");
