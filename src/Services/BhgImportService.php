@@ -345,7 +345,7 @@ class BhgImportService
                 'contract_type' => 'unbefristet', // Standard
                 'employment_status' => 'aktiv',
                 'hours_per_month' => $sollStunden, // Soll-Stunden aus CSV
-                'cost_center' => $row['ks_schlüssel'], // Kostenstelle aus CSV
+                'cost_center' => $row['ks_schlüssel'], // Kostenstelle aus CSV (String-Referenz)
                 'is_active' => empty($row['austrittsdatum']),
                 'created_by_user_id' => $this->userId,
                 'team_id' => $this->teamId,
