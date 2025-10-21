@@ -492,19 +492,27 @@ class BhgImportService
                 ]);
             }
 
-            // Create contact relation
-            CrmContactRelation::create([
-                'contact_id' => $contact->id,
-                'company_id' => $company->id,
-                'relation_type_id' => 1, // Employee relation type
-                'position' => $row['stellenbezeichnung'] ?: $row['tätigkeit'],
-                'start_date' => $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null,
-                'end_date' => $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null,
-                'is_primary' => true,
-                'is_active' => empty($row['austrittsdatum']),
-            ]);
+            // Prüfen ob Relation bereits existiert
+            $existingRelation = CrmContactRelation::where('contact_id', $contact->id)
+                ->where('company_id', $company->id)
+                ->where('relation_type_id', 1)
+                ->first();
+            
+            if (!$existingRelation) {
+                // Create contact relation
+                CrmContactRelation::create([
+                    'contact_id' => $contact->id,
+                    'company_id' => $company->id,
+                    'relation_type_id' => 1, // Employee relation type
+                    'position' => $row['stellenbezeichnung'] ?: $row['tätigkeit'],
+                    'start_date' => $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null,
+                    'end_date' => $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null,
+                    'is_primary' => true,
+                    'is_active' => empty($row['austrittsdatum']),
+                ]);
 
-            $this->stats['crm_company_relations_created']++;
+                $this->stats['crm_company_relations_created']++;
+            }
         } catch (\Exception $e) {
             $this->stats['errors'][] = "Company relation {$row['personalnummer']}: " . $e->getMessage();
         }
