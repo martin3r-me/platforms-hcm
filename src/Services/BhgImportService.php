@@ -315,32 +315,8 @@ class BhgImportService
             $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
             $endDate = $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null;
             
-            // DEBUG: Ausgabe der Prüfkriterien
-            echo "DEBUG: Prüfe Vertrag für Mitarbeiter {$employee->id} (Personalnummer: {$row['personalnummer']})\n";
-            echo "DEBUG: Startdatum: " . ($startDate ? $startDate->format('Y-m-d') : 'NULL') . "\n";
-            echo "DEBUG: Tätigkeit: " . ($row['tätigkeit'] ?? 'LEER') . "\n";
-            echo "DEBUG: Job Title: " . ($row['stellenbezeichnung'] ?? 'LEER') . "\n";
-            
-            // Einfachste Prüfung: Gleicher Mitarbeiter + gleiches Startdatum
-            $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
-                ->where('start_date', $startDate)
-                ->first();
-            
-            // DEBUG: Ergebnis der Prüfung
-            if ($existingContract) {
-                echo "DEBUG: ✅ BESTEHENDER VERTRAG GEFUNDEN (ID: {$existingContract->id})\n";
-                echo "DEBUG: Bestehender Vertrag Startdatum: " . ($existingContract->start_date ? $existingContract->start_date->format('Y-m-d') : 'NULL') . "\n";
-                echo "DEBUG: Bestehender Vertrag Kostenstelle: " . ($existingContract->cost_center ?? 'NULL') . "\n";
-            } else {
-                echo "DEBUG: ❌ KEIN BESTEHENDER VERTRAG - NEUER VERTRAG WIRD ERSTELLT\n";
-                
-                // DEBUG: Zeige alle bestehenden Verträge für diesen Mitarbeiter
-                $allContracts = HcmEmployeeContract::where('employee_id', $employee->id)->get();
-                echo "DEBUG: Alle bestehenden Verträge für Mitarbeiter {$employee->id}:\n";
-                foreach ($allContracts as $contract) {
-                    echo "DEBUG:   - Vertrag ID: {$contract->id}, Start: " . ($contract->start_date ? $contract->start_date->format('Y-m-d') : 'NULL') . ", Kostenstelle: " . ($contract->cost_center ?? 'NULL') . "\n";
-                }
-            }
+            // Einfachste Prüfung: Nur Personalnummer (da jeder Mitarbeiter nur einen Vertrag haben sollte)
+            $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)->first();
             
             if ($existingContract) {
                 // Bestehender Vertrag - prüfen ob Austrittsdatum aktualisiert werden muss
@@ -686,9 +662,7 @@ class BhgImportService
                 // Prüfen ob Vertrag bereits existiert (nur wenn Mitarbeiter bereits existiert)
                 $existingContract = null;
                 if ($employee) {
-                    $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
-                        ->where('start_date', $startDate)
-                        ->first();
+                    $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)->first();
                 }
                 
                 if (!$existingContract) {
