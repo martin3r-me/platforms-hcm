@@ -35,6 +35,7 @@ class BhgImportService
         'cost_centers_created' => 0,
         'contracts_created' => 0,
         'contracts_updated' => 0,
+        'contract_title_links_created' => 0,
         'contract_activity_links_created' => 0,
         'crm_contacts_created' => 0,
         'crm_company_relations_created' => 0,
@@ -310,12 +311,13 @@ class BhgImportService
                 return;
             }
 
-            // Prüfen ob Vertrag bereits existiert (basierend auf Eintrittsdatum)
+            // Prüfen ob Vertrag bereits existiert (basierend auf Eintrittsdatum und Kostenstelle)
             $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
             $endDate = $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null;
             
             $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
                 ->where('start_date', $startDate)
+                ->where('cost_center', $row['ks_schlüssel'])
                 ->first();
             
             if ($existingContract) {
@@ -357,7 +359,13 @@ class BhgImportService
                     ->first();
                 
                 if ($jobTitle) {
-                    $contract->update(['job_title_id' => $jobTitle->id]);
+                    DB::table('hcm_employee_contract_title_links')->insert([
+                        'contract_id' => $contract->id,
+                        'job_title_id' => $jobTitle->id,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                    $this->stats['contract_title_links_created']++;
                 }
             }
 
@@ -658,11 +666,17 @@ class BhgImportService
                 if ($employee) {
                     $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
                         ->where('start_date', $startDate)
+                        ->where('cost_center', $row['ks_schlüssel'])
                         ->first();
                 }
                 
                 if (!$existingContract) {
                     $this->stats['contracts_created']++;
+                    
+                    // Count title links
+                    if (!empty($row['stellenbezeichnung'])) {
+                        $this->stats['contract_title_links_created']++;
+                    }
                     
                     // Count activity links
                     if (!empty($row['tätigkeit'])) {

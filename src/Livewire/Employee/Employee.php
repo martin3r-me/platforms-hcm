@@ -49,7 +49,7 @@ class Employee extends Component
             'crmContactLinks.contact', 
             'employer', 
             'activities',
-            'contracts.jobTitle',
+            'contracts.jobTitles',
             'contracts.jobActivities'
         ]);
         

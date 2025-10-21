@@ -71,9 +71,14 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         return $this->belongsTo(\Platform\Hcm\Models\HcmTaxFactor::class, 'tax_factor_id');
     }
 
-    public function jobTitle(): BelongsTo
+    public function jobTitles(): BelongsToMany
     {
-        return $this->belongsTo(HcmJobTitle::class, 'job_title_id');
+        return $this->belongsToMany(
+            HcmJobTitle::class,
+            'hcm_employee_contract_title_links',
+            'contract_id',
+            'job_title_id'
+        );
     }
 
     public function jobActivities(): BelongsToMany

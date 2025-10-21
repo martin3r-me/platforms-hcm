@@ -3,6 +3,7 @@
 namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Symfony\Component\Uid\UuidV7;
 
 class HcmJobTitle extends Model
@@ -27,6 +28,16 @@ class HcmJobTitle extends Model
                 $model->uuid = $uuid;
             }
         });
+    }
+
+    public function contracts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            HcmEmployeeContract::class,
+            'hcm_employee_contract_title_links',
+            'job_title_id',
+            'contract_id'
+        );
     }
 }
 

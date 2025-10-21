@@ -41,7 +41,7 @@ class Index extends Component
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc')->limit(1);
             },
-            'contracts.jobTitle',
+            'contracts.jobTitles',
             'contracts.jobActivities'
         ])
             ->forTeam(auth()->user()->currentTeam->id);

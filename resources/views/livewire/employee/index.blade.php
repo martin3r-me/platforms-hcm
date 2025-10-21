@@ -61,10 +61,10 @@
                         @endif
                     </x-ui-table-cell>
                     <x-ui-table-cell compact="true">
-                        @if($employee->contracts->isNotEmpty() && $employee->contracts->first()->jobTitle)
+                        @if($employee->contracts->isNotEmpty() && $employee->contracts->first()->jobTitles->isNotEmpty())
                             <div class="text-xs">
-                                <div class="font-medium">{{ $employee->contracts->first()->jobTitle->name }}</div>
-                                <div class="text-muted">{{ $employee->contracts->first()->jobTitle->code }}</div>
+                                <div class="font-medium">{{ $employee->contracts->first()->jobTitles->first()->name }}</div>
+                                <div class="text-muted">{{ $employee->contracts->first()->jobTitles->first()->code }}</div>
                             </div>
                         @else
                             <span class="text-xs text-muted">–</span>

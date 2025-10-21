@@ -114,8 +114,8 @@
                                         @if($contract->end_date)
                                             <div><strong>Ende:</strong> {{ \Carbon\Carbon::parse($contract->end_date)->format('d.m.Y') }}</div>
                                         @endif
-                                        @if($contract->jobTitle)
-                                            <div><strong>Stelle:</strong> {{ $contract->jobTitle->name }}</div>
+                                        @if($contract->jobTitles->count() > 0)
+                                            <div><strong>Stelle:</strong> {{ $contract->jobTitles->first()->name }}</div>
                                         @endif
                                         @if($contract->cost_center)
                                             <div><strong>Kostenstelle:</strong> {{ $contract->cost_center }}</div>
