@@ -311,23 +311,13 @@ class BhgImportService
                 return;
             }
 
-            // Prüfen ob Vertrag bereits existiert (Personalnummer + Eintrittsdatum + Tätigkeit + Job Title)
+            // Prüfen ob Vertrag bereits existiert (Personalnummer + Eintrittsdatum)
             $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
             $endDate = $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null;
             
-            // Einfache Prüfung: Gleicher Mitarbeiter, gleiches Startdatum, gleiche Tätigkeit, gleicher Job Title
+            // Einfachste Prüfung: Gleicher Mitarbeiter + gleiches Startdatum
             $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
                 ->where('start_date', $startDate)
-                ->whereHas('jobActivities', function($query) use ($row) {
-                    if (!empty($row['tätigkeit'])) {
-                        $query->where('name', $row['tätigkeit']);
-                    }
-                })
-                ->whereHas('jobTitles', function($query) use ($row) {
-                    if (!empty($row['stellenbezeichnung'])) {
-                        $query->where('name', $row['stellenbezeichnung']);
-                    }
-                })
                 ->first();
             
             if ($existingContract) {
@@ -676,16 +666,6 @@ class BhgImportService
                 if ($employee) {
                     $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)
                         ->where('start_date', $startDate)
-                        ->whereHas('jobActivities', function($query) use ($row) {
-                            if (!empty($row['tätigkeit'])) {
-                                $query->where('name', $row['tätigkeit']);
-                            }
-                        })
-                        ->whereHas('jobTitles', function($query) use ($row) {
-                            if (!empty($row['stellenbezeichnung'])) {
-                                $query->where('name', $row['stellenbezeichnung']);
-                            }
-                        })
                         ->first();
                 }
                 
