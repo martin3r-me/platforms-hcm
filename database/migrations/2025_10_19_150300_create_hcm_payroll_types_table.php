@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('hcm_payroll_types', function (Blueprint $t) {
+        if (!Schema::hasTable('hcm_payroll_types')) {
+            Schema::create('hcm_payroll_types', function (Blueprint $t) {
             $t->id();
 
             // Mandant / Team
@@ -56,7 +57,8 @@ return new class extends Migration {
             $t->index(['team_id','category','is_active']);
             $t->index(['team_id','lanr']);      // LANR-Index for German payroll types
             $t->index(['team_id','display_group','sort_order']); // Grouping & Sorting
-        });
+            });
+        }
     }
 
     public function down(): void
