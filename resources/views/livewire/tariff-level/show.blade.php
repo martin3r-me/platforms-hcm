@@ -95,7 +95,7 @@
                                         </div>
                                     </x-ui-table-cell>
                                     <x-ui-table-cell compact="true" align="right">
-                                        <div class="text-sm font-medium">{{ number_format($rate->amount, 2, ',', '.') }} €</div>
+                                        <div class="text-sm font-medium">{{ number_format((float)$rate->amount, 2, ',', '.') }} €</div>
                                     </x-ui-table-cell>
                                     <x-ui-table-cell compact="true">
                                         @if($rate->is_current)

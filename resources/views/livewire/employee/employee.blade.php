@@ -147,7 +147,7 @@
                                                 @if($contract->getCurrentTariffRate())
                                                     <div class="mt-1">
                                                         <span class="text-sm font-medium text-green-600">
-                                                            {{ number_format($contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
+                                                            {{ number_format((float)$contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
                                                         </span>
                                                         <span class="text-xs text-[var(--ui-muted)] ml-1">aktueller Tarifsatz</span>
                                                     </div>

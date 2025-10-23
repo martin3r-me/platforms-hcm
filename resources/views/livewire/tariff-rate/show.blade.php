@@ -1,11 +1,11 @@
 <x-ui-page>
     <x-slot name="navbar">
         <x-ui-page-navbar 
-            title="Tarifsatz: {{ number_format($tariffRate->amount, 2, ',', '.') }} €" 
+            title="Tarifsatz: {{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €" 
             icon="heroicon-o-banknotes"
             :breadcrumbs="[
                 ['title' => 'Tarifsätze', 'route' => 'hcm.tariff-rates.index'],
-                ['title' => number_format($tariffRate->amount, 2, ',', '.') . ' €']
+                ['title' => number_format((float)$tariffRate->amount, 2, ',', '.') . ' €']
             ]"
         />
     </x-slot>
@@ -22,7 +22,7 @@
                         <dt class="text-sm font-medium text-gray-500">Betrag</dt>
                         <dd class="mt-1 text-sm text-gray-900">
                             <span class="text-2xl font-bold text-green-600">
-                                {{ number_format($tariffRate->amount, 2, ',', '.') }} €
+                                {{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €
                             </span>
                         </dd>
                     </div>

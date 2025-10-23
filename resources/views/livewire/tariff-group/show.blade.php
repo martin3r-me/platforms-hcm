@@ -16,7 +16,7 @@
         <div class="py-8">
             <div class="max-w-full sm:px-6 lg:px-8">
                 <!-- Statistiken -->
-                <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <x-ui-dashboard-tile
                         title="Tarifstufen"
                         :count="$tariffGroup->tariffLevels->count()"
@@ -125,7 +125,7 @@
                                             </span>
                                         </x-ui-table-cell>
                                         <x-ui-table-cell compact="true">
-                                            <div class="font-medium text-green-600">{{ number_format($rate->amount, 2, ',', '.') }} €</div>
+                                            <div class="font-medium text-green-600">{{ number_format((float)$rate->amount, 2, ',', '.') }} €</div>
                                         </x-ui-table-cell>
                                         <x-ui-table-cell compact="true">
                                             <div class="text-sm text-gray-500">{{ $rate->valid_from ? \Carbon\Carbon::parse($rate->valid_from)->format('d.m.Y') : 'N/A' }}</div>

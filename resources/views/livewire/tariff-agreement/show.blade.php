@@ -24,7 +24,7 @@
         <div class="py-8">
             <div class="max-w-full sm:px-6 lg:px-8">
                 <!-- Statistiken -->
-                <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <x-ui-dashboard-tile
                         title="Tarifgruppen"
                         :count="$tariffAgreement->tariffGroups->count()"

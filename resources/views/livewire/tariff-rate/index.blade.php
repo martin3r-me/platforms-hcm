@@ -31,7 +31,7 @@
                         :href="route('hcm.tariff-rates.show', ['tariffRate' => $rate->id])"
                     >
                         <x-ui-table-cell compact="true">
-                            <div class="text-sm font-medium">{{ number_format($rate->amount, 2, ',', '.') }} €</div>
+                            <div class="text-sm font-medium">{{ number_format((float)$rate->amount, 2, ',', '.') }} €</div>
                         </x-ui-table-cell>
                         <x-ui-table-cell compact="true">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
