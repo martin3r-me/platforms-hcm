@@ -143,7 +143,7 @@
                 placeholder="Kurzer Name (optional)"
             />
             
-            <x-ui-textarea 
+            <x-ui-input-textarea 
                 wire:model="description" 
                 label="Beschreibung"
                 placeholder="Beschreibung der Krankenkasse"
@@ -170,14 +170,14 @@
                 placeholder="kontakt@krankenkasse.de"
             />
             
-            <x-ui-textarea 
+            <x-ui-input-textarea 
                 wire:model="address" 
                 label="Adresse"
                 placeholder="Vollständige Adresse"
                 rows="3"
             />
             
-            <x-ui-checkbox 
+            <x-ui-input-checkbox 
                 wire:model="is_active" 
                 label="Aktiv"
             />
@@ -217,7 +217,7 @@
                 placeholder="Kurzer Name (optional)"
             />
             
-            <x-ui-textarea 
+            <x-ui-input-textarea 
                 wire:model="description" 
                 label="Beschreibung"
                 placeholder="Beschreibung der Krankenkasse"
@@ -244,14 +244,14 @@
                 placeholder="kontakt@krankenkasse.de"
             />
             
-            <x-ui-textarea 
+            <x-ui-input-textarea 
                 wire:model="address" 
                 label="Adresse"
                 placeholder="Vollständige Adresse"
                 rows="3"
             />
             
-            <x-ui-checkbox 
+            <x-ui-input-checkbox 
                 wire:model="is_active" 
                 label="Aktiv"
             />

@@ -181,7 +181,7 @@
                 
                 @if($editMode)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <x-ui-checkbox 
+                        <x-ui-input-checkbox 
                             name="is_above_tariff" 
                             label="Übertariflich bezahlen"
                             wire:model="is_above_tariff"
@@ -196,7 +196,7 @@
                                 step="0.01"
                             />
                             
-                            <x-ui-textarea 
+                            <x-ui-input-textarea 
                                 name="above_tariff_reason" 
                                 label="Grund"
                                 wire:model="above_tariff_reason"
@@ -241,7 +241,7 @@
                 
                 @if($editMode)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <x-ui-checkbox 
+                        <x-ui-input-checkbox 
                             name="is_minimum_wage" 
                             label="Mindestlohn bezahlen"
                             wire:model="is_minimum_wage"
@@ -264,7 +264,7 @@
                                 step="0.1"
                             />
                             
-                            <x-ui-textarea 
+                            <x-ui-input-textarea 
                                 name="minimum_wage_notes" 
                                 label="Notizen"
                                 wire:model="minimum_wage_notes"
