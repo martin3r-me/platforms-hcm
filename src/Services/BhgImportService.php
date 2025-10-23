@@ -492,6 +492,19 @@ class BhgImportService
                 ]);
             }
 
+            // Add email address if provided
+            if (!empty($row['email'])) {
+                $this->createEmailAddress($contact, $row['email'], 1, true);
+            }
+
+            // Add phone numbers if provided
+            if (!empty($row['telefon'])) {
+                $this->createPhoneNumber($contact, $row['telefon'], 1, true);
+            }
+            if (!empty($row['mobil'])) {
+                $this->createPhoneNumber($contact, $row['mobil'], 2, false);
+            }
+
             // Create company relation if employer exists
             if ($this->employerId) {
                 $this->createCompanyRelation($contact, $row);
@@ -619,6 +632,47 @@ class BhgImportService
                 'phone_type_id' => $phoneTypeId,
                 'is_primary' => $isPrimary,
             ]);
+        }
+    }
+
+    private function createEmailAddress($contact, $emailInput, $emailTypeId = 1, $isPrimary = false)
+    {
+        try {
+            // Prüfen ob Email bereits existiert
+            $existingEmail = CrmEmailAddress::where('emailable_id', $contact->id)
+                ->where('emailable_type', CrmContact::class)
+                ->where('email_address', $emailInput)
+                ->where('email_type_id', $emailTypeId)
+                ->first();
+            
+            if ($existingEmail) {
+                return; // Email bereits vorhanden
+            }
+            
+            // Email validieren
+            if (!filter_var($emailInput, FILTER_VALIDATE_EMAIL)) {
+                return; // Ungültige Email-Adresse
+            }
+            
+            // Wenn als primär markiert, alle anderen als nicht-primär setzen
+            if ($isPrimary) {
+                CrmEmailAddress::where('emailable_id', $contact->id)
+                    ->where('emailable_type', CrmContact::class)
+                    ->update(['is_primary' => false]);
+            }
+            
+            CrmEmailAddress::create([
+                'emailable_id' => $contact->id,
+                'emailable_type' => CrmContact::class,
+                'email_address' => $emailInput,
+                'email_type_id' => $emailTypeId,
+                'is_primary' => $isPrimary,
+                'is_active' => true,
+            ]);
+            
+        } catch (\Exception $e) {
+            // Fehler beim Erstellen der Email-Adresse ignorieren
+            $this->stats['errors'][] = "Email {$emailInput}: " . $e->getMessage();
         }
     }
 
