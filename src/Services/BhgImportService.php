@@ -500,8 +500,7 @@ class BhgImportService
 
             // Add email address if provided (nur wenn nicht bereits vorhanden)
             if (!empty($row['email']) && trim($row['email']) !== '') {
-                $existingEmail = CrmEmailAddress::where('emailable_id', $contact->id)
-                    ->where('emailable_type', CrmContact::class)
+                $existingEmail = $contact->emailAddresses()
                     ->where('email_address', trim($row['email']))
                     ->first();
                 
@@ -515,8 +514,7 @@ class BhgImportService
 
             // Add phone numbers if provided (nur wenn nicht bereits vorhanden)
             if (!empty($row['telefon']) && trim($row['telefon']) !== '') {
-                $existingPhone = CrmPhoneNumber::where('phoneable_id', $contact->id)
-                    ->where('phoneable_type', CrmContact::class)
+                $existingPhone = $contact->phoneNumbers()
                     ->where('raw_input', trim($row['telefon']))
                     ->first();
                 
@@ -529,8 +527,7 @@ class BhgImportService
             }
             
             if (!empty($row['mobil']) && trim($row['mobil']) !== '') {
-                $existingMobile = CrmPhoneNumber::where('phoneable_id', $contact->id)
-                    ->where('phoneable_type', CrmContact::class)
+                $existingMobile = $contact->phoneNumbers()
                     ->where('raw_input', trim($row['mobil']))
                     ->first();
                 
@@ -638,22 +635,18 @@ class BhgImportService
                 'is_primary' => $isPrimary,
             ];
             
-            CrmPhoneNumber::create($phoneData);
+            $contact->phoneNumbers()->create($phoneData);
             
         } catch (NumberParseException $e) {
             // Fallback: Nur raw_input speichern bei Parsing-Fehlern
-            CrmPhoneNumber::create([
-                'phoneable_id' => $contact->id,
-                'phoneable_type' => CrmContact::class,
+            $contact->phoneNumbers()->create([
                 'raw_input' => $phoneInput,
                 'phone_type_id' => $phoneTypeId,
                 'is_primary' => $isPrimary,
             ]);
         } catch (\Exception $e) {
             // Fallback: Nur raw_input speichern bei anderen Fehlern
-            CrmPhoneNumber::create([
-                'phoneable_id' => $contact->id,
-                'phoneable_type' => CrmContact::class,
+            $contact->phoneNumbers()->create([
                 'raw_input' => $phoneInput,
                 'phone_type_id' => $phoneTypeId,
                 'is_primary' => $isPrimary,
@@ -677,9 +670,7 @@ class BhgImportService
                     ->update(['is_primary' => false]);
             }
             
-            CrmEmailAddress::create([
-                'emailable_id' => $contact->id,
-                'emailable_type' => CrmContact::class,
+            $contact->emailAddresses()->create([
                 'email_address' => $emailInput,
                 'email_type_id' => $emailTypeId,
                 'is_primary' => $isPrimary,
