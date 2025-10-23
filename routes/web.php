@@ -32,6 +32,9 @@ Route::get('/health-insurance-companies/{healthInsuranceCompany}', \Platform\Hcm
 // Tarife / Steuerklassen
 Route::get('/tariffs', TariffIndex::class)->name('hcm.tariffs.index');
 
+// Tarif-Übersicht
+Route::get('/tariff-overview', \Platform\Hcm\Livewire\Tariff\Overview::class)->name('hcm.tariff-overview');
+
 // Tarifverträge
 Route::get('/tariff-agreements', \Platform\Hcm\Livewire\TariffAgreement\Index::class)->name('hcm.tariff-agreements.index');
 Route::get('/tariff-agreements/{tariffAgreement}', \Platform\Hcm\Livewire\TariffAgreement\Show::class)->name('hcm.tariff-agreements.show');

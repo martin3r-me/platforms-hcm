@@ -27,6 +27,10 @@
 
     {{-- Abschnitt: Tarife --}}
     <x-ui-sidebar-list label="Tarife">
+        <x-ui-sidebar-item :href="route('hcm.tariff-overview')">
+            @svg('heroicon-o-scale', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarif-Übersicht</span>
+        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('hcm.tariff-agreements.index')">
             @svg('heroicon-o-document-text', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Tarifverträge</span>
