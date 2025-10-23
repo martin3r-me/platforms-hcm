@@ -12,14 +12,8 @@ class Index extends Component
 
     public $search = '';
     public $perPage = 15;
-    public $sortField = 'name';
+    public $sortField = 'code';
     public $sortDirection = 'asc';
-
-    protected $queryString = [
-        'search' => ['except' => ''],
-        'sortField' => ['except' => 'name'],
-        'sortDirection' => ['except' => 'asc'],
-    ];
 
     public function sortBy($field)
     {
@@ -31,20 +25,28 @@ class Index extends Component
         }
     }
 
-    public function render()
+    public function getTariffLevelsProperty()
     {
-        $tariffLevels = HcmTariffLevel::with(['tariffGroup.tariffAgreement'])
+        return HcmTariffLevel::query()
+            ->with(['tariffGroup.tariffAgreement'])
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
-                    $q->where('name', 'like', '%' . $this->search . '%')
-                      ->orWhere('code', 'like', '%' . $this->search . '%');
+                    $q->where('code', 'like', '%' . $this->search . '%')
+                      ->orWhere('name', 'like', '%' . $this->search . '%')
+                      ->orWhereHas('tariffGroup', function ($groupQuery) {
+                          $groupQuery->where('code', 'like', '%' . $this->search . '%')
+                                    ->orWhere('name', 'like', '%' . $this->search . '%');
+                      });
                 });
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
+    }
 
+    public function render()
+    {
         return view('hcm::livewire.tariff-level.index', [
-            'tariffLevels' => $tariffLevels,
-        ])->layout('platform::layouts.app');
+            'tariffLevels' => $this->tariffLevels
+        ]);
     }
 }

@@ -1,139 +1,123 @@
-<div>
-    <div class="mb-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ $tariffLevel->name }}</h1>
-                <p class="mt-1 text-sm text-gray-500">Tarifstufe: {{ $tariffLevel->code }}</p>
-            </div>
-            <div class="flex items-center space-x-3">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
-                    @svg('heroicons.bars-3', 'w-4 h-4 mr-1')
-                    {{ $tariffLevel->code }}
-                </span>
-            </div>
-        </div>
-    </div>
+<x-ui-page>
+    <x-slot name="navbar">
+        <x-ui-page-navbar 
+            title="{{ $tariffLevel->name }}" 
+            icon="heroicon-o-bars-3"
+            :breadcrumbs="[
+                ['title' => 'Tarifstufen', 'route' => 'hcm.tariff-levels.index'],
+                ['title' => $tariffLevel->name]
+            ]"
+        />
+    </x-slot>
 
-    <!-- Progression Info -->
-    <div class="mb-8">
-        <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Progression</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Progression (Monate)</p>
-                    <p class="text-2xl font-semibold text-gray-900">
-                        @if($tariffLevel->progression_months === 999)
-                            <span class="text-red-600">Endstufe</span>
-                        @else
-                            {{ $tariffLevel->progression_months }} Monate
-                        @endif
-                    </p>
-                </div>
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Status</p>
-                    <p class="text-lg font-semibold">
-                        @if($tariffLevel->progression_months === 999)
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                                @svg('heroicons.x-circle', 'w-4 h-4 mr-1')
-                                Endstufe
+    <x-ui-page-container>
+        <!-- Tariff Level Details -->
+        <div class="bg-white shadow rounded-lg mb-6">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Tarifstufe Details</h3>
+            </div>
+            <div class="px-6 py-4">
+                <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Code</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ $tariffLevel->code }}
                             </span>
-                        @else
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                                @svg('heroicons.arrow-right', 'w-4 h-4 mr-1')
-                                Progression möglich
-                            </span>
-                        @endif
-                    </p>
-                </div>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Name</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $tariffLevel->name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Tarifgruppe</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            <a href="{{ route('hcm.tariff-groups.show', $tariffLevel->tariffGroup) }}" 
+                               class="text-indigo-600 hover:text-indigo-900">
+                                {{ $tariffLevel->tariffGroup->name }}
+                            </a>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Tarifvertrag</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            <a href="{{ route('hcm.tariff-agreements.show', $tariffLevel->tariffGroup->tariffAgreement) }}" 
+                               class="text-indigo-600 hover:text-indigo-900">
+                                {{ $tariffLevel->tariffGroup->tariffAgreement->name }}
+                            </a>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Progression (Monate)</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            @if($tariffLevel->progression_months)
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    {{ $tariffLevel->progression_months }} Monate
+                                </span>
+                            @else
+                                <span class="text-sm text-gray-400">Endstufe (keine Progression)</span>
+                            @endif
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Erstellt</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $tariffLevel->created_at->format('d.m.Y H:i') }}</dd>
+                    </div>
+                </dl>
             </div>
         </div>
-    </div>
 
-    <!-- Tariff Group Info -->
-    <div class="mb-8">
-        <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Tarifgruppe</h3>
-            <div class="flex items-center space-x-4">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Gruppe</p>
-                    <p class="text-lg font-semibold text-gray-900">{{ $tariffLevel->tariffGroup->name }}</p>
-                </div>
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Code</p>
-                    <p class="text-lg font-semibold text-gray-900">{{ $tariffLevel->tariffGroup->code }}</p>
-                </div>
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Tarifvertrag</p>
-                    <p class="text-lg font-semibold text-gray-900">{{ $tariffLevel->tariffGroup->tariffAgreement->name ?? 'N/A' }}</p>
-                </div>
+        <!-- Tariff Rates -->
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-medium text-gray-900">Tarifsätze</h3>
             </div>
-        </div>
-    </div>
-
-    <!-- Tariff Rates -->
-    <div class="mb-8">
-        <h2 class="text-lg font-medium text-gray-900 mb-4">Tarifsätze</h2>
-        <div class="bg-white shadow overflow-hidden sm:rounded-md">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Betrag
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Gültig von
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Gültig bis
-                            </th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        @forelse($tariffLevel->tariffRates as $rate)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    <span class="text-lg font-bold text-green-600">{{ number_format($rate->amount, 2, ',', '.') }} €</span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $rate->valid_from ? \Carbon\Carbon::parse($rate->valid_from)->format('d.m.Y') : 'N/A' }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {{ $rate->valid_to ? \Carbon\Carbon::parse($rate->valid_to)->format('d.m.Y') : 'Unbegrenzt' }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    @php
-                                        $now = now();
-                                        $validFrom = $rate->valid_from ? \Carbon\Carbon::parse($rate->valid_from) : null;
-                                        $validTo = $rate->valid_to ? \Carbon\Carbon::parse($rate->valid_to) : null;
-                                        
-                                        $isValid = (!$validFrom || $validFrom <= $now) && (!$validTo || $validTo >= $now);
-                                    @endphp
-                                    
-                                    @if($isValid)
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Aktiv
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Inaktiv
-                                        </span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">
-                                    Keine Tarifsätze gefunden
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                @if($tariffLevel->tariffRates->count() > 0)
+                    <x-ui-table compact="true">
+                        <x-ui-table-header>
+                            <x-ui-table-header-cell compact="true">Gültig ab</x-ui-table-header-cell>
+                            <x-ui-table-header-cell compact="true">Gültig bis</x-ui-table-header-cell>
+                            <x-ui-table-header-cell compact="true" align="right">Betrag (€)</x-ui-table-header-cell>
+                            <x-ui-table-header-cell compact="true">Status</x-ui-table-header-cell>
+                        </x-ui-table-header>
+                        
+                        <x-ui-table-body>
+                            @foreach($tariffLevel->tariffRates as $rate)
+                                <x-ui-table-row compact="true">
+                                    <x-ui-table-cell compact="true">
+                                        <div class="text-sm font-medium">{{ $rate->valid_from->format('d.m.Y') }}</div>
+                                    </x-ui-table-cell>
+                                    <x-ui-table-cell compact="true">
+                                        <div class="text-sm text-gray-500">
+                                            {{ $rate->valid_until ? $rate->valid_until->format('d.m.Y') : 'Unbegrenzt' }}
+                                        </div>
+                                    </x-ui-table-cell>
+                                    <x-ui-table-cell compact="true" align="right">
+                                        <div class="text-sm font-medium">{{ number_format($rate->amount, 2, ',', '.') }} €</div>
+                                    </x-ui-table-cell>
+                                    <x-ui-table-cell compact="true">
+                                        @if($rate->is_current)
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                Aktuell
+                                            </span>
+                                        @else
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                Historisch
+                                            </span>
+                                        @endif
+                                    </x-ui-table-cell>
+                                </x-ui-table-row>
+                            @endforeach
+                        </x-ui-table-body>
+                    </x-ui-table>
+                @else
+                    <div class="px-6 py-4 text-center text-sm text-gray-500">
+                        Keine Tarifsätze für diese Stufe vorhanden
+                    </div>
+                @endif
             </div>
         </div>
-    </div>
-</div>
+    </x-ui-page-container>
+</x-ui-page>

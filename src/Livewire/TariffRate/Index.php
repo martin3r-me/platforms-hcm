@@ -15,12 +15,6 @@ class Index extends Component
     public $sortField = 'amount';
     public $sortDirection = 'desc';
 
-    protected $queryString = [
-        'search' => ['except' => ''],
-        'sortField' => ['except' => 'amount'],
-        'sortDirection' => ['except' => 'desc'],
-    ];
-
     public function sortBy($field)
     {
         if ($this->sortField === $field) {
@@ -31,26 +25,31 @@ class Index extends Component
         }
     }
 
-    public function render()
+    public function getTariffRatesProperty()
     {
-        $tariffRates = HcmTariffRate::with(['tariffGroup.tariffAgreement', 'tariffLevel'])
+        return HcmTariffRate::query()
+            ->with(['tariffLevel.tariffGroup.tariffAgreement'])
             ->when($this->search, function ($query) {
                 $query->where(function ($q) {
-                    $q->whereHas('tariffGroup', function ($groupQuery) {
-                        $groupQuery->where('name', 'like', '%' . $this->search . '%')
-                                  ->orWhere('code', 'like', '%' . $this->search . '%');
-                    })
-                    ->orWhereHas('tariffLevel', function ($levelQuery) {
-                        $levelQuery->where('name', 'like', '%' . $this->search . '%')
-                                  ->orWhere('code', 'like', '%' . $this->search . '%');
-                    });
+                    $q->where('amount', 'like', '%' . $this->search . '%')
+                      ->orWhereHas('tariffLevel', function ($levelQuery) {
+                          $levelQuery->where('code', 'like', '%' . $this->search . '%')
+                                    ->orWhere('name', 'like', '%' . $this->search . '%')
+                                    ->orWhereHas('tariffGroup', function ($groupQuery) {
+                                        $groupQuery->where('code', 'like', '%' . $this->search . '%')
+                                                  ->orWhere('name', 'like', '%' . $this->search . '%');
+                                    });
+                      });
                 });
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
+    }
 
+    public function render()
+    {
         return view('hcm::livewire.tariff-rate.index', [
-            'tariffRates' => $tariffRates,
-        ])->layout('platform::layouts.app');
+            'tariffRates' => $this->tariffRates
+        ]);
     }
 }

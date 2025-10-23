@@ -11,13 +11,13 @@ class Show extends Component
 
     public function mount(HcmTariffRate $tariffRate)
     {
-        $this->tariffRate = $tariffRate->load(['tariffGroup.tariffAgreement', 'tariffLevel']);
+        $this->tariffRate = $tariffRate->load([
+            'tariffLevel.tariffGroup.tariffAgreement'
+        ]);
     }
 
     public function render()
     {
-        return view('hcm::livewire.tariff-rate.show', [
-            'tariffRate' => $this->tariffRate,
-        ])->layout('platform::layouts.app');
+        return view('hcm::livewire.tariff-rate.show');
     }
 }
