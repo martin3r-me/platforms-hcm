@@ -348,6 +348,7 @@ class BhgImportService
                 ->first();
             
             if ($existingEmployee) {
+                echo "DEBUG: Employee already exists for {$row['personalnummer']} - skipping creation\n";
                 // Mitarbeiter existiert bereits - prüfen ob Status aktualisiert werden muss
                 $isActive = empty($row['austrittsdatum']);
                 if ($existingEmployee->is_active !== $isActive) {
@@ -543,6 +544,8 @@ class BhgImportService
             $existingLink = CrmContactLink::where('linkable_id', $employee->id)
                 ->where('linkable_type', HcmEmployee::class)
                 ->first();
+            
+            echo "DEBUG: Checking for existing CRM link for employee {$employee->id}\n";
 
             if ($existingLink) {
                 // Mitarbeiter hat bereits einen CRM Kontakt - Update

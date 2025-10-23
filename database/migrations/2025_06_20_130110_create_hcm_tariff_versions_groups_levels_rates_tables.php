@@ -33,7 +33,7 @@ return new class extends Migration
             $table->foreignId('tariff_group_id')->constrained('hcm_tariff_groups')->cascadeOnDelete();
             $table->string('code', 50);
             $table->string('name', 255);
-            $table->unsignedTinyInteger('progression_months')->nullable();
+            $table->unsignedInteger('progression_months')->nullable();
             $table->timestamps();
             $table->unique(['tariff_group_id','code'], 'tariff_levels_group_code_unique');
         });
