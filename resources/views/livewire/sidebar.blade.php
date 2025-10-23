@@ -37,6 +37,26 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
+    {{-- Abschnitt: Tarife --}}
+    <x-ui-sidebar-list label="Tarife">
+        <x-ui-sidebar-item :href="route('hcm.tariff-agreements.index')">
+            @svg('heroicon-o-document-text', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarifverträge</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.tariff-groups.index')">
+            @svg('heroicon-o-squares-2x2', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarifgruppen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.tariff-levels.index')">
+            @svg('heroicon-o-bars-3', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarifstufen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.tariff-rates.index')">
+            @svg('heroicon-o-banknotes', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarifsätze</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
     {{-- Collapsed: Icons-only für Allgemein --}}
     <div x-show="collapsed" class="px-2 py-2 border-b border-[var(--ui-border)]">
         <div class="flex flex-col gap-2">
@@ -60,6 +80,18 @@
             </a>
             <a href="{{ route('hcm.payroll-types.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
                 @svg('heroicon-o-currency-euro', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.tariff-agreements.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-document-text', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.tariff-groups.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-squares-2x2', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.tariff-levels.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-bars-3', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.tariff-rates.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+                @svg('heroicon-o-banknotes', 'w-5 h-5')
             </a>
         </div>
     </div>
