@@ -8,12 +8,12 @@
             <div class="flex items-center space-x-3">
                 @if($tariffAgreement->is_active)
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                        @svg('heroicons.check-circle', 'w-4 h-4 mr-1')
+                        @svg('heroicon-o-check-circle', 'w-4 h-4 mr-1')
                         Aktiv
                     </span>
                 @else
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                        @svg('heroicons.x-circle', 'w-4 h-4 mr-1')
+                        @svg('heroicon-o-x-circle', 'w-4 h-4 mr-1')
                         Inaktiv
                     </span>
                 @endif
@@ -51,7 +51,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    @svg('heroicons.squares-2x2', 'h-8 w-8 text-blue-600')
+                    @svg('heroicon-o-squares-2x2', 'h-8 w-8 text-blue-600')
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Tarifgruppen</p>
@@ -63,7 +63,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    @svg('heroicons.bars-3', 'h-8 w-8 text-green-600')
+                    @svg('heroicon-o-bars-3', 'h-8 w-8 text-green-600')
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Tarifstufen</p>
@@ -75,7 +75,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    @svg('heroicons.banknotes', 'h-8 w-8 text-yellow-600')
+                    @svg('heroicon-o-banknotes', 'h-8 w-8 text-yellow-600')
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Tarifsätze</p>

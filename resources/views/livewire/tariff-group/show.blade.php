@@ -7,7 +7,7 @@
             </div>
             <div class="flex items-center space-x-3">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    @svg('heroicons.squares-2x2', 'w-4 h-4 mr-1')
+                    @svg('heroicon-o-squares-2x2', 'w-4 h-4 mr-1')
                     {{ $tariffGroup->code }}
                 </span>
             </div>
@@ -123,7 +123,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    @svg('heroicons.bars-3', 'h-8 w-8 text-blue-600')
+                    @svg('heroicon-o-bars-3', 'h-8 w-8 text-blue-600')
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Tarifstufen</p>
@@ -135,7 +135,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    @svg('heroicons.banknotes', 'h-8 w-8 text-green-600')
+                    @svg('heroicon-o-banknotes', 'h-8 w-8 text-green-600')
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Tarifsätze</p>
@@ -147,7 +147,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
-                    @svg('heroicons.document-text', 'h-8 w-8 text-yellow-600')
+                    @svg('heroicon-o-document-text', 'h-8 w-8 text-yellow-600')
                 </div>
                 <div class="ml-4">
                     <p class="text-sm font-medium text-gray-500">Tarifvertrag</p>
