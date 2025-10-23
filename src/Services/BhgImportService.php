@@ -128,8 +128,10 @@ class BhgImportService
             throw new \Exception('Could not open CSV file');
         }
 
-        // Skip header
-        fgetcsv($handle, 0, ';');
+        // Skip first 3 header lines
+        fgetcsv($handle, 0, ';'); // "Mitarbeiterliste"
+        fgetcsv($handle, 0, ';'); // "Gültigkeitsdatum..."
+        fgetcsv($handle, 0, ';'); // "Personalnummer;Nachname;..."
 
         $rowCount = 0;
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
