@@ -128,9 +128,7 @@ class BhgImportService
             throw new \Exception('Could not open CSV file');
         }
 
-        // Skip first 3 header lines
-        fgetcsv($handle, 0, ';'); // "Mitarbeiterliste"
-        fgetcsv($handle, 0, ';'); // "Gültigkeitsdatum..."
+        // Skip header line
         fgetcsv($handle, 0, ';'); // "Personalnummer;Nachname;..."
 
         $rowCount = 0;
@@ -142,17 +140,9 @@ class BhgImportService
                 // Nur echte Datensätze verarbeiten (Personalnummer muss numerisch sein)
                 $personalnummer = trim($row[0]);
                 
-                // Strikte Filterung: Nur numerische Personalnummern
+                // Einfache Filterung: Nur numerische Personalnummern
                 if (empty($personalnummer) || !is_numeric($personalnummer)) {
                     echo "DEBUG: Skipping row {$rowCount} - not numeric personalnummer: '{$personalnummer}'\n";
-                    continue;
-                }
-                
-                // Zusätzliche Sicherheit: Prüfe auf bekannte Header-Strings
-                if (strpos($personalnummer, 'Mitarbeiterliste') !== false || 
-                    strpos($personalnummer, 'Gültigkeitsdatum') !== false ||
-                    strpos($personalnummer, 'Personalnummer') !== false) {
-                    echo "DEBUG: Skipping row {$rowCount} - header string detected: '{$personalnummer}'\n";
                     continue;
                 }
                 
@@ -705,14 +695,11 @@ class BhgImportService
             
             if (!$existingEmail) {
                 echo "DEBUG: Adding new email for {$row['vorname']}: {$emailAddress}\n";
-                $contact->emailAddresses()->create([
-                    'email_address' => $emailAddress,
-                    'email_type_id' => 1,
-                    'is_primary' => true,
-                    'is_active' => true,
-                ]);
+                $this->createEmailAddress($contact, $emailAddress, 1, true);
             } else {
                 echo "DEBUG: Email already exists for {$row['vorname']}: {$emailAddress}\n";
+                // Aktiviere die bestehende Email
+                $existingEmail->update(['is_active' => true, 'is_primary' => true]);
             }
         } else {
             // Wenn keine Email in CSV, aber Kontakt hat Emails - diese als inaktiv markieren
@@ -739,6 +726,8 @@ class BhgImportService
                 $this->createPhoneNumber($contact, $phoneNumber, 1, true);
             } else {
                 echo "DEBUG: Telefon already exists for {$row['vorname']}: {$phoneNumber}\n";
+                // Aktiviere die bestehende Telefonnummer
+                $existingPhone->update(['is_active' => true, 'is_primary' => true]);
             }
         }
         
@@ -755,6 +744,8 @@ class BhgImportService
                 $this->createPhoneNumber($contact, $mobileNumber, 2, false);
             } else {
                 echo "DEBUG: Mobil already exists for {$row['vorname']}: {$mobileNumber}\n";
+                // Aktiviere die bestehende Mobilnummer
+                $existingMobile->update(['is_active' => true]);
             }
         }
         
