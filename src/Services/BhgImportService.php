@@ -132,7 +132,7 @@ class BhgImportService
         fgetcsv($handle, 0, ';');
 
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            if (count($row) >= 15) {
+            if (count($row) >= 18) {
                 $data[] = [
                     'personalnummer' => $row[0],
                     'nachname' => $row[1],
@@ -149,6 +149,9 @@ class BhgImportService
                     'eintrittsdatum' => $row[12],
                     'austrittsdatum' => $row[13],
                     'konzerneintritt' => $row[14],
+                    'telefon' => $row[15],
+                    'mobil' => $row[16],
+                    'email' => $row[17],
                 ];
             }
         }
