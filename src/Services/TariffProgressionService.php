@@ -29,13 +29,33 @@ class TariffProgressionService
 
         foreach ($contracts as $contract) {
             try {
+                // Debug: Log contract details
+                \Log::info("Checking contract {$contract->id}:", [
+                    'tariff_group_id' => $contract->tariff_group_id,
+                    'tariff_level_id' => $contract->tariff_level_id,
+                    'tariff_level_start_date' => $contract->tariff_level_start_date,
+                    'next_tariff_level_date' => $contract->next_tariff_level_date,
+                    'tariff_level' => $contract->tariffLevel ? $contract->tariffLevel->code : 'null',
+                    'progression_months' => $contract->tariffLevel ? $contract->tariffLevel->progression_months : 'null'
+                ]);
+                
+                $shouldProgress = $this->shouldProgress($contract, $date);
+                $shouldProgressRetroactively = $this->shouldProgressRetroactively($contract, $date);
+                
+                \Log::info("Progression checks:", [
+                    'shouldProgress' => $shouldProgress,
+                    'shouldProgressRetroactively' => $shouldProgressRetroactively
+                ]);
+                
                 // Check both current and retroactive progressions
-                if ($this->shouldProgress($contract, $date) || $this->shouldProgressRetroactively($contract, $date)) {
+                if ($shouldProgress || $shouldProgressRetroactively) {
                     $this->progressToNextLevel($contract, $date);
                     $results['progressed']++;
+                    \Log::info("Progressed contract {$contract->id}");
                 }
                 $results['processed']++;
             } catch (\Exception $e) {
+                \Log::error("Error processing contract {$contract->id}: " . $e->getMessage());
                 $results['errors'][] = [
                     'contract_id' => $contract->id,
                     'error' => $e->getMessage()
@@ -52,6 +72,7 @@ class TariffProgressionService
     public function shouldProgress(HcmEmployeeContract $contract, ?string $date = null): bool
     {
         if (!$contract->tariffLevel || $contract->tariffLevel->isFinalLevel()) {
+            \Log::info("Contract {$contract->id}: No tariff level or final level");
             return false;
         }
 
@@ -59,12 +80,15 @@ class TariffProgressionService
         
         // Check if progression is due
         if ($contract->isTariffProgressionDue($date)) {
+            \Log::info("Contract {$contract->id}: Progression due based on next_tariff_level_date");
             return true;
         }
 
         // Calculate if enough time has passed
         $startDate = $contract->tariff_level_start_date ?? $contract->start_date;
         $monthsSinceStart = Carbon::parse($startDate)->diffInMonths(Carbon::parse($date));
+        
+        \Log::info("Contract {$contract->id}: Months since start: {$monthsSinceStart}, Required: {$contract->tariffLevel->progression_months}");
         
         return $monthsSinceStart >= $contract->tariffLevel->progression_months;
     }
@@ -335,6 +359,7 @@ class TariffProgressionService
     public function shouldProgressRetroactively(HcmEmployeeContract $contract, string $date): bool
     {
         if (!$contract->tariffLevel || $contract->tariffLevel->isFinalLevel()) {
+            \Log::info("Contract {$contract->id}: No tariff level or final level (retroactive)");
             return false;
         }
 
@@ -345,6 +370,8 @@ class TariffProgressionService
         $progressionDate = Carbon::parse($startDate)
             ->addMonths($progressionMonths)
             ->toDateString();
+            
+        \Log::info("Contract {$contract->id}: Retroactive check - Start: {$startDate}, Progression months: {$progressionMonths}, Should have progressed: {$progressionDate}, Is past: " . (Carbon::parse($progressionDate)->isPast() ? 'yes' : 'no'));
             
         // Check if the progression date is in the past
         return Carbon::parse($progressionDate)->isPast();

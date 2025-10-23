@@ -126,24 +126,28 @@
     <x-ui-modal wire:model="showCreateModal" title="Neue Krankenkasse">
         <div class="space-y-6">
             <x-ui-input-text 
+                name="name"
                 wire:model="name" 
                 label="Name *"
                 placeholder="Vollständiger Name der Krankenkasse"
             />
             
             <x-ui-input-text 
+                name="code"
                 wire:model="code" 
                 label="Code *"
                 placeholder="Eindeutiger Code"
             />
             
             <x-ui-input-text 
+                name="short_name"
                 wire:model="short_name" 
                 label="Kurzname"
                 placeholder="Kurzer Name (optional)"
             />
             
             <x-ui-input-textarea 
+                name="description"
                 wire:model="description" 
                 label="Beschreibung"
                 placeholder="Beschreibung der Krankenkasse"
@@ -152,25 +156,29 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-ui-input-text 
-                    wire:model="website" 
+                    name="website"
+                wire:model="website" 
                     label="Website"
                     placeholder="https://..."
                 />
                 
                 <x-ui-input-text 
-                    wire:model="phone" 
+                    name="phone"
+                wire:model="phone" 
                     label="Telefon"
                     placeholder="+49 ..."
                 />
             </div>
             
             <x-ui-input-text 
+                name="email"
                 wire:model="email" 
                 label="E-Mail"
                 placeholder="kontakt@krankenkasse.de"
             />
             
             <x-ui-input-textarea 
+                name="address"
                 wire:model="address" 
                 label="Adresse"
                 placeholder="Vollständige Adresse"
@@ -178,6 +186,7 @@
             />
             
             <x-ui-input-checkbox 
+                name="is_active"
                 wire:model="is_active" 
                 label="Aktiv"
             />
@@ -200,24 +209,28 @@
     <x-ui-modal wire:model="showEditModal" title="Krankenkasse bearbeiten">
         <div class="space-y-6">
             <x-ui-input-text 
+                name="name"
                 wire:model="name" 
                 label="Name *"
                 placeholder="Vollständiger Name der Krankenkasse"
             />
             
             <x-ui-input-text 
+                name="code"
                 wire:model="code" 
                 label="Code *"
                 placeholder="Eindeutiger Code"
             />
             
             <x-ui-input-text 
+                name="short_name"
                 wire:model="short_name" 
                 label="Kurzname"
                 placeholder="Kurzer Name (optional)"
             />
             
             <x-ui-input-textarea 
+                name="description"
                 wire:model="description" 
                 label="Beschreibung"
                 placeholder="Beschreibung der Krankenkasse"
@@ -226,25 +239,29 @@
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-ui-input-text 
-                    wire:model="website" 
+                    name="website"
+                wire:model="website" 
                     label="Website"
                     placeholder="https://..."
                 />
                 
                 <x-ui-input-text 
-                    wire:model="phone" 
+                    name="phone"
+                wire:model="phone" 
                     label="Telefon"
                     placeholder="+49 ..."
                 />
             </div>
             
             <x-ui-input-text 
+                name="email"
                 wire:model="email" 
                 label="E-Mail"
                 placeholder="kontakt@krankenkasse.de"
             />
             
             <x-ui-input-textarea 
+                name="address"
                 wire:model="address" 
                 label="Adresse"
                 placeholder="Vollständige Adresse"
@@ -252,6 +269,7 @@
             />
             
             <x-ui-input-checkbox 
+                name="is_active"
                 wire:model="is_active" 
                 label="Aktiv"
             />

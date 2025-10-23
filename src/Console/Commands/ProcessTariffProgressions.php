@@ -48,6 +48,22 @@ class ProcessTariffProgressions extends Command
                 }
             }
             
+            // Additional debug: Check all contracts with tariff assignments
+            $this->info("\nDebug: All contracts with tariff assignments:");
+            $allContracts = \Platform\Hcm\Models\HcmEmployeeContract::with(['tariffGroup', 'tariffLevel', 'employee'])
+                ->whereNotNull('tariff_group_id')
+                ->whereNotNull('tariff_level_id')
+                ->where('is_active', true)
+                ->limit(5)
+                ->get();
+                
+            foreach ($allContracts as $contract) {
+                $this->line("- Contract {$contract->id}: {$contract->tariffGroup->code} - {$contract->tariffLevel->code}");
+                $this->line("  Start: {$contract->tariff_level_start_date ?? $contract->start_date}");
+                $this->line("  Progression months: {$contract->tariffLevel->progression_months}");
+                $this->line("  Next progression: {$contract->next_tariff_level_date}");
+            }
+            
             return 0;
         }
 
