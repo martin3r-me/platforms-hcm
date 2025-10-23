@@ -144,7 +144,8 @@ class BhgImportService
                 if (empty($personalnummer) || 
                     strpos($personalnummer, 'Mitarbeiterliste') !== false || 
                     strpos($personalnummer, 'Gültigkeitsdatum') !== false ||
-                    strpos($personalnummer, 'Personalnummer') !== false) {
+                    strpos($personalnummer, 'Personalnummer') !== false ||
+                    !is_numeric($personalnummer)) {
                     echo "DEBUG: Skipping row {$rowCount} - invalid personalnummer: '{$personalnummer}'\n";
                     continue;
                 }
