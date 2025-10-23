@@ -426,6 +426,9 @@ class BhgImportService
                     'last_name' => $row['nachname'],
                 ]);
                 echo "DEBUG: Update CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
+                
+                // Update Email-Adressen und Telefonnummern für bestehende Kontakte
+                $this->updateContactData($contact, $row);
             } else {
                 // Neuer CRM Kontakt erstellen
                 $contact = CrmContact::create([
@@ -651,6 +654,122 @@ class BhgImportService
                 'phone_type_id' => $phoneTypeId,
                 'is_primary' => $isPrimary,
             ]);
+        }
+    }
+
+    private function updateContactData($contact, $row)
+    {
+        echo "DEBUG: Updating contact data for {$row['vorname']} {$row['nachname']}\n";
+        
+        // Update Email-Adressen
+        $this->updateEmailAddresses($contact, $row);
+        
+        // Update Telefonnummern
+        $this->updatePhoneNumbers($contact, $row);
+        
+        // Update Adressen
+        $this->updateAddresses($contact, $row);
+    }
+
+    private function updateEmailAddresses($contact, $row)
+    {
+        if (!empty($row['email']) && trim($row['email']) !== '') {
+            $emailAddress = trim($row['email']);
+            
+            // Prüfen ob Email bereits existiert
+            $existingEmail = $contact->emailAddresses()
+                ->where('email_address', $emailAddress)
+                ->first();
+            
+            if (!$existingEmail) {
+                echo "DEBUG: Adding new email for {$row['vorname']}: {$emailAddress}\n";
+                $contact->emailAddresses()->create([
+                    'email_address' => $emailAddress,
+                    'email_type_id' => 1,
+                    'is_primary' => true,
+                    'is_active' => true,
+                ]);
+            } else {
+                echo "DEBUG: Email already exists for {$row['vorname']}: {$emailAddress}\n";
+            }
+        } else {
+            // Wenn keine Email in CSV, aber Kontakt hat Emails - diese als inaktiv markieren
+            $contact->emailAddresses()->update(['is_active' => false]);
+            echo "DEBUG: No email in CSV for {$row['vorname']} - marking existing emails as inactive\n";
+        }
+    }
+
+    private function updatePhoneNumbers($contact, $row)
+    {
+        $hasPhone = !empty($row['telefon']) && trim($row['telefon']) !== '';
+        $hasMobile = !empty($row['mobil']) && trim($row['mobil']) !== '';
+        
+        // Update Telefon
+        if ($hasPhone) {
+            $phoneNumber = trim($row['telefon']);
+            
+            $existingPhone = $contact->phoneNumbers()
+                ->where('raw_input', $phoneNumber)
+                ->first();
+            
+            if (!$existingPhone) {
+                echo "DEBUG: Adding new telefon for {$row['vorname']}: {$phoneNumber}\n";
+                $this->createPhoneNumber($contact, $phoneNumber, 1, true);
+            } else {
+                echo "DEBUG: Telefon already exists for {$row['vorname']}: {$phoneNumber}\n";
+            }
+        }
+        
+        // Update Mobil
+        if ($hasMobile) {
+            $mobileNumber = trim($row['mobil']);
+            
+            $existingMobile = $contact->phoneNumbers()
+                ->where('raw_input', $mobileNumber)
+                ->first();
+            
+            if (!$existingMobile) {
+                echo "DEBUG: Adding new mobil for {$row['vorname']}: {$mobileNumber}\n";
+                $this->createPhoneNumber($contact, $mobileNumber, 2, false);
+            } else {
+                echo "DEBUG: Mobil already exists for {$row['vorname']}: {$mobileNumber}\n";
+            }
+        }
+        
+        // Wenn keine Telefonnummern in CSV, aber Kontakt hat welche - diese als inaktiv markieren
+        if (!$hasPhone && !$hasMobile) {
+            $contact->phoneNumbers()->update(['is_active' => false]);
+            echo "DEBUG: No phone numbers in CSV for {$row['vorname']} - marking existing phones as inactive\n";
+        }
+    }
+
+    private function updateAddresses($contact, $row)
+    {
+        if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
+            $street = trim($row['straße']);
+            $postalCode = trim($row['plz']);
+            $city = trim($row['ort']);
+            
+            $existingAddress = $contact->postalAddresses()
+                ->where('street', $street)
+                ->where('postal_code', $postalCode)
+                ->where('city', $city)
+                ->first();
+            
+            if (!$existingAddress) {
+                echo "DEBUG: Adding new address for {$row['vorname']}: {$street}, {$postalCode} {$city}\n";
+                $contact->postalAddresses()->create([
+                    'street' => $street,
+                    'postal_code' => $postalCode,
+                    'city' => $city,
+                    'additional_info' => trim($row['adresszusatz']),
+                    'address_type_id' => 1,
+                    'is_primary' => true,
+                    'is_active' => true,
+                ]);
+            } else {
+                echo "DEBUG: Address already exists for {$row['vorname']}: {$street}, {$postalCode} {$city}\n";
+            }
         }
     }
 
