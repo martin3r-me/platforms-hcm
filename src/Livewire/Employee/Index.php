@@ -218,15 +218,5 @@ class Index extends Component
             $this->createStep = 1;
         }
     }
-
-    public function sortBy($field)
-    {
-        if ($this->sortField === $field) {
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortField = $field;
-            $this->sortDirection = 'asc';
-        }
-    }
 }
 

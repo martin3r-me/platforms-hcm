@@ -74,16 +74,6 @@ class Index extends Component
         ];
     }
 
-    public function sortBy($field)
-    {
-        if ($this->sortField === $field) {
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortField = $field;
-            $this->sortDirection = 'asc';
-        }
-    }
-
     public function render()
     {
         return view('hcm::livewire.employer.index')
@@ -138,15 +128,5 @@ class Index extends Component
     {
         $this->modalShow = false;
         $this->resetForm();
-    }
-
-    public function sortBy($field)
-    {
-        if ($this->sortField === $field) {
-            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
-        } else {
-            $this->sortField = $field;
-            $this->sortDirection = 'asc';
-        }
     }
 }
