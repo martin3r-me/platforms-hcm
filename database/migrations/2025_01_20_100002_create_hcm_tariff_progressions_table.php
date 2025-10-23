@@ -18,7 +18,7 @@ return new class extends Migration
             $table->text('progression_notes')->nullable();
             $table->timestamps();
             
-            $table->index(['employee_contract_id', 'progression_date']);
+            $table->index(['employee_contract_id', 'progression_date'], 'tariff_progressions_contract_date_idx');
         });
     }
 

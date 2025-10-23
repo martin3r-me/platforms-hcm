@@ -139,6 +139,34 @@
                         </x-ui-table>
                     </div>
                 </div>
+
+                <!-- Progression-Info -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <div class="flex items-center gap-2 mb-4">
+                        @svg('heroicon-o-arrow-trending-up', 'w-5 h-5 text-blue-600')
+                        <h3 class="text-lg font-medium text-blue-900">Tarifstufen-Progression</h3>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">
+                                {{ $tariffGroup->tariffLevels->where('progression_months', '!=', 999)->count() }}
+                            </div>
+                            <div class="text-sm text-blue-700">Progression möglich</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">
+                                {{ $tariffGroup->tariffLevels->where('progression_months', 999)->count() }}
+                            </div>
+                            <div class="text-sm text-green-700">Endstufen</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">
+                                {{ $tariffGroup->tariffLevels->avg('progression_months') ?? 0 }}
+                            </div>
+                            <div class="text-sm text-purple-700">Ø Progression (Monate)</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </x-ui-page-container>

@@ -88,13 +88,45 @@
                     </div>
                 </div>
 
-                <!-- Description -->
-                @if($tariffAgreement->description)
-                    <div class="bg-white border border-gray-200 rounded-lg p-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-3">Beschreibung</h3>
-                        <p class="text-gray-600">{{ $tariffAgreement->description }}</p>
-                    </div>
-                @endif
+                <!-- Tarifvertrag Details -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 mb-8">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Tarifvertrag Details</h3>
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Code</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $tariffAgreement->code }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Status</dt>
+                            <dd class="mt-1">
+                                @if($tariffAgreement->is_active)
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Aktiv
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        Inaktiv
+                                    </span>
+                                @endif
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Team</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $tariffAgreement->team->name ?? 'N/A' }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Erstellt</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ $tariffAgreement->created_at->format('d.m.Y H:i') }}</dd>
+                        </div>
+                    </dl>
+                    
+                    @if($tariffAgreement->description)
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-sm font-medium text-gray-900 mb-2">Beschreibung</h4>
+                            <p class="text-sm text-gray-600">{{ $tariffAgreement->description }}</p>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </x-ui-page-container>

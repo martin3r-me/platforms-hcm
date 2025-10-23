@@ -122,45 +122,99 @@
                                         @endif
                                         
                                         <!-- Tarif-Informationen -->
-                                        @if($contract->tariffGroup || $contract->tariffLevel)
-                                            <div class="mt-2 pt-2 border-t border-[var(--ui-border)]/20">
-                                                <div class="flex items-center gap-2 mb-1">
-                                                    @svg('heroicon-o-currency-euro', 'w-4 h-4 text-blue-600')
-                                                    <span class="font-medium text-blue-700">Tarifzuordnung</span>
-                                                </div>
-                                                @if($contract->tariffGroup)
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                            {{ $contract->tariffGroup->code }}
-                                                        </span>
-                                                        <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffGroup->name }}</span>
-                                                    </div>
-                                                @endif
-                                                @if($contract->tariffLevel)
-                                                    <div class="flex items-center gap-2 mt-1">
-                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                            Stufe {{ $contract->tariffLevel->code }}
-                                                        </span>
-                                                        <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffLevel->name }}</span>
-                                                    </div>
-                                                @endif
-                                                @if($contract->getCurrentTariffRate())
-                                                    <div class="mt-1">
-                                                        <span class="text-sm font-medium text-green-600">
-                                                            {{ number_format((float)$contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
-                                                        </span>
-                                                        <span class="text-xs text-[var(--ui-muted)] ml-1">aktueller Tarifsatz</span>
-                                                    </div>
-                                                @endif
-                                                @if($contract->next_tariff_level_date)
-                                                    <div class="mt-1">
-                                                        <span class="text-xs text-[var(--ui-muted)]">
-                                                            Nächste Progression: {{ \Carbon\Carbon::parse($contract->next_tariff_level_date)->format('d.m.Y') }}
-                                                        </span>
-                                                    </div>
-                                                @endif
+                                        <div class="mt-2 pt-2 border-t border-[var(--ui-border)]/20">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                @svg('heroicon-o-currency-euro', 'w-4 h-4 text-blue-600')
+                                                <span class="font-medium text-blue-700">Vergütung</span>
                                             </div>
-                                        @endif
+                                            
+                                            <!-- Bezahlungsart -->
+                                            <div class="mb-2">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
+                                                    @if($contract->is_minimum_wage) bg-yellow-100 text-yellow-800
+                                                    @elseif($contract->is_above_tariff) bg-purple-100 text-purple-800
+                                                    @elseif($contract->tariffGroup) bg-blue-100 text-blue-800
+                                                    @else bg-gray-100 text-gray-800 @endif">
+                                                    {{ $contract->getSalaryTypeDescription() }}
+                                                </span>
+                                            </div>
+
+                                            <!-- Tarifliche Zuordnung -->
+                                            @if($contract->tariffGroup || $contract->tariffLevel)
+                                                <div class="space-y-1 mb-2">
+                                                    @if($contract->tariffGroup)
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {{ $contract->tariffGroup->code }}
+                                                            </span>
+                                                            <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffGroup->name }}</span>
+                                                        </div>
+                                                    @endif
+                                                    @if($contract->tariffLevel)
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                                Stufe {{ $contract->tariffLevel->code }}
+                                                            </span>
+                                                            <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffLevel->name }}</span>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endif
+
+                                            <!-- Übertarifliche Bezahlung -->
+                                            @if($contract->is_above_tariff && $contract->above_tariff_amount)
+                                                <div class="mb-2 p-2 bg-purple-50 rounded border border-purple-200">
+                                                    <div class="text-xs font-medium text-purple-700 mb-1">Übertariflich</div>
+                                                    <div class="text-sm font-medium text-purple-600">
+                                                        +{{ number_format((float)$contract->above_tariff_amount, 2, ',', '.') }} €
+                                                    </div>
+                                                    @if($contract->above_tariff_reason)
+                                                        <div class="text-xs text-purple-600 mt-1">{{ $contract->above_tariff_reason }}</div>
+                                                    @endif
+                                                </div>
+                                            @endif
+
+                                            <!-- Mindestlohn -->
+                                            @if($contract->is_minimum_wage)
+                                                <div class="mb-2 p-2 bg-yellow-50 rounded border border-yellow-200">
+                                                    <div class="text-xs font-medium text-yellow-700 mb-1">Mindestlohn</div>
+                                                    <div class="text-sm font-medium text-yellow-600">
+                                                        {{ number_format((float)$contract->minimum_wage_hourly_rate, 2, ',', '.') }} €/h
+                                                    </div>
+                                                    <div class="text-xs text-yellow-600">
+                                                        {{ $contract->minimum_wage_monthly_hours }}h/Monat
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            <!-- Aktueller Tarifsatz -->
+                                            @if($contract->getCurrentTariffRate())
+                                                <div class="mb-2">
+                                                    <div class="text-sm font-medium text-green-600">
+                                                        {{ number_format((float)$contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
+                                                    </div>
+                                                    <div class="text-xs text-[var(--ui-muted)]">Tarifsatz</div>
+                                                </div>
+                                            @endif
+
+                                            <!-- Effektives Monatsgehalt -->
+                                            <div class="mb-2 p-2 bg-green-50 rounded border border-green-200">
+                                                <div class="text-xs font-medium text-green-700 mb-1">Gesamtgehalt</div>
+                                                <div class="text-lg font-bold text-green-600">
+                                                    {{ number_format((float)$contract->getEffectiveMonthlySalary(), 2, ',', '.') }} €
+                                                </div>
+                                                <div class="text-xs text-green-600">effektiv/Monat</div>
+                                            </div>
+
+                                            <!-- Progression -->
+                                            @if($contract->next_tariff_level_date)
+                                                <div class="mt-2">
+                                                    <div class="text-xs text-[var(--ui-muted)]">
+                                                        Nächste Progression: {{ \Carbon\Carbon::parse($contract->next_tariff_level_date)->format('d.m.Y') }}
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </div>
