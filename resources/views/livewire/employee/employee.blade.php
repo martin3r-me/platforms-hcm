@@ -120,6 +120,47 @@
                                         @if($contract->cost_center)
                                             <div><strong>Kostenstelle:</strong> {{ $contract->cost_center }}</div>
                                         @endif
+                                        
+                                        <!-- Tarif-Informationen -->
+                                        @if($contract->tariffGroup || $contract->tariffLevel)
+                                            <div class="mt-2 pt-2 border-t border-[var(--ui-border)]/20">
+                                                <div class="flex items-center gap-2 mb-1">
+                                                    @svg('heroicon-o-currency-euro', 'w-4 h-4 text-blue-600')
+                                                    <span class="font-medium text-blue-700">Tarifzuordnung</span>
+                                                </div>
+                                                @if($contract->tariffGroup)
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                            {{ $contract->tariffGroup->code }}
+                                                        </span>
+                                                        <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffGroup->name }}</span>
+                                                    </div>
+                                                @endif
+                                                @if($contract->tariffLevel)
+                                                    <div class="flex items-center gap-2 mt-1">
+                                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                            Stufe {{ $contract->tariffLevel->code }}
+                                                        </span>
+                                                        <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffLevel->name }}</span>
+                                                    </div>
+                                                @endif
+                                                @if($contract->getCurrentTariffRate())
+                                                    <div class="mt-1">
+                                                        <span class="text-sm font-medium text-green-600">
+                                                            {{ number_format($contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
+                                                        </span>
+                                                        <span class="text-xs text-[var(--ui-muted)] ml-1">aktueller Tarifsatz</span>
+                                                    </div>
+                                                @endif
+                                                @if($contract->next_tariff_level_date)
+                                                    <div class="mt-1">
+                                                        <span class="text-xs text-[var(--ui-muted)]">
+                                                            Nächste Progression: {{ \Carbon\Carbon::parse($contract->next_tariff_level_date)->format('d.m.Y') }}
+                                                        </span>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
