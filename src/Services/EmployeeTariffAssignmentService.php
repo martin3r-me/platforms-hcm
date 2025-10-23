@@ -135,14 +135,32 @@ class EmployeeTariffAssignmentService
         $assignments = [];
         foreach ($csv as $record) {
             $assignments[] = [
-                'employee_number' => $record['Mitarbeiternummer'] ?? '',
-                'tariff_group_code' => $record['Tarifgruppe'] ?? '',
-                'tariff_level_code' => $record['Tarifstufe'] ?? '',
-                'assignment_date' => $record['Eingruppierungsdatum'] ?? now()->toDateString(),
+                'employee_number' => $record['AbrechNr'] ?? '',
+                'tariff_group_code' => $record['TKZ'] ?? '',
+                'tariff_level_code' => $record['Stufe'] ?? '',
+                'assignment_date' => $this->parseDate($record['Datum'] ?? ''),
+                'first_name' => $record['Vorname'] ?? '',
+                'last_name' => $record['Name'] ?? '',
             ];
         }
 
         return $this->processCsvAssignments($assignments);
+    }
+
+    /**
+     * Parse German date format (DD.MM.YYYY) to YYYY-MM-DD
+     */
+    private function parseDate(string $date): string
+    {
+        if (empty($date)) {
+            return now()->toDateString();
+        }
+
+        try {
+            return \Carbon\Carbon::createFromFormat('d.m.Y', $date)->toDateString();
+        } catch (\Exception $e) {
+            return now()->toDateString();
+        }
     }
 
     /**
@@ -158,10 +176,15 @@ class EmployeeTariffAssignmentService
 
         foreach ($assignments as $assignment) {
             try {
+                // Handle AT employees (empty level)
+                if ($assignment['tariff_group_code'] === 'AT' && empty($assignment['tariff_level_code'])) {
+                    $assignment['tariff_level_code'] = '1'; // Default AT level
+                }
+
                 // Find employee by number
                 $employee = \Platform\Hcm\Models\HcmEmployee::where('employee_number', $assignment['employee_number'])->first();
                 if (!$employee) {
-                    throw new \Exception("Employee not found: {$assignment['employee_number']}");
+                    throw new \Exception("Employee not found: {$assignment['employee_number']} ({$assignment['first_name']} {$assignment['last_name']})");
                 }
 
                 // Get active contract

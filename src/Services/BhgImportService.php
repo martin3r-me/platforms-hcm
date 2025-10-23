@@ -63,7 +63,10 @@ class BhgImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            DB::transaction(function () use ($data) {
+            // Parse additional data from Ergänzungsdatei
+            $additionalData = $this->parseAdditionalData($csvPath);
+            
+            DB::transaction(function () use ($data, $additionalData) {
                 // 1. Import Cost Centers first
                 $this->importCostCenters($data);
                 
@@ -76,8 +79,8 @@ class BhgImportService
                 // 4. Create Contracts
                 $this->createContracts($data);
                 
-                // 5. Create CRM Contacts
-                $this->createCrmContacts($data);
+                // 5. Create CRM Contacts with additional data
+                $this->createCrmContacts($data, $additionalData);
             });
 
             return $this->stats;
@@ -176,6 +179,46 @@ class BhgImportService
         fclose($handle);
         echo "DEBUG: Total valid rows parsed: " . count($data) . "\n";
         return $data;
+    }
+
+    private function parseAdditionalData($csvPath)
+    {
+        $additionalData = [];
+        $additionalPath = str_replace('20102025_Mitarbeiterliste.csv', '20102025_Mitarbeiterliste_Ergaezung.csv', $csvPath);
+        
+        if (!file_exists($additionalPath)) {
+            echo "DEBUG: Additional data file not found: {$additionalPath}\n";
+            return $additionalData;
+        }
+        
+        $handle = fopen($additionalPath, 'r');
+        if (!$handle) {
+            echo "DEBUG: Could not open additional data file: {$additionalPath}\n";
+            return $additionalData;
+        }
+
+        // Skip header
+        fgetcsv($handle, 0, ';');
+
+        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            if (count($row) >= 7) {
+                $personalnummer = trim($row[0]);
+                if (!empty($personalnummer) && is_numeric($personalnummer)) {
+                    $additionalData[$personalnummer] = [
+                        'ks_schlüssel' => trim($row[1]),
+                        'title' => trim($row[2]),
+                        'birthdate' => trim($row[3]),
+                        'salutation' => trim($row[4]),
+                        'countrycode' => trim($row[5]),
+                        'gender' => trim($row[6]),
+                    ];
+                }
+            }
+        }
+
+        fclose($handle);
+        echo "DEBUG: Additional data parsed for " . count($additionalData) . " employees\n";
+        return $additionalData;
     }
 
     private function importCostCenters($data)
@@ -450,18 +493,25 @@ class BhgImportService
         }
     }
 
-    private function createCrmContacts($data)
+    private function createCrmContacts($data, $additionalData = [])
     {
         foreach ($data as $row) {
-            $this->createCrmContact($row);
+            $this->createCrmContact($row, $additionalData);
         }
     }
 
-    private function createCrmContact($row)
+    private function createCrmContact($row, $additionalData = [])
     {
         try {
             echo "DEBUG: Creating CRM contact for {$row['vorname']} {$row['nachname']} (Personalnummer: {$row['personalnummer']})\n";
             echo "DEBUG: Email: '{$row['email']}', Telefon: '{$row['telefon']}', Mobil: '{$row['mobil']}'\n";
+            
+            // Merge additional data if available
+            $personalnummer = $row['personalnummer'];
+            if (isset($additionalData[$personalnummer])) {
+                $additional = $additionalData[$personalnummer];
+                echo "DEBUG: Additional data found - Birthdate: '{$additional['birthdate']}', Salutation: '{$additional['salutation']}', Gender: '{$additional['gender']}'\n";
+            }
             
             // Mitarbeiter finden
             $employee = HcmEmployee::where('team_id', $this->teamId)
@@ -483,11 +533,27 @@ class BhgImportService
             if ($existingLink) {
                 // Mitarbeiter hat bereits einen CRM Kontakt - Update
                 $contact = $existingLink->contact;
-                $contact->update([
+                
+                // Prepare update data
+                $updateData = [
                     'first_name' => $row['vorname'],
                     'last_name' => $row['nachname'],
-                ]);
+                ];
+                
+                // Add additional data if available
+                if (isset($additionalData[$personalnummer])) {
+                    $additional = $additionalData[$personalnummer];
+                    if (!empty($additional['birthdate'])) {
+                        $updateData['birth_date'] = $this->parseDateValue($additional['birthdate']);
+                    }
+                    // Add other fields as needed
+                }
+                
+                $contact->update($updateData);
                 echo "DEBUG: Update CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
+                echo "DEBUG: ===========================================\n";
+                echo "DEBUG: EMAIL/TELEFON DEBUG START\n";
+                echo "DEBUG: ===========================================\n";
                 echo "DEBUG: Email: '{$row['email']}', Telefon: '{$row['telefon']}', Mobil: '{$row['mobil']}'\n";
                 echo "DEBUG: *** CALLING updateContactData for {$row['vorname']} ***\n";
                 
@@ -496,13 +562,24 @@ class BhgImportService
                 echo "DEBUG: *** FINISHED updateContactData for {$row['vorname']} ***\n";
             } else {
                 // Neuer CRM Kontakt erstellen
-                $contact = CrmContact::create([
+                $contactData = [
                     'team_id' => $this->teamId,
                     'first_name' => $row['vorname'],
                     'last_name' => $row['nachname'],
                     'is_active' => true,
                     'created_by_user_id' => $this->userId,
-                ]);
+                ];
+                
+                // Add additional data if available
+                if (isset($additionalData[$personalnummer])) {
+                    $additional = $additionalData[$personalnummer];
+                    if (!empty($additional['birthdate'])) {
+                        $contactData['birth_date'] = $this->parseDateValue($additional['birthdate']);
+                    }
+                    // Add other fields as needed
+                }
+                
+                $contact = CrmContact::create($contactData);
                 echo "DEBUG: Erstelle CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
                 
                 // Initial creation of email/phone/address for new contacts
