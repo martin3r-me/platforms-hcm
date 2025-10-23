@@ -218,6 +218,9 @@ class BhgImportService
 
         fclose($handle);
         echo "DEBUG: Additional data parsed for " . count($additionalData) . " employees\n";
+        echo "DEBUG: ===========================================\n";
+        echo "DEBUG: ERGÄNZUNGSDATEI SUCCESSFULLY PARSED!\n";
+        echo "DEBUG: ===========================================\n";
         return $additionalData;
     }
 
@@ -305,9 +308,20 @@ class BhgImportService
             ->first();
 
         if (!$existing) {
+            // Prüfe ob Code bereits existiert
+            $code = 'JA_' . substr(md5($name), 0, 8);
+            $existingCode = HcmJobActivity::where('team_id', $this->teamId)
+                ->where('code', $code)
+                ->first();
+            
+            if ($existingCode) {
+                // Füge Zeitstempel hinzu um Eindeutigkeit zu gewährleisten
+                $code = 'JA_' . substr(md5($name . time()), 0, 8);
+            }
+            
             HcmJobActivity::create([
                 'team_id' => $this->teamId,
-                'code' => 'JA_' . substr(md5($name), 0, 8),
+                'code' => $code,
                 'name' => $name,
                 'short_name' => substr($name, 0, 50),
                 'is_active' => true,
