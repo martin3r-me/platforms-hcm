@@ -11,6 +11,7 @@ class SetupTariffStructure extends Command
     protected $signature = 'hcm:setup-tariff-structure 
                             {--tariff-agreement= : Tariff agreement ID or code}
                             {--create-agreement : Create new tariff agreement}
+                            {--team-id= : Team ID for tariff agreement}
                             {--ensure-contracts : Ensure all contracts have tariff assignment}';
 
     protected $description = 'Setup complete tariff structure including AT groups';
@@ -19,10 +20,20 @@ class SetupTariffStructure extends Command
     {
         $tariffAgreementId = $this->option('tariff-agreement');
         $createAgreement = $this->option('create-agreement');
+        $teamId = $this->option('team-id');
         $ensureContracts = $this->option('ensure-contracts');
 
+        // Get team ID
+        if (!$teamId) {
+            $teamId = $this->askForTeamId();
+            if (!$teamId) {
+                $this->error('Team ID is required');
+                return 1;
+            }
+        }
+
         // Get or create tariff agreement
-        $tariffAgreement = $this->getTariffAgreement($tariffAgreementId, $createAgreement);
+        $tariffAgreement = $this->getTariffAgreement($tariffAgreementId, $createAgreement, $teamId);
         if (!$tariffAgreement) {
             $this->error('Tariff agreement not found and --create-agreement not specified');
             return 1;
@@ -42,7 +53,7 @@ class SetupTariffStructure extends Command
         if ($ensureContracts) {
             $this->info("Ensuring all contracts have tariff assignment...");
             
-            $contractResults = $structureService->ensureAllContractsHaveTariff($tariffAgreement->team_id);
+            $contractResults = $structureService->ensureAllContractsHaveTariff($teamId);
             
             $this->line("- Contracts processed: {$contractResults['processed']}");
             $this->line("- Contracts assigned: {$contractResults['assigned']}");
@@ -59,7 +70,7 @@ class SetupTariffStructure extends Command
         return 0;
     }
 
-    private function getTariffAgreement(?string $identifier, bool $createIfNotExists): ?HcmTariffAgreement
+    private function getTariffAgreement(?string $identifier, bool $createIfNotExists, int $teamId): ?HcmTariffAgreement
     {
         if (!$identifier) {
             $this->error('Tariff agreement identifier is required');
@@ -92,11 +103,42 @@ class SetupTariffStructure extends Command
                 'code' => $identifier,
                 'name' => $name,
                 'description' => 'Standard tariff structure with AT groups',
-                'team_id' => 1, // You might want to get this from context
+                'team_id' => $teamId,
                 'is_active' => true,
             ]);
         }
 
         return null;
+    }
+
+    private function askForTeamId(): ?int
+    {
+        // Get available teams
+        $teams = \Platform\Core\Models\Team::all();
+        
+        if ($teams->isEmpty()) {
+            $this->error('No teams found');
+            return null;
+        }
+
+        $this->info('Available teams:');
+        foreach ($teams as $team) {
+            $this->line("- {$team->id}: {$team->name}");
+        }
+
+        $teamId = $this->ask('Enter Team ID');
+        
+        if (!is_numeric($teamId)) {
+            $this->error('Team ID must be numeric');
+            return null;
+        }
+
+        $team = $teams->find($teamId);
+        if (!$team) {
+            $this->error("Team with ID {$teamId} not found");
+            return null;
+        }
+
+        return (int) $teamId;
     }
 }
