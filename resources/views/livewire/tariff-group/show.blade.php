@@ -1,18 +1,16 @@
-<div>
-    <div class="mb-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ $tariffGroup->name }}</h1>
-                <p class="mt-1 text-sm text-gray-500">Tarifgruppe: {{ $tariffGroup->code }}</p>
-            </div>
-            <div class="flex items-center space-x-3">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    @svg('heroicon-o-squares-2x2', 'w-4 h-4 mr-1')
-                    {{ $tariffGroup->code }}
-                </span>
-            </div>
-        </div>
-    </div>
+<x-ui-page>
+    <x-slot name="navbar">
+        <x-ui-page-navbar 
+            title="{{ $tariffGroup->name }}" 
+            icon="heroicon-o-squares-2x2"
+            :breadcrumbs="[
+                ['title' => 'Tarifgruppen', 'route' => 'hcm.tariff-groups.index'],
+                ['title' => $tariffGroup->name]
+            ]"
+        />
+    </x-slot>
+
+    <x-ui-page-container>
 
     <!-- Tariff Levels -->
     <div class="mb-8">
@@ -156,4 +154,5 @@
             </div>
         </div>
     </div>
-</div>
+    </x-ui-page-container>
+</x-ui-page>
