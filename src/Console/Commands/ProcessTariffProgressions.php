@@ -58,8 +58,9 @@ class ProcessTariffProgressions extends Command
                 ->get();
                 
             foreach ($allContracts as $contract) {
+                $startDate = $contract->tariff_level_start_date ?? $contract->start_date;
                 $this->line("- Contract {$contract->id}: {$contract->tariffGroup->code} - {$contract->tariffLevel->code}");
-                $this->line("  Start: {$contract->tariff_level_start_date ?? $contract->start_date}");
+                $this->line("  Start: {$startDate}");
                 $this->line("  Progression months: {$contract->tariffLevel->progression_months}");
                 $this->line("  Next progression: {$contract->next_tariff_level_date}");
             }
