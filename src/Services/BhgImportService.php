@@ -1068,13 +1068,20 @@ class BhgImportService
                 // Test Job Activities
                 foreach ($sampleData as $row) {
                     if (!empty($row['tätigkeit'])) {
-                        $jobActivity = new HcmJobActivity();
-                        $jobActivity->team_id = $this->teamId;
-                        $jobActivity->code = 'TEST_' . substr(md5($row['tätigkeit']), 0, 8);
-                        $jobActivity->name = $row['tätigkeit'];
-                        $jobActivity->is_active = true;
-                        $jobActivity->created_by_user_id = $this->userId;
-                        $jobActivity->save();
+                        // Prüfe ob bereits existiert
+                        $existing = HcmJobActivity::where('team_id', $this->teamId)
+                            ->where('name', $row['tätigkeit'])
+                            ->first();
+                        
+                        if (!$existing) {
+                            $jobActivity = new HcmJobActivity();
+                            $jobActivity->team_id = $this->teamId;
+                            $jobActivity->code = 'TEST_' . substr(md5($row['tätigkeit'] . time()), 0, 8);
+                            $jobActivity->name = $row['tätigkeit'];
+                            $jobActivity->is_active = true;
+                            $jobActivity->created_by_user_id = $this->userId;
+                            $jobActivity->save();
+                        }
                     }
                 }
                 

@@ -70,6 +70,10 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\ImportBhgData::class,
                 \Platform\Hcm\Console\Commands\ImportPayrollTypes::class,
                 \Platform\Hcm\Console\Commands\ExportPayrollTypes::class,
+                \Platform\Hcm\Console\Commands\SetupTariffStructure::class,
+                \Platform\Hcm\Console\Commands\ImportTariffLogic::class,
+                \Platform\Hcm\Console\Commands\AssignEmployeeTariffs::class,
+                \Platform\Hcm\Console\Commands\ProcessTariffProgressions::class,
             ]);
         }
     }
