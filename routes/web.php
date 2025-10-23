@@ -22,6 +22,13 @@ Route::get('/employers/{employer}', EmployerShow::class)->name('hcm.employers.sh
 Route::get('/employees', EmployeeIndex::class)->name('hcm.employees.index');
 Route::get('/employees/{employee}', EmployeeShow::class)->name('hcm.employees.show');
 
+// Verträge
+Route::get('/contracts/{contract}', \Platform\Hcm\Livewire\Contract\Show::class)->name('hcm.contracts.show');
+
+// Krankenkassen
+Route::get('/health-insurance-companies', \Platform\Hcm\Livewire\HealthInsuranceCompany\Index::class)->name('hcm.health-insurance-companies.index');
+Route::get('/health-insurance-companies/{healthInsuranceCompany}', \Platform\Hcm\Livewire\HealthInsuranceCompany\Show::class)->name('hcm.health-insurance-companies.show');
+
 // Tarife / Steuerklassen
 Route::get('/tariffs', TariffIndex::class)->name('hcm.tariffs.index');
 

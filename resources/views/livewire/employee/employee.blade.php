@@ -229,6 +229,14 @@
                                 <x-ui-button 
                                     size="sm" 
                                     variant="secondary-outline" 
+                                    :href="route('hcm.contracts.show', $contract)"
+                                    wire:navigate
+                                >
+                                    @svg('heroicon-o-eye', 'w-4 h-4')
+                                </x-ui-button>
+                                <x-ui-button 
+                                    size="sm" 
+                                    variant="secondary-outline" 
                                     wire:click="editContract({{ $contract->id }})"
                                 >
                                     @svg('heroicon-o-pencil', 'w-4 h-4')

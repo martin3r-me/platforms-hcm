@@ -74,6 +74,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\ImportTariffLogic::class,
                 \Platform\Hcm\Console\Commands\AssignEmployeeTariffs::class,
                 \Platform\Hcm\Console\Commands\ProcessTariffProgressions::class,
+                \Platform\Hcm\Console\Commands\SeedHealthInsuranceCompanies::class,
             ]);
         }
     }
