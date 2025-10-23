@@ -42,6 +42,32 @@ return [
                     'route' => 'hcm.employees.index',
                     'icon' => 'heroicon-o-user-group',
                 ],
+                'tariffs' => [
+                    'title' => 'Tarife',
+                    'icon' => 'heroicon-o-currency-euro',
+                    'items' => [
+                        'tariff-agreements' => [
+                            'title' => 'Tarifverträge',
+                            'route' => 'hcm.tariff-agreements.index',
+                            'icon' => 'heroicon-o-document-text',
+                        ],
+                        'tariff-groups' => [
+                            'title' => 'Tarifgruppen',
+                            'route' => 'hcm.tariff-groups.index',
+                            'icon' => 'heroicon-o-squares-2x2',
+                        ],
+                        'tariff-levels' => [
+                            'title' => 'Tarifstufen',
+                            'route' => 'hcm.tariff-levels.index',
+                            'icon' => 'heroicon-o-bars-3',
+                        ],
+                        'tariff-rates' => [
+                            'title' => 'Tarifsätze',
+                            'route' => 'hcm.tariff-rates.index',
+                            'icon' => 'heroicon-o-banknotes',
+                        ],
+                    ],
+                ],
             ],
         ],
     ],

@@ -25,6 +25,22 @@ Route::get('/employees/{employee}', EmployeeShow::class)->name('hcm.employees.sh
 // Tarife / Steuerklassen
 Route::get('/tariffs', TariffIndex::class)->name('hcm.tariffs.index');
 
+// Tarifverträge
+Route::get('/tariff-agreements', \Platform\Hcm\Livewire\TariffAgreement\Index::class)->name('hcm.tariff-agreements.index');
+Route::get('/tariff-agreements/{tariffAgreement}', \Platform\Hcm\Livewire\TariffAgreement\Show::class)->name('hcm.tariff-agreements.show');
+
+// Tarifgruppen
+Route::get('/tariff-groups', \Platform\Hcm\Livewire\TariffGroup\Index::class)->name('hcm.tariff-groups.index');
+Route::get('/tariff-groups/{tariffGroup}', \Platform\Hcm\Livewire\TariffGroup\Show::class)->name('hcm.tariff-groups.show');
+
+// Tarifstufen
+Route::get('/tariff-levels', \Platform\Hcm\Livewire\TariffLevel\Index::class)->name('hcm.tariff-levels.index');
+Route::get('/tariff-levels/{tariffLevel}', \Platform\Hcm\Livewire\TariffLevel\Show::class)->name('hcm.tariff-levels.show');
+
+// Tarifsätze
+Route::get('/tariff-rates', \Platform\Hcm\Livewire\TariffRate\Index::class)->name('hcm.tariff-rates.index');
+Route::get('/tariff-rates/{tariffRate}', \Platform\Hcm\Livewire\TariffRate\Show::class)->name('hcm.tariff-rates.show');
+
 // Stellenbezeichnungen & Tätigkeiten
 Route::get('/job-titles', JobTitleIndex::class)->name('hcm.job-titles.index');
 Route::get('/job-activities', JobActivityIndex::class)->name('hcm.job-activities.index');
