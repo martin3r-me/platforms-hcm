@@ -18,6 +18,8 @@ class Show extends Component
     {
         $levels = $this->tariffGroup->tariffLevels;
         
+        $avgProgression = $levels->where('progression_months', '!=', 999)->avg('progression_months');
+        
         return [
             'possible_progressions' => $levels->filter(function($level) { 
                 return !$level->isFinalLevel(); 
@@ -25,7 +27,7 @@ class Show extends Component
             'final_levels' => $levels->filter(function($level) { 
                 return $level->isFinalLevel(); 
             })->count(),
-            'avg_progression_months' => $levels->where('progression_months', '!=', 999)->avg('progression_months') ?? 0,
+            'avg_progression_months' => $avgProgression ? (float)$avgProgression : 0,
         ];
     }
 

@@ -120,4 +120,82 @@
             </div>
         </div>
     </x-ui-page-container>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                {{-- Aktionen --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="primary" size="sm" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-plus', 'w-4 h-4')
+                                Neuer Tarifsatz
+                            </span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-pencil', 'w-4 h-4')
+                                Bearbeiten
+                            </span>
+                        </x-ui-button>
+                    </div>
+                </div>
+
+                {{-- Statistiken --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Tarifsätze</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->tariffRates->count() }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Tarifgruppe</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->tariffGroup->name ?? 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Progression Info --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Progression</h3>
+                    <div class="space-y-3">
+                        @if($tariffLevel->progression_months && $tariffLevel->progression_months != 999)
+                            <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                                <span class="text-sm text-[var(--ui-muted)]">Progression (Monate)</span>
+                                <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->progression_months }}</span>
+                            </div>
+                        @else
+                            <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                                <span class="text-sm text-[var(--ui-muted)]">Status</span>
+                                <span class="font-semibold text-[var(--ui-secondary)]">Endstufe</span>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-4 space-y-4">
+                <div class="text-sm text-[var(--ui-muted)]">Letzte Aktivitäten</div>
+                <div class="space-y-3 text-sm">
+                    <div class="p-2 rounded border border-[var(--ui-border)]/60 bg-[var(--ui-muted-5)]">
+                        <div class="font-medium text-[var(--ui-secondary)] truncate">Tarifstufe erstellt</div>
+                        <div class="text-[var(--ui-muted)]">{{ $tariffLevel->created_at->format('d.m.Y H:i') }}</div>
+                    </div>
+                    @if($tariffLevel->updated_at != $tariffLevel->created_at)
+                        <div class="p-2 rounded border border-[var(--ui-border)]/60 bg-[var(--ui-muted-5)]">
+                            <div class="font-medium text-[var(--ui-secondary)] truncate">Zuletzt bearbeitet</div>
+                            <div class="text-[var(--ui-muted)]">{{ $tariffLevel->updated_at->format('d.m.Y H:i') }}</div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>

@@ -143,4 +143,78 @@
             </div>
         </div>
     </x-ui-page-container>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                {{-- Aktionen --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary-outline" size="sm" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-pencil', 'w-4 h-4')
+                                Bearbeiten
+                            </span>
+                        </x-ui-button>
+                    </div>
+                </div>
+
+                {{-- Statistiken --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Betrag</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Tarifstufe</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffRate->tariffLevel->name ?? 'N/A' }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Tarifgruppe</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffRate->tariffLevel->tariffGroup->name ?? 'N/A' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Status --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Status</h3>
+                    <div class="p-3 rounded-lg {{ $tariffRate->is_current ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200' }}">
+                        <div class="flex items-center gap-2">
+                            @if($tariffRate->is_current)
+                                @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
+                                <span class="text-sm font-medium text-green-800">Aktuell</span>
+                            @else
+                                @svg('heroicon-o-clock', 'w-5 h-5 text-gray-600')
+                                <span class="text-sm font-medium text-gray-800">Historisch</span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-4 space-y-4">
+                <div class="text-sm text-[var(--ui-muted)]">Letzte Aktivitäten</div>
+                <div class="space-y-3 text-sm">
+                    <div class="p-2 rounded border border-[var(--ui-border)]/60 bg-[var(--ui-muted-5)]">
+                        <div class="font-medium text-[var(--ui-secondary)] truncate">Tarifsatz erstellt</div>
+                        <div class="text-[var(--ui-muted)]">{{ $tariffRate->created_at->format('d.m.Y H:i') }}</div>
+                    </div>
+                    @if($tariffRate->updated_at != $tariffRate->created_at)
+                        <div class="p-2 rounded border border-[var(--ui-border)]/60 bg-[var(--ui-muted-5)]">
+                            <div class="font-medium text-[var(--ui-secondary)] truncate">Zuletzt bearbeitet</div>
+                            <div class="text-[var(--ui-muted)]">{{ $tariffRate->updated_at->format('d.m.Y H:i') }}</div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>

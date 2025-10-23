@@ -41,110 +41,89 @@
         </div>
 
         <!-- Arbeitgeber Tabelle -->
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-            <div class="overflow-x-auto">
-                <table class="w-full table-auto border-collapse text-sm">
-                    <thead class="bg-gray-50">
-                        <tr class="text-left text-gray-500 border-b border-gray-200 text-xs uppercase tracking-wide">
-                            <th class="px-6 py-3">
-                                <button wire:click="sortBy('employer_number')" class="d-flex items-center gap-1 hover:text-gray-700">
-                                    Arbeitgeber-Nr.
-                                    @if($sortField === 'employer_number')
-                                        @if($sortDirection === 'asc')
-                                            @svg('heroicon-o-chevron-up', 'w-4 h-4')
-                                        @else
-                                            @svg('heroicon-o-chevron-down', 'w-4 h-4')
-                                        @endif
-                                    @endif
-                                </button>
-                            </th>
-                            <th class="px-6 py-3">Unternehmen</th>
-                            <th class="px-6 py-3">Mitarbeiter-Nummerierung</th>
-                            <th class="px-6 py-3">Mitarbeiter</th>
-                            <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3">Erstellt</th>
-                            <th class="px-6 py-3 text-right">Aktionen</th>
-                        </tr>
-                    </thead>
-
-                    <tbody class="divide-y divide-gray-200">
-                        @forelse ($this->employers as $employer)
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4">
-                                    <div class="font-medium text-gray-900">
-                                        {{ $employer->employer_number }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="d-flex items-center">
-                                        @svg('heroicon-o-building-office', 'w-5 h-5 text-gray-400 mr-3')
-                                        <div>
-                                            <div class="font-medium text-gray-900">
-                                                {{ optional($employer->organizationCompanyLinks->first()?->company)->name ?? 'Kein Unternehmen verknüpft' }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900">
-                                        @if($employer->employee_number_prefix)
-                                            {{ $employer->employee_number_prefix }}0001 - {{ $employer->employee_number_prefix }}{{ str_pad($employer->employee_number_next - 1, 4, '0', STR_PAD_LEFT) }}
-                                        @else
-                                            0001 - {{ str_pad($employer->employee_number_next - 1, 4, '0', STR_PAD_LEFT) }}
-                                        @endif
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        Nächste: {{ $employer->previewNextEmployeeNumber() }}
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    <div class="text-sm text-gray-900">
-                                        {{ $employer->employee_count }} Mitarbeiter
-                                    </div>
-                                    <div class="text-xs text-gray-500">
-                                        {{ $employer->active_employee_count }} aktiv
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4">
-                                    @if($employer->is_active)
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            Aktiv
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                            Inaktiv
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 text-sm text-gray-500">
-                                    {{ $employer->created_at->format('d.m.Y') }}
-                                </td>
-                                <td class="px-6 py-4 text-right">
-                                    <x-ui-button 
-                                        size="sm" 
-                                        variant="secondary" 
-                                        href="{{ route('hcm.employers.show', ['employer' => $employer->id]) }}" 
-                                        wire:navigate
-                                    >
-                                        Bearbeiten
-                                    </x-ui-button>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                                    <div class="flex flex-col items-center">
-                                        @svg('heroicon-o-building-office', 'w-12 h-12 text-gray-300 mb-4')
-                                        <p class="text-lg font-medium">Keine Arbeitgeber gefunden</p>
-                                        <p class="text-sm">Erstellen Sie Ihren ersten Arbeitgeber um zu beginnen.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <x-ui-table compact="true">
+            <x-ui-table-header>
+                <x-ui-table-header-cell compact="true" sortable="true" sortField="employer_number" :currentSort="$sortField" :sortDirection="$sortDirection">Arbeitgeber-Nr.</x-ui-table-header-cell>
+                <x-ui-table-header-cell compact="true">Unternehmen</x-ui-table-header-cell>
+                <x-ui-table-header-cell compact="true">Mitarbeiter-Nummerierung</x-ui-table-header-cell>
+                <x-ui-table-header-cell compact="true">Mitarbeiter</x-ui-table-header-cell>
+                <x-ui-table-header-cell compact="true" sortable="true" sortField="is_active" :currentSort="$sortField" :sortDirection="$sortDirection">Status</x-ui-table-header-cell>
+                <x-ui-table-header-cell compact="true">Erstellt</x-ui-table-header-cell>
+                <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
+            </x-ui-table-header>
+            
+            <x-ui-table-body>
+                @forelse ($this->employers as $employer)
+                    <x-ui-table-row 
+                        compact="true"
+                        clickable="true" 
+                        :href="route('hcm.employers.show', ['employer' => $employer->id])"
+                    >
+                        <x-ui-table-cell compact="true">
+                            <div class="font-medium">{{ $employer->employer_number }}</div>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell compact="true">
+                            <div class="d-flex items-center gap-2">
+                                @svg('heroicon-o-building-office', 'w-4 h-4 text-muted')
+                                <div>
+                                    <div class="font-medium">{{ optional($employer->organizationCompanyLinks->first()?->company)->name ?? 'Kein Unternehmen verknüpft' }}</div>
+                                </div>
+                            </div>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell compact="true">
+                            <div class="text-sm">
+                                @if($employer->employee_number_prefix)
+                                    {{ $employer->employee_number_prefix }}0001 - {{ $employer->employee_number_prefix }}{{ str_pad($employer->employee_number_next - 1, 4, '0', STR_PAD_LEFT) }}
+                                @else
+                                    0001 - {{ str_pad($employer->employee_number_next - 1, 4, '0', STR_PAD_LEFT) }}
+                                @endif
+                            </div>
+                            <div class="text-xs text-muted">
+                                Nächste: {{ $employer->previewNextEmployeeNumber() }}
+                            </div>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell compact="true">
+                            <div class="text-sm">
+                                {{ $employer->employee_count }} Mitarbeiter
+                            </div>
+                            <div class="text-xs text-muted">
+                                {{ $employer->active_employee_count }} aktiv
+                            </div>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell compact="true">
+                            <x-ui-badge variant="{{ $employer->is_active ? 'success' : 'secondary' }}" size="sm">
+                                {{ $employer->is_active ? 'Aktiv' : 'Inaktiv' }}
+                            </x-ui-badge>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell compact="true">
+                            <div class="text-sm text-muted">
+                                {{ $employer->created_at->format('d.m.Y') }}
+                            </div>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell compact="true" align="right">
+                            <x-ui-button 
+                                size="sm" 
+                                variant="secondary" 
+                                href="{{ route('hcm.employers.show', ['employer' => $employer->id]) }}" 
+                                wire:navigate
+                            >
+                                Bearbeiten
+                            </x-ui-button>
+                        </x-ui-table-cell>
+                    </x-ui-table-row>
+                @empty
+                    <x-ui-table-row>
+                        <x-ui-table-cell colspan="7" align="center" class="py-12">
+                            <div class="flex flex-col items-center">
+                                @svg('heroicon-o-building-office', 'w-12 h-12 text-muted mb-4')
+                                <p class="text-lg font-medium">Keine Arbeitgeber gefunden</p>
+                                <p class="text-sm text-muted">Erstellen Sie Ihren ersten Arbeitgeber um zu beginnen.</p>
+                            </div>
+                        </x-ui-table-cell>
+                    </x-ui-table-row>
+                @endforelse
+            </x-ui-table-body>
+        </x-ui-table>
 
         <!-- Create Employer Modal -->
     <x-ui-modal
