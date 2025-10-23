@@ -139,14 +139,20 @@ class BhgImportService
             echo "DEBUG: Processing row {$rowCount}: " . implode(' | ', array_slice($row, 0, 5)) . "\n";
             
             if (count($row) >= 18) {
-                // Nur echte Datensätze verarbeiten (Personalnummer muss numerisch oder alphanumerisch sein)
+                // Nur echte Datensätze verarbeiten (Personalnummer muss numerisch sein)
                 $personalnummer = trim($row[0]);
-                if (empty($personalnummer) || 
-                    strpos($personalnummer, 'Mitarbeiterliste') !== false || 
+                
+                // Strikte Filterung: Nur numerische Personalnummern
+                if (empty($personalnummer) || !is_numeric($personalnummer)) {
+                    echo "DEBUG: Skipping row {$rowCount} - not numeric personalnummer: '{$personalnummer}'\n";
+                    continue;
+                }
+                
+                // Zusätzliche Sicherheit: Prüfe auf bekannte Header-Strings
+                if (strpos($personalnummer, 'Mitarbeiterliste') !== false || 
                     strpos($personalnummer, 'Gültigkeitsdatum') !== false ||
-                    strpos($personalnummer, 'Personalnummer') !== false ||
-                    !is_numeric($personalnummer)) {
-                    echo "DEBUG: Skipping row {$rowCount} - invalid personalnummer: '{$personalnummer}'\n";
+                    strpos($personalnummer, 'Personalnummer') !== false) {
+                    echo "DEBUG: Skipping row {$rowCount} - header string detected: '{$personalnummer}'\n";
                     continue;
                 }
                 
