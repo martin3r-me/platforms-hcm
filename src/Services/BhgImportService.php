@@ -488,6 +488,7 @@ class BhgImportService
                     'last_name' => $row['nachname'],
                 ]);
                 echo "DEBUG: Update CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
+                echo "DEBUG: Email: '{$row['email']}', Telefon: '{$row['telefon']}', Mobil: '{$row['mobil']}'\n";
                 
                 // Update Email-Adressen und Telefonnummern für bestehende Kontakte
                 $this->updateContactData($contact, $row);
@@ -672,6 +673,9 @@ class BhgImportService
     private function updateContactData($contact, $row)
     {
         echo "DEBUG: Updating contact data for {$row['vorname']} {$row['nachname']}\n";
+        echo "DEBUG: Email value: '{$row['email']}' (empty: " . (empty($row['email']) ? 'true' : 'false') . ")\n";
+        echo "DEBUG: Telefon value: '{$row['telefon']}' (empty: " . (empty($row['telefon']) ? 'true' : 'false') . ")\n";
+        echo "DEBUG: Mobil value: '{$row['mobil']}' (empty: " . (empty($row['mobil']) ? 'true' : 'false') . ")\n";
         
         // Update Email-Adressen
         $this->updateEmailAddresses($contact, $row);
