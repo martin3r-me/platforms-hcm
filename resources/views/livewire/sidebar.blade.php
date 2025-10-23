@@ -5,12 +5,16 @@
         HCM
     </div>
     
-    {{-- Abschnitt: Allgemein (über UI-Komponenten) --}}
-    <x-ui-sidebar-list label="Allgemein">
+    {{-- Abschnitt: Dashboard --}}
+    <x-ui-sidebar-list label="Übersicht">
         <x-ui-sidebar-item :href="route('hcm.dashboard')">
             @svg('heroicon-o-home', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Dashboard</span>
         </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
+    {{-- Abschnitt: Organisation --}}
+    <x-ui-sidebar-list label="Organisation">
         <x-ui-sidebar-item :href="route('hcm.employers.index')">
             @svg('heroicon-o-building-office', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Arbeitgeber</span>
@@ -18,26 +22,6 @@
         <x-ui-sidebar-item :href="route('hcm.employees.index')">
             @svg('heroicon-o-user-group', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Mitarbeiter</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.tariffs.index')">
-            @svg('heroicon-o-scale', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Tarifklassen</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.job-titles.index')">
-            @svg('heroicon-o-briefcase', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Stellenbezeichnungen</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.job-activities.index')">
-            @svg('heroicon-o-clipboard-document', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Tätigkeiten</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.payroll-types.index')">
-            @svg('heroicon-o-currency-euro', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Lohnarten</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.health-insurance-companies.index')">
-            @svg('heroicon-o-heart', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Krankenkassen</span>
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
@@ -61,44 +45,81 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
-    {{-- Collapsed: Icons-only für Allgemein --}}
+    {{-- Abschnitt: Stellen & Tätigkeiten --}}
+    <x-ui-sidebar-list label="Stellen & Tätigkeiten">
+        <x-ui-sidebar-item :href="route('hcm.job-titles.index')">
+            @svg('heroicon-o-briefcase', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Stellenbezeichnungen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.job-activities.index')">
+            @svg('heroicon-o-clipboard-document', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tätigkeiten</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
+    {{-- Abschnitt: Lohn & Soziales --}}
+    <x-ui-sidebar-list label="Lohn & Soziales">
+        <x-ui-sidebar-item :href="route('hcm.payroll-types.index')">
+            @svg('heroicon-o-currency-euro', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Lohnarten</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.health-insurance-companies.index')">
+            @svg('heroicon-o-heart', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Krankenkassen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.tariffs.index')">
+            @svg('heroicon-o-scale', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Tarifklassen</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
+    {{-- Collapsed: Icons-only --}}
     <div x-show="collapsed" class="px-2 py-2 border-b border-[var(--ui-border)]">
         <div class="flex flex-col gap-2">
-            <a href="{{ route('hcm.dashboard') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            {{-- Dashboard --}}
+            <a href="{{ route('hcm.dashboard') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Dashboard">
                 @svg('heroicon-o-home', 'w-5 h-5')
             </a>
-            <a href="{{ route('hcm.employers.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            
+            {{-- Organisation --}}
+            <a href="{{ route('hcm.employers.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Arbeitgeber">
                 @svg('heroicon-o-building-office', 'w-5 h-5')
             </a>
-            <a href="{{ route('hcm.employees.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            <a href="{{ route('hcm.employees.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Mitarbeiter">
                 @svg('heroicon-o-user-group', 'w-5 h-5')
             </a>
-            <a href="{{ route('hcm.tariffs.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
-                @svg('heroicon-o-scale', 'w-5 h-5')
-            </a>
-            <a href="{{ route('hcm.job-titles.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
-                @svg('heroicon-o-briefcase', 'w-5 h-5')
-            </a>
-            <a href="{{ route('hcm.job-activities.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
-                @svg('heroicon-o-clipboard-document', 'w-5 h-5')
-            </a>
-            <a href="{{ route('hcm.payroll-types.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
-                @svg('heroicon-o-currency-euro', 'w-5 h-5')
-            </a>
-            <a href="{{ route('hcm.health-insurance-companies.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
-                @svg('heroicon-o-heart', 'w-5 h-5')
-            </a>
-            <a href="{{ route('hcm.tariff-agreements.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            
+            {{-- Tarife --}}
+            <a href="{{ route('hcm.tariff-agreements.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tarifverträge">
                 @svg('heroicon-o-document-text', 'w-5 h-5')
             </a>
-            <a href="{{ route('hcm.tariff-groups.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            <a href="{{ route('hcm.tariff-groups.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tarifgruppen">
                 @svg('heroicon-o-squares-2x2', 'w-5 h-5')
             </a>
-            <a href="{{ route('hcm.tariff-levels.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            <a href="{{ route('hcm.tariff-levels.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tarifstufen">
                 @svg('heroicon-o-bars-3', 'w-5 h-5')
             </a>
-            <a href="{{ route('hcm.tariff-rates.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]">
+            <a href="{{ route('hcm.tariff-rates.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tarifsätze">
                 @svg('heroicon-o-banknotes', 'w-5 h-5')
+            </a>
+            
+            {{-- Stellen & Tätigkeiten --}}
+            <a href="{{ route('hcm.job-titles.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Stellenbezeichnungen">
+                @svg('heroicon-o-briefcase', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.job-activities.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tätigkeiten">
+                @svg('heroicon-o-clipboard-document', 'w-5 h-5')
+            </a>
+            
+            {{-- Lohn & Soziales --}}
+            <a href="{{ route('hcm.payroll-types.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Lohnarten">
+                @svg('heroicon-o-currency-euro', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.health-insurance-companies.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Krankenkassen">
+                @svg('heroicon-o-heart', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.tariffs.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tarifklassen">
+                @svg('heroicon-o-scale', 'w-5 h-5')
             </a>
         </div>
     </div>
