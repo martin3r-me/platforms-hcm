@@ -143,69 +143,60 @@
                     </div>
                     
                     @if($this->employees->count() > 0)
-                        <div class="overflow-x-auto">
-                            <table class="w-full table-auto border-collapse text-sm">
-                                <thead class="bg-gray-50">
-                                    <tr class="text-left text-gray-500 border-b border-gray-200 text-xs uppercase tracking-wide">
-                                        <th class="px-6 py-3">Mitarbeiter-Nr.</th>
-                                        <th class="px-6 py-3">Name</th>
-                                        <th class="px-6 py-3">Kontakt</th>
-                                        <th class="px-6 py-3">Status</th>
-                                        <th class="px-6 py-3 text-right">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    @foreach($this->employees as $employee)
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-6 py-4">
-                                                <div class="font-medium text-gray-900">
-                                                    {{ $employee->employee_number }}
+                        <x-ui-table compact="true">
+                            <x-ui-table-header>
+                                <x-ui-table-header-cell compact="true">Mitarbeiter-Nr.</x-ui-table-header-cell>
+                                <x-ui-table-header-cell compact="true">Name</x-ui-table-header-cell>
+                                <x-ui-table-header-cell compact="true">Kontakt</x-ui-table-header-cell>
+                                <x-ui-table-header-cell compact="true">Status</x-ui-table-header-cell>
+                                <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
+                            </x-ui-table-header>
+                            
+                            <x-ui-table-body>
+                                @foreach($this->employees as $employee)
+                                    <x-ui-table-row 
+                                        compact="true"
+                                        clickable="true" 
+                                        :href="route('hcm.employees.show', ['employee' => $employee->id])"
+                                    >
+                                        <x-ui-table-cell compact="true">
+                                            <div class="font-medium">{{ $employee->employee_number }}</div>
+                                        </x-ui-table-cell>
+                                        <x-ui-table-cell compact="true">
+                                            <div class="font-medium">{{ $employee->full_name ?? 'Kein Name' }}</div>
+                                        </x-ui-table-cell>
+                                        <x-ui-table-cell compact="true">
+                                            @if($employee->crmContactLinks->count() > 0)
+                                                <div class="text-sm">
+                                                    @if($employee->crmContactLinks->first()->contact->emailAddresses->where('is_primary', true)->first())
+                                                        {{ $employee->crmContactLinks->first()->contact->emailAddresses->where('is_primary', true)->first()->email_address }}
+                                                    @else
+                                                        <span class="text-muted">Keine E-Mail</span>
+                                                    @endif
                                                 </div>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                <div class="font-medium text-gray-900">
-                                                    {{ $employee->full_name ?? 'Kein Name' }}
-                                                </div>
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                @if($employee->crmContactLinks->count() > 0)
-                                                    <div class="text-sm text-gray-900">
-                                                        @if($employee->crmContactLinks->first()->contact->emailAddresses->where('is_primary', true)->first())
-                                                            {{ $employee->crmContactLinks->first()->contact->emailAddresses->where('is_primary', true)->first()->email_address }}
-                                                        @else
-                                                            <span class="text-gray-400">Keine E-Mail</span>
-                                                        @endif
-                                                    </div>
-                                                @else
-                                                    <span class="text-gray-400">Kein Kontakt</span>
-                                                @endif
-                                            </td>
-                                            <td class="px-6 py-4">
-                                                @if($employee->is_active)
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                        Aktiv
-                                                    </span>
-                                                @else
-                                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                        Inaktiv
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="px-6 py-4 text-right">
-                                                <x-ui-button 
-                                                    size="sm" 
-                                                    variant="secondary" 
-                                                    href="{{ route('hcm.employees.show', ['employee' => $employee->id]) }}" 
-                                                    wire:navigate
-                                                >
-                                                    Bearbeiten
-                                                </x-ui-button>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                                            @else
+                                                <span class="text-muted">Kein Kontakt</span>
+                                            @endif
+                                        </x-ui-table-cell>
+                                        <x-ui-table-cell compact="true">
+                                            <x-ui-badge variant="{{ $employee->is_active ? 'success' : 'secondary' }}" size="sm">
+                                                {{ $employee->is_active ? 'Aktiv' : 'Inaktiv' }}
+                                            </x-ui-badge>
+                                        </x-ui-table-cell>
+                                        <x-ui-table-cell compact="true" align="right">
+                                            <x-ui-button 
+                                                size="sm" 
+                                                variant="secondary" 
+                                                href="{{ route('hcm.employees.show', ['employee' => $employee->id]) }}" 
+                                                wire:navigate
+                                            >
+                                                Bearbeiten
+                                            </x-ui-button>
+                                        </x-ui-table-cell>
+                                    </x-ui-table-row>
+                                @endforeach
+                            </x-ui-table-body>
+                        </x-ui-table>
                     @else
                         <div class="text-center py-8">
                             @svg('heroicon-o-user-group', 'w-12 h-12 text-gray-300 mx-auto mb-4')

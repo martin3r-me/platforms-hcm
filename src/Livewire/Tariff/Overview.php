@@ -14,7 +14,7 @@ class Overview extends Component
     public function getTariffAgreementsProperty()
     {
         return HcmTariffAgreement::with(['tariffGroups.tariffLevels', 'tariffGroups.tariffRates'])
-            ->forTeam(auth()->user()->currentTeam->id)
+            ->where('team_id', auth()->user()->currentTeam->id)
             ->orderBy('name')
             ->get();
     }
@@ -22,7 +22,9 @@ class Overview extends Component
     public function getTariffGroupsProperty()
     {
         return HcmTariffGroup::with(['tariffAgreement', 'tariffLevels', 'tariffRates'])
-            ->forTeam(auth()->user()->currentTeam->id)
+            ->whereHas('tariffAgreement', function($query) {
+                $query->where('team_id', auth()->user()->currentTeam->id);
+            })
             ->orderBy('name')
             ->get();
     }
@@ -30,7 +32,9 @@ class Overview extends Component
     public function getTariffLevelsProperty()
     {
         return HcmTariffLevel::with(['tariffGroup.tariffAgreement', 'tariffRates'])
-            ->forTeam(auth()->user()->currentTeam->id)
+            ->whereHas('tariffGroup.tariffAgreement', function($query) {
+                $query->where('team_id', auth()->user()->currentTeam->id);
+            })
             ->orderBy('code')
             ->get();
     }
@@ -38,7 +42,9 @@ class Overview extends Component
     public function getTariffRatesProperty()
     {
         return HcmTariffRate::with(['tariffLevel.tariffGroup.tariffAgreement'])
-            ->forTeam(auth()->user()->currentTeam->id)
+            ->whereHas('tariffLevel.tariffGroup.tariffAgreement', function($query) {
+                $query->where('team_id', auth()->user()->currentTeam->id);
+            })
             ->orderBy('amount', 'desc')
             ->get();
     }
@@ -48,10 +54,16 @@ class Overview extends Component
         $teamId = auth()->user()->currentTeam->id;
         
         return [
-            'agreements' => HcmTariffAgreement::forTeam($teamId)->count(),
-            'groups' => HcmTariffGroup::forTeam($teamId)->count(),
-            'levels' => HcmTariffLevel::forTeam($teamId)->count(),
-            'rates' => HcmTariffRate::forTeam($teamId)->count(),
+            'agreements' => HcmTariffAgreement::where('team_id', $teamId)->count(),
+            'groups' => HcmTariffGroup::whereHas('tariffAgreement', function($query) use ($teamId) {
+                $query->where('team_id', $teamId);
+            })->count(),
+            'levels' => HcmTariffLevel::whereHas('tariffGroup.tariffAgreement', function($query) use ($teamId) {
+                $query->where('team_id', $teamId);
+            })->count(),
+            'rates' => HcmTariffRate::whereHas('tariffLevel.tariffGroup.tariffAgreement', function($query) use ($teamId) {
+                $query->where('team_id', $teamId);
+            })->count(),
         ];
     }
 
