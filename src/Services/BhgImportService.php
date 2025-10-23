@@ -133,8 +133,17 @@ class BhgImportService
 
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
             if (count($row) >= 18) {
+                // Nur echte Datensätze verarbeiten (Personalnummer muss numerisch oder alphanumerisch sein)
+                $personalnummer = trim($row[0]);
+                if (empty($personalnummer) || 
+                    strpos($personalnummer, 'Mitarbeiterliste') !== false || 
+                    strpos($personalnummer, 'Gültigkeitsdatum') !== false ||
+                    strpos($personalnummer, 'Personalnummer') !== false) {
+                    continue;
+                }
+                
                 $data[] = [
-                    'personalnummer' => $row[0],
+                    'personalnummer' => $personalnummer,
                     'nachname' => $row[1],
                     'vorname' => $row[2],
                     'geschlecht' => $row[3],
@@ -304,6 +313,30 @@ class BhgImportService
         }
     }
 
+    private function parseDateValue($dateString)
+    {
+        if (empty($dateString) || trim($dateString) === '') {
+            return null;
+        }
+        
+        $dateString = trim($dateString);
+        
+        try {
+            // Versuche verschiedene Formate
+            $formats = ['d.m.Y', 'd.m.y', 'Y-m-d', 'd-m-Y'];
+            foreach ($formats as $format) {
+                $date = Carbon::createFromFormat($format, $dateString);
+                if ($date && $date->format($format) === $dateString) {
+                    return $date;
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignoriere Parsing-Fehler
+        }
+        
+        return null;
+    }
+
     private function createContract($row)
     {
         try {
@@ -315,9 +348,9 @@ class BhgImportService
                 return;
             }
 
-            // Prüfen ob Vertrag bereits existiert (Personalnummer + Eintrittsdatum)
-            $startDate = $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null;
-            $endDate = $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null;
+            // Robuste Datumsparsing
+            $startDate = $this->parseDateValue($row['eintrittsdatum']);
+            $endDate = $this->parseDateValue($row['austrittsdatum']);
             
             // Einfachste Prüfung: Nur Personalnummer (da jeder Mitarbeiter nur einen Vertrag haben sollte)
             $existingContract = HcmEmployeeContract::where('employee_id', $employee->id)->first();
@@ -338,6 +371,12 @@ class BhgImportService
             $sollStunden = null;
             if (!empty($row['soll_stunden'])) {
                 $sollStunden = (float) str_replace(',', '.', $row['soll_stunden']);
+            }
+            
+            // Nur Vertrag erstellen wenn start_date vorhanden ist
+            if (!$startDate) {
+                echo "DEBUG: Skipping contract for {$row['personalnummer']} - no valid start date\n";
+                return;
             }
             
             // Neuen Vertrag erstellen
@@ -410,6 +449,7 @@ class BhgImportService
                 ->first();
 
             if (!$employee) {
+                echo "DEBUG: No employee found for {$row['personalnummer']} - skipping CRM contact\n";
                 return;
             }
 
@@ -439,20 +479,18 @@ class BhgImportService
                     'created_by_user_id' => $this->userId,
                 ]);
                 echo "DEBUG: Erstelle CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
-            }
-
-            // Add address (nur wenn nicht bereits vorhanden)
-            if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
-                // Prüfen ob Adresse bereits existiert
-                $existingAddress = CrmPostalAddress::where('addressable_id', $contact->id)
-                    ->where('addressable_type', CrmContact::class)
-                    ->where('street', trim($row['straße']))
-                    ->where('postal_code', trim($row['plz']))
-                    ->where('city', trim($row['ort']))
-                    ->first();
                 
-                if (!$existingAddress) {
-                    echo "DEBUG: Adding address for {$row['vorname']}: {$row['straße']}, {$row['plz']} {$row['ort']}\n";
+                // Initial creation of email/phone/address for new contacts
+                if (!empty($row['email']) && trim($row['email']) !== '') {
+                    $this->createEmailAddress($contact, $row['email'], 1, true);
+                }
+                if (!empty($row['telefon']) && trim($row['telefon']) !== '') {
+                    $this->createPhoneNumber($contact, $row['telefon'], 1, true);
+                }
+                if (!empty($row['mobil']) && trim($row['mobil']) !== '') {
+                    $this->createPhoneNumber($contact, $row['mobil'], 2, false);
+                }
+                if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
                     CrmPostalAddress::create([
                         'addressable_id' => $contact->id,
                         'addressable_type' => CrmContact::class,
@@ -460,19 +498,13 @@ class BhgImportService
                         'postal_code' => trim($row['plz']),
                         'city' => trim($row['ort']),
                         'additional_info' => trim($row['adresszusatz']),
-                        'address_type_id' => 1, // Standard Adress-Typ
+                        'address_type_id' => 1,
                         'is_primary' => true,
                     ]);
-                } else {
-                    echo "DEBUG: Address already exists for {$row['vorname']}: {$row['straße']}, {$row['plz']} {$row['ort']}\n";
                 }
             }
 
             // Link to employee if exists
-            $employee = HcmEmployee::where('team_id', $this->teamId)
-                ->where('employee_number', $row['personalnummer'])
-                ->first();
-
             if ($employee) {
                 // Prüfen ob Link bereits existiert
                 $existingLink = CrmContactLink::where('contact_id', $contact->id)
@@ -488,57 +520,6 @@ class BhgImportService
                         'team_id' => $this->teamId,
                         'created_by_user_id' => $this->userId,
                     ]);
-                }
-            }
-
-            // Create link between employee and CRM contact
-            if (!$existingLink) {
-                CrmContactLink::create([
-                    'contact_id' => $contact->id,
-                    'linkable_id' => $employee->id,
-                    'linkable_type' => HcmEmployee::class,
-                    'team_id' => $this->teamId,
-                ]);
-            }
-
-            // Add email address if provided (nur wenn nicht bereits vorhanden)
-            if (!empty($row['email']) && trim($row['email']) !== '') {
-                $existingEmail = $contact->emailAddresses()
-                    ->where('email_address', trim($row['email']))
-                    ->first();
-                
-                if (!$existingEmail) {
-                    echo "DEBUG: Adding email for {$row['vorname']}: {$row['email']}\n";
-                    $this->createEmailAddress($contact, $row['email'], 1, true);
-                } else {
-                    echo "DEBUG: Email already exists for {$row['vorname']}: {$row['email']}\n";
-                }
-            }
-
-            // Add phone numbers if provided (nur wenn nicht bereits vorhanden)
-            if (!empty($row['telefon']) && trim($row['telefon']) !== '') {
-                $existingPhone = $contact->phoneNumbers()
-                    ->where('raw_input', trim($row['telefon']))
-                    ->first();
-                
-                if (!$existingPhone) {
-                    echo "DEBUG: Adding telefon for {$row['vorname']}: {$row['telefon']}\n";
-                    $this->createPhoneNumber($contact, $row['telefon'], 1, true);
-                } else {
-                    echo "DEBUG: Telefon already exists for {$row['vorname']}: {$row['telefon']}\n";
-                }
-            }
-            
-            if (!empty($row['mobil']) && trim($row['mobil']) !== '') {
-                $existingMobile = $contact->phoneNumbers()
-                    ->where('raw_input', trim($row['mobil']))
-                    ->first();
-                
-                if (!$existingMobile) {
-                    echo "DEBUG: Adding mobil for {$row['vorname']}: {$row['mobil']}\n";
-                    $this->createPhoneNumber($contact, $row['mobil'], 2, false);
-                } else {
-                    echo "DEBUG: Mobil already exists for {$row['vorname']}: {$row['mobil']}\n";
                 }
             }
 
@@ -593,8 +574,8 @@ class BhgImportService
                     'company_id' => $company->id,
                     'relation_type_id' => 1, // Employee relation type
                     'position' => $row['stellenbezeichnung'] ?: $row['tätigkeit'],
-                    'start_date' => $row['eintrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['eintrittsdatum']) : null,
-                    'end_date' => $row['austrittsdatum'] ? Carbon::createFromFormat('d.m.Y', $row['austrittsdatum']) : null,
+                    'start_date' => $this->parseDateValue($row['eintrittsdatum']),
+                    'end_date' => $this->parseDateValue($row['austrittsdatum']),
                     'is_primary' => true,
                     'is_active' => empty($row['austrittsdatum']),
                 ]);
