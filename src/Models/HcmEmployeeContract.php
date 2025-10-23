@@ -32,6 +32,11 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'department_id',
         'location_id',
         'cost_center',
+        'tariff_group_id',
+        'tariff_level_id',
+        'tariff_assignment_date',
+        'tariff_level_start_date',
+        'next_tariff_level_date',
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
@@ -41,6 +46,9 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'tariff_assignment_date' => 'date',
+        'tariff_level_start_date' => 'date',
+        'next_tariff_level_date' => 'date',
         'is_active' => 'boolean',
     ];
 
@@ -105,6 +113,45 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     public function getTeamId(): int
     {
         return $this->team_id;
+    }
+
+    public function tariffGroup(): BelongsTo
+    {
+        return $this->belongsTo(HcmTariffGroup::class, 'tariff_group_id');
+    }
+
+    public function tariffLevel(): BelongsTo
+    {
+        return $this->belongsTo(HcmTariffLevel::class, 'tariff_level_id');
+    }
+
+    /**
+     * Get current tariff rate for this contract
+     */
+    public function getCurrentTariffRate(?string $date = null): ?HcmTariffRate
+    {
+        if (!$this->tariff_group_id || !$this->tariff_level_id) {
+            return null;
+        }
+
+        return HcmTariffRate::getCurrentRate(
+            $this->tariff_group_id,
+            $this->tariff_level_id,
+            $date
+        );
+    }
+
+    /**
+     * Check if tariff level progression is due
+     */
+    public function isTariffProgressionDue(?string $date = null): bool
+    {
+        if (!$this->next_tariff_level_date) {
+            return false;
+        }
+
+        $date = $date ?? now()->toDateString();
+        return $this->next_tariff_level_date <= $date;
     }
 }
 
