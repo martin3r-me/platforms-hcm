@@ -438,27 +438,30 @@ class BhgImportService
                 echo "DEBUG: Erstelle CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
             }
 
-            // Add address
+            // Add address (nur wenn nicht bereits vorhanden)
             if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
                 // Prüfen ob Adresse bereits existiert
                 $existingAddress = CrmPostalAddress::where('addressable_id', $contact->id)
                     ->where('addressable_type', CrmContact::class)
-                    ->where('street', $row['straße'])
-                    ->where('postal_code', $row['plz'])
-                    ->where('city', $row['ort'])
+                    ->where('street', trim($row['straße']))
+                    ->where('postal_code', trim($row['plz']))
+                    ->where('city', trim($row['ort']))
                     ->first();
                 
                 if (!$existingAddress) {
+                    echo "DEBUG: Adding address for {$row['vorname']}: {$row['straße']}, {$row['plz']} {$row['ort']}\n";
                     CrmPostalAddress::create([
                         'addressable_id' => $contact->id,
                         'addressable_type' => CrmContact::class,
-                        'street' => $row['straße'],
-                        'postal_code' => $row['plz'],
-                        'city' => $row['ort'],
-                        'additional_info' => $row['adresszusatz'],
+                        'street' => trim($row['straße']),
+                        'postal_code' => trim($row['plz']),
+                        'city' => trim($row['ort']),
+                        'additional_info' => trim($row['adresszusatz']),
                         'address_type_id' => 1, // Standard Adress-Typ
                         'is_primary' => true,
                     ]);
+                } else {
+                    echo "DEBUG: Address already exists for {$row['vorname']}: {$row['straße']}, {$row['plz']} {$row['ort']}\n";
                 }
             }
 
@@ -495,17 +498,48 @@ class BhgImportService
                 ]);
             }
 
-            // Add email address if provided
-            if (!empty($row['email'])) {
-                $this->createEmailAddress($contact, $row['email'], 1, true);
+            // Add email address if provided (nur wenn nicht bereits vorhanden)
+            if (!empty($row['email']) && trim($row['email']) !== '') {
+                $existingEmail = CrmEmailAddress::where('emailable_id', $contact->id)
+                    ->where('emailable_type', CrmContact::class)
+                    ->where('email_address', trim($row['email']))
+                    ->first();
+                
+                if (!$existingEmail) {
+                    echo "DEBUG: Adding email for {$row['vorname']}: {$row['email']}\n";
+                    $this->createEmailAddress($contact, $row['email'], 1, true);
+                } else {
+                    echo "DEBUG: Email already exists for {$row['vorname']}: {$row['email']}\n";
+                }
             }
 
-            // Add phone numbers if provided
-            if (!empty($row['telefon'])) {
-                $this->createPhoneNumber($contact, $row['telefon'], 1, true);
+            // Add phone numbers if provided (nur wenn nicht bereits vorhanden)
+            if (!empty($row['telefon']) && trim($row['telefon']) !== '') {
+                $existingPhone = CrmPhoneNumber::where('phoneable_id', $contact->id)
+                    ->where('phoneable_type', CrmContact::class)
+                    ->where('raw_input', trim($row['telefon']))
+                    ->first();
+                
+                if (!$existingPhone) {
+                    echo "DEBUG: Adding telefon for {$row['vorname']}: {$row['telefon']}\n";
+                    $this->createPhoneNumber($contact, $row['telefon'], 1, true);
+                } else {
+                    echo "DEBUG: Telefon already exists for {$row['vorname']}: {$row['telefon']}\n";
+                }
             }
-            if (!empty($row['mobil'])) {
-                $this->createPhoneNumber($contact, $row['mobil'], 2, false);
+            
+            if (!empty($row['mobil']) && trim($row['mobil']) !== '') {
+                $existingMobile = CrmPhoneNumber::where('phoneable_id', $contact->id)
+                    ->where('phoneable_type', CrmContact::class)
+                    ->where('raw_input', trim($row['mobil']))
+                    ->first();
+                
+                if (!$existingMobile) {
+                    echo "DEBUG: Adding mobil for {$row['vorname']}: {$row['mobil']}\n";
+                    $this->createPhoneNumber($contact, $row['mobil'], 2, false);
+                } else {
+                    echo "DEBUG: Mobil already exists for {$row['vorname']}: {$row['mobil']}\n";
+                }
             }
 
             // Create company relation if employer exists
@@ -575,17 +609,6 @@ class BhgImportService
     private function createPhoneNumber($contact, $phoneInput, $phoneTypeId, $isPrimary)
     {
         try {
-            // Prüfen ob Telefonnummer bereits existiert
-            $existingPhone = CrmPhoneNumber::where('phoneable_id', $contact->id)
-                ->where('phoneable_type', CrmContact::class)
-                ->where('raw_input', $phoneInput)
-                ->where('phone_type_id', $phoneTypeId)
-                ->first();
-            
-            if ($existingPhone) {
-                return; // Telefonnummer bereits vorhanden
-            }
-            
             $phoneUtil = PhoneNumberUtil::getInstance();
             
             // Versuche deutsche Nummer zu parsen (DE als Standard)
@@ -641,19 +664,9 @@ class BhgImportService
     private function createEmailAddress($contact, $emailInput, $emailTypeId = 1, $isPrimary = false)
     {
         try {
-            // Prüfen ob Email bereits existiert
-            $existingEmail = CrmEmailAddress::where('emailable_id', $contact->id)
-                ->where('emailable_type', CrmContact::class)
-                ->where('email_address', $emailInput)
-                ->where('email_type_id', $emailTypeId)
-                ->first();
-            
-            if ($existingEmail) {
-                return; // Email bereits vorhanden
-            }
-            
             // Email validieren
             if (!filter_var($emailInput, FILTER_VALIDATE_EMAIL)) {
+                echo "DEBUG: Invalid email format: {$emailInput}\n";
                 return; // Ungültige Email-Adresse
             }
             
