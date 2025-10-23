@@ -70,7 +70,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\ImportBhgData::class,
                 \Platform\Hcm\Console\Commands\ImportPayrollTypes::class,
                 \Platform\Hcm\Console\Commands\ExportPayrollTypes::class,
-                \Platform\Hcm\Console\Commands\SimpleTest::class,
+                \Platform\Hcm\Console\Commands\TestTariffCommand::class,
             ]);
         }
     }
