@@ -21,6 +21,6 @@ class Show extends Component
 
     public function render()
     {
-        return view('hcm::livewire.tariff-level.show');
+        return view('hcm::livewire.tariff-level.show')->layout('platform::layouts.app');
     }
 }

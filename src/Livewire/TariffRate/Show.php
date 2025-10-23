@@ -18,6 +18,6 @@ class Show extends Component
 
     public function render()
     {
-        return view('hcm::livewire.tariff-rate.show');
+        return view('hcm::livewire.tariff-rate.show')->layout('platform::layouts.app');
     }
 }

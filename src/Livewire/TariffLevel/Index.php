@@ -47,6 +47,6 @@ class Index extends Component
     {
         return view('hcm::livewire.tariff-level.index', [
             'tariffLevels' => $this->tariffLevels
-        ]);
+        ])->layout('platform::layouts.app');
     }
 }

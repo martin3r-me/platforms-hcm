@@ -50,6 +50,6 @@ class Index extends Component
     {
         return view('hcm::livewire.tariff-rate.index', [
             'tariffRates' => $this->tariffRates
-        ]);
+        ])->layout('platform::layouts.app');
     }
 }
