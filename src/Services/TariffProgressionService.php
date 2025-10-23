@@ -100,6 +100,9 @@ class TariffProgressionService
             'tariff_level_start_date' => $actualProgressionDate,
             'next_tariff_level_date' => $this->calculateNextProgressionDate($nextLevel, $actualProgressionDate)
         ]);
+        
+        // Ensure next tariff level date is properly set for the new level
+        $contract->setNextTariffLevelDate();
     }
 
     /**

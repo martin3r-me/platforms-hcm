@@ -76,6 +76,13 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
                 $model->uuid = $uuid;
             }
         });
+        
+        static::saved(function (self $model) {
+            // Set next tariff level date when tariff level is assigned
+            if ($model->tariff_level_id && !$model->next_tariff_level_date) {
+                $model->setNextTariffLevelDate();
+            }
+        });
     }
 
     public function employee(): BelongsTo
@@ -171,6 +178,51 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
 
         $date = $date ?? now()->toDateString();
         return $this->next_tariff_level_date <= $date;
+    }
+
+    /**
+     * Set next tariff level date based on current tariff level
+     */
+    public function setNextTariffLevelDate(): void
+    {
+        if (!$this->tariffLevel || $this->tariffLevel->isFinalLevel()) {
+            $this->next_tariff_level_date = null;
+            $this->save();
+            return;
+        }
+
+        $startDate = $this->tariff_level_start_date ?? $this->start_date;
+        $progressionMonths = $this->tariffLevel->progression_months;
+        
+        if ($progressionMonths === 999) {
+            // Endstufe - keine weitere Progression
+            $this->next_tariff_level_date = null;
+        } else {
+            // Berechne nächstes Progression-Datum
+            $this->next_tariff_level_date = \Carbon\Carbon::parse($startDate)
+                ->addMonths($progressionMonths)
+                ->toDateString();
+        }
+        
+        $this->save();
+    }
+
+    /**
+     * Update next tariff level date for all contracts with tariff assignments
+     */
+    public static function updateAllNextTariffLevelDates(): int
+    {
+        $contracts = self::whereNotNull('tariff_level_id')
+            ->where('is_active', true)
+            ->get();
+            
+        $updated = 0;
+        foreach ($contracts as $contract) {
+            $contract->setNextTariffLevelDate();
+            $updated++;
+        }
+        
+        return $updated;
     }
 
     /**
