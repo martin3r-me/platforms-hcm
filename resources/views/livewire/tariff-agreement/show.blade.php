@@ -27,7 +27,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <x-ui-dashboard-tile
                         title="Tarifgruppen"
-                        :count="$tariffAgreement->tariffGroups->count()"
+                        :count="(int) $tariffAgreement->tariffGroups->count()"
                         icon="squares-2x2"
                         variant="primary"
                         size="sm"
@@ -35,7 +35,7 @@
                     
                     <x-ui-dashboard-tile
                         title="Tarifstufen"
-                        :count="$tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffLevels->count(); })"
+                        :count="(int) $tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffLevels->count(); })"
                         icon="bars-3"
                         variant="success"
                         size="sm"
@@ -43,7 +43,7 @@
                     
                     <x-ui-dashboard-tile
                         title="Tarifsätze"
-                        :count="$tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffRates->count(); })"
+                        :count="(int) $tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffRates->count(); })"
                         icon="banknotes"
                         variant="secondary"
                         size="sm"
@@ -51,7 +51,7 @@
                     
                     <x-ui-dashboard-tile
                         title="Status"
-                        :count="$tariffAgreement->is_active ? 'Aktiv' : 'Inaktiv'"
+                        :count="(string) ($tariffAgreement->is_active ? 'Aktiv' : 'Inaktiv')"
                         icon="check-circle"
                         variant="info"
                         size="sm"

@@ -19,7 +19,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     <x-ui-dashboard-tile
                         title="Tarifstufen"
-                        :count="$tariffGroup->tariffLevels->count()"
+                        :count="(int) $tariffGroup->tariffLevels->count()"
                         icon="bars-3"
                         variant="primary"
                         size="sm"
@@ -27,7 +27,7 @@
                     
                     <x-ui-dashboard-tile
                         title="Tarifsätze"
-                        :count="$tariffGroup->tariffRates->count()"
+                        :count="(int) $tariffGroup->tariffRates->count()"
                         icon="banknotes"
                         variant="success"
                         size="sm"
@@ -35,7 +35,7 @@
                     
                     <x-ui-dashboard-tile
                         title="Tarifvertrag"
-                        :count="1"
+                        :count="(int) 1"
                         icon="document-text"
                         variant="secondary"
                         size="sm"
@@ -43,7 +43,7 @@
                     
                     <x-ui-dashboard-tile
                         title="Status"
-                        :count="$tariffGroup->tariffAgreement->is_active ? 'Aktiv' : 'Inaktiv'"
+                        :count="(string) ($tariffGroup->tariffAgreement->is_active ? 'Aktiv' : 'Inaktiv')"
                         icon="check-circle"
                         variant="info"
                         size="sm"
@@ -161,7 +161,7 @@
                         </div>
                         <div class="text-center">
                             <div class="text-2xl font-bold text-purple-600">
-                                {{ $tariffGroup->tariffLevels->avg('progression_months') ?? 0 }}
+                                {{ round((float) ($tariffGroup->tariffLevels->where('progression_months', '!=', 999)->avg('progression_months') ?? 0)) }}
                             </div>
                             <div class="text-sm text-purple-700">Ø Progression (Monate)</div>
                         </div>

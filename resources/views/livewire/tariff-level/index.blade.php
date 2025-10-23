@@ -69,9 +69,5 @@
             </x-ui-table-body>
         </x-ui-table>
 
-        <!-- Pagination -->
-        <div class="mt-6">
-            {{ $tariffLevels->links() }}
-        </div>
     </x-ui-page-container>
 </x-ui-page>

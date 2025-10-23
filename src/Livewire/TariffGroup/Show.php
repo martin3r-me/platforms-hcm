@@ -14,6 +14,21 @@ class Show extends Component
         $this->tariffGroup = $tariffGroup->load(['tariffAgreement', 'tariffLevels', 'tariffRates']);
     }
 
+    public function getProgressionStatsProperty()
+    {
+        $levels = $this->tariffGroup->tariffLevels;
+        
+        return [
+            'possible_progressions' => $levels->filter(function($level) { 
+                return !$level->isFinalLevel(); 
+            })->count(),
+            'final_levels' => $levels->filter(function($level) { 
+                return $level->isFinalLevel(); 
+            })->count(),
+            'avg_progression_months' => $levels->where('progression_months', '!=', 999)->avg('progression_months') ?? 0,
+        ];
+    }
+
     public function render()
     {
         return view('hcm::livewire.tariff-group.show', [
