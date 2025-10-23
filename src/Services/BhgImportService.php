@@ -131,7 +131,11 @@ class BhgImportService
         // Skip header
         fgetcsv($handle, 0, ';');
 
+        $rowCount = 0;
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            $rowCount++;
+            echo "DEBUG: Processing row {$rowCount}: " . implode(' | ', array_slice($row, 0, 5)) . "\n";
+            
             if (count($row) >= 18) {
                 // Nur echte Datensätze verarbeiten (Personalnummer muss numerisch oder alphanumerisch sein)
                 $personalnummer = trim($row[0]);
@@ -139,8 +143,11 @@ class BhgImportService
                     strpos($personalnummer, 'Mitarbeiterliste') !== false || 
                     strpos($personalnummer, 'Gültigkeitsdatum') !== false ||
                     strpos($personalnummer, 'Personalnummer') !== false) {
+                    echo "DEBUG: Skipping row {$rowCount} - invalid personalnummer: '{$personalnummer}'\n";
                     continue;
                 }
+                
+                echo "DEBUG: Valid row {$rowCount} - Personalnummer: '{$personalnummer}', Email: '{$row[17]}', Telefon: '{$row[15]}', Mobil: '{$row[16]}'\n";
                 
                 $data[] = [
                     'personalnummer' => $personalnummer,
@@ -162,10 +169,13 @@ class BhgImportService
                     'mobil' => $row[16],
                     'email' => $row[17],
                 ];
+            } else {
+                echo "DEBUG: Skipping row {$rowCount} - insufficient columns: " . count($row) . "\n";
             }
         }
 
         fclose($handle);
+        echo "DEBUG: Total valid rows parsed: " . count($data) . "\n";
         return $data;
     }
 
@@ -316,24 +326,32 @@ class BhgImportService
     private function parseDateValue($dateString)
     {
         if (empty($dateString) || trim($dateString) === '') {
+            echo "DEBUG: Empty date string\n";
             return null;
         }
         
         $dateString = trim($dateString);
+        echo "DEBUG: Parsing date: '{$dateString}'\n";
         
         try {
             // Versuche verschiedene Formate
             $formats = ['d.m.Y', 'd.m.y', 'Y-m-d', 'd-m-Y'];
             foreach ($formats as $format) {
-                $date = Carbon::createFromFormat($format, $dateString);
-                if ($date && $date->format($format) === $dateString) {
-                    return $date;
+                try {
+                    $date = Carbon::createFromFormat($format, $dateString);
+                    if ($date && $date->format($format) === $dateString) {
+                        echo "DEBUG: Successfully parsed date '{$dateString}' with format '{$format}'\n";
+                        return $date;
+                    }
+                } catch (\Exception $e) {
+                    echo "DEBUG: Failed to parse '{$dateString}' with format '{$format}': " . $e->getMessage() . "\n";
                 }
             }
         } catch (\Exception $e) {
-            // Ignoriere Parsing-Fehler
+            echo "DEBUG: General parsing error for '{$dateString}': " . $e->getMessage() . "\n";
         }
         
+        echo "DEBUG: Could not parse date '{$dateString}' - returning null\n";
         return null;
     }
 
@@ -443,6 +461,9 @@ class BhgImportService
     private function createCrmContact($row)
     {
         try {
+            echo "DEBUG: Creating CRM contact for {$row['vorname']} {$row['nachname']} (Personalnummer: {$row['personalnummer']})\n";
+            echo "DEBUG: Email: '{$row['email']}', Telefon: '{$row['telefon']}', Mobil: '{$row['mobil']}'\n";
+            
             // Mitarbeiter finden
             $employee = HcmEmployee::where('team_id', $this->teamId)
                 ->where('employee_number', $row['personalnummer'])
@@ -452,6 +473,8 @@ class BhgImportService
                 echo "DEBUG: No employee found for {$row['personalnummer']} - skipping CRM contact\n";
                 return;
             }
+            
+            echo "DEBUG: Found employee ID {$employee->id} for {$row['personalnummer']}\n";
 
             // Prüfen ob Mitarbeiter bereits einen verknüpften CRM Kontakt hat
             $existingLink = CrmContactLink::where('linkable_id', $employee->id)
@@ -482,13 +505,22 @@ class BhgImportService
                 
                 // Initial creation of email/phone/address for new contacts
                 if (!empty($row['email']) && trim($row['email']) !== '') {
+                    echo "DEBUG: Creating email for new contact {$row['vorname']}: {$row['email']}\n";
                     $this->createEmailAddress($contact, $row['email'], 1, true);
+                } else {
+                    echo "DEBUG: No email provided for {$row['vorname']}\n";
                 }
                 if (!empty($row['telefon']) && trim($row['telefon']) !== '') {
+                    echo "DEBUG: Creating telefon for new contact {$row['vorname']}: {$row['telefon']}\n";
                     $this->createPhoneNumber($contact, $row['telefon'], 1, true);
+                } else {
+                    echo "DEBUG: No telefon provided for {$row['vorname']}\n";
                 }
                 if (!empty($row['mobil']) && trim($row['mobil']) !== '') {
+                    echo "DEBUG: Creating mobil for new contact {$row['vorname']}: {$row['mobil']}\n";
                     $this->createPhoneNumber($contact, $row['mobil'], 2, false);
+                } else {
+                    echo "DEBUG: No mobil provided for {$row['vorname']}\n";
                 }
                 if (!empty($row['straße']) && !empty($row['plz']) && !empty($row['ort'])) {
                     CrmPostalAddress::create([
