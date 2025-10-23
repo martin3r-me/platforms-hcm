@@ -489,9 +489,11 @@ class BhgImportService
                 ]);
                 echo "DEBUG: Update CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
                 echo "DEBUG: Email: '{$row['email']}', Telefon: '{$row['telefon']}', Mobil: '{$row['mobil']}'\n";
+                echo "DEBUG: *** CALLING updateContactData for {$row['vorname']} ***\n";
                 
                 // Update Email-Adressen und Telefonnummern für bestehende Kontakte
                 $this->updateContactData($contact, $row);
+                echo "DEBUG: *** FINISHED updateContactData for {$row['vorname']} ***\n";
             } else {
                 // Neuer CRM Kontakt erstellen
                 $contact = CrmContact::create([
