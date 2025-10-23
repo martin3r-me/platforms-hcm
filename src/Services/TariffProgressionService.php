@@ -4,6 +4,7 @@ namespace Platform\Hcm\Services;
 
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Models\HcmTariffLevel;
+use Platform\Hcm\Models\HcmTariffProgression;
 use Carbon\Carbon;
 
 class TariffProgressionService
@@ -78,6 +79,16 @@ class TariffProgressionService
         if (!$nextLevel) {
             throw new \Exception('No next tariff level available');
         }
+
+        // Create progression record
+        HcmTariffProgression::create([
+            'employee_contract_id' => $contract->id,
+            'from_tariff_level_id' => $contract->tariff_level_id,
+            'to_tariff_level_id' => $nextLevel->id,
+            'progression_date' => $date,
+            'progression_reason' => 'automatic',
+            'progression_notes' => 'Automatische Tarifstufen-Progression'
+        ]);
 
         // Update contract with new level
         $contract->update([
@@ -175,5 +186,46 @@ class TariffProgressionService
         }
 
         return $results;
+    }
+
+    /**
+     * Manually progress a contract to a specific tariff level
+     */
+    public function manualProgression(
+        HcmEmployeeContract $contract, 
+        HcmTariffLevel $targetLevel, 
+        string $date, 
+        string $reason = 'manual',
+        ?string $notes = null
+    ): HcmTariffProgression {
+        // Create progression record
+        $progression = HcmTariffProgression::create([
+            'employee_contract_id' => $contract->id,
+            'from_tariff_level_id' => $contract->tariff_level_id,
+            'to_tariff_level_id' => $targetLevel->id,
+            'progression_date' => $date,
+            'progression_reason' => $reason,
+            'progression_notes' => $notes ?? "Manuelle Progression zu {$targetLevel->name}"
+        ]);
+
+        // Update contract
+        $contract->update([
+            'tariff_level_id' => $targetLevel->id,
+            'tariff_level_start_date' => $date,
+            'next_tariff_level_date' => $this->calculateNextProgressionDate($targetLevel, $date)
+        ]);
+
+        return $progression;
+    }
+
+    /**
+     * Get progression history for a contract
+     */
+    public function getProgressionHistory(HcmEmployeeContract $contract): \Illuminate\Database\Eloquent\Collection
+    {
+        return $contract->tariffProgressions()
+            ->with(['fromTariffLevel', 'toTariffLevel'])
+            ->orderBy('progression_date', 'desc')
+            ->get();
     }
 }

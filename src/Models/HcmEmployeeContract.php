@@ -37,6 +37,14 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'tariff_assignment_date',
         'tariff_level_start_date',
         'next_tariff_level_date',
+        'is_above_tariff',
+        'above_tariff_amount',
+        'above_tariff_reason',
+        'above_tariff_start_date',
+        'is_minimum_wage',
+        'minimum_wage_hourly_rate',
+        'minimum_wage_monthly_hours',
+        'minimum_wage_notes',
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
@@ -49,6 +57,12 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'tariff_assignment_date' => 'date',
         'tariff_level_start_date' => 'date',
         'next_tariff_level_date' => 'date',
+        'above_tariff_start_date' => 'date',
+        'is_above_tariff' => 'boolean',
+        'is_minimum_wage' => 'boolean',
+        'above_tariff_amount' => 'decimal:2',
+        'minimum_wage_hourly_rate' => 'decimal:2',
+        'minimum_wage_monthly_hours' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 
@@ -125,6 +139,11 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         return $this->belongsTo(HcmTariffLevel::class, 'tariff_level_id');
     }
 
+    public function tariffProgressions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmTariffProgression::class, 'employee_contract_id');
+    }
+
     /**
      * Get current tariff rate for this contract
      */
@@ -152,6 +171,54 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
 
         $date = $date ?? now()->toDateString();
         return $this->next_tariff_level_date <= $date;
+    }
+
+    /**
+     * Get effective monthly salary (tariff + above tariff + minimum wage)
+     */
+    public function getEffectiveMonthlySalary(?string $date = null): float
+    {
+        $baseAmount = 0;
+        
+        // Tariflicher Anteil
+        if ($this->tariff_group_id && $this->tariff_level_id) {
+            $tariffRate = $this->getCurrentTariffRate($date);
+            if ($tariffRate) {
+                $baseAmount = $tariffRate->amount;
+            }
+        }
+        
+        // Übertariflicher Anteil
+        if ($this->is_above_tariff && $this->above_tariff_amount) {
+            $baseAmount += $this->above_tariff_amount;
+        }
+        
+        // Mindestlohn (stundenbasiert)
+        if ($this->is_minimum_wage && $this->minimum_wage_hourly_rate && $this->minimum_wage_monthly_hours) {
+            $baseAmount = max($baseAmount, $this->minimum_wage_hourly_rate * $this->minimum_wage_monthly_hours);
+        }
+        
+        return $baseAmount;
+    }
+
+    /**
+     * Get salary type description
+     */
+    public function getSalaryTypeDescription(): string
+    {
+        if ($this->is_minimum_wage) {
+            return 'Mindestlohn (stundenbasiert)';
+        }
+        
+        if ($this->is_above_tariff) {
+            return 'Übertariflich';
+        }
+        
+        if ($this->tariff_group_id && $this->tariff_level_id) {
+            return 'Tariflich';
+        }
+        
+        return 'Nicht zugeordnet';
     }
 }
 
