@@ -40,217 +40,170 @@
                 />
             </div>
 
-            <!-- Tarifverträge Tabelle -->
-            <div class="mb-8">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tarifverträge</h2>
-                <x-ui-table compact="true">
-                    <x-ui-table-header>
-                        <x-ui-table-header-cell compact="true">Name</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Code</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Gruppen</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Status</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
-                    </x-ui-table-header>
-                    
-                    <x-ui-table-body>
-                        @foreach($this->tariffAgreements as $agreement)
-                            <x-ui-table-row 
-                                compact="true"
-                                clickable="true" 
-                                :href="route('hcm.tariff-agreements.show', $agreement)"
-                            >
-                                <x-ui-table-cell compact="true">
-                                    <div class="font-medium">{{ $agreement->name }}</div>
-                                    @if($agreement->description)
-                                        <div class="text-xs text-muted">{{ Str::limit($agreement->description, 50) }}</div>
-                                    @endif
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+            <!-- Tarif-Baum Struktur -->
+            <div class="space-y-6">
+                @foreach($this->tariffAgreements as $agreement)
+                    <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 overflow-hidden">
+                        <!-- Tarifvertrag Header -->
+                        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 px-6 py-4 border-b border-[var(--ui-border)]/60">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    @svg('heroicon-o-document-text', 'w-6 h-6 text-indigo-600')
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $agreement->name }}</h3>
+                                        @if($agreement->description)
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $agreement->description }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
                                         {{ $agreement->code }}
                                     </span>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <span class="text-sm">{{ $agreement->tariffGroups->count() }} Gruppen</span>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
                                     <x-ui-badge variant="{{ $agreement->is_active ? 'success' : 'secondary' }}" size="sm">
                                         {{ $agreement->is_active ? 'Aktiv' : 'Inaktiv' }}
                                     </x-ui-badge>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true" align="right">
                                     <x-ui-button 
                                         size="sm" 
                                         variant="secondary" 
                                         href="{{ route('hcm.tariff-agreements.show', $agreement) }}" 
                                         wire:navigate
                                     >
-                                        Anzeigen
+                                        Details
                                     </x-ui-button>
-                                </x-ui-table-cell>
-                            </x-ui-table-row>
-                        @endforeach
-                    </x-ui-table-body>
-                </x-ui-table>
-            </div>
+                                </div>
+                            </div>
+                        </div>
 
-            <!-- Tarifgruppen Tabelle -->
-            <div class="mb-8">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tarifgruppen</h2>
-                <x-ui-table compact="true">
-                    <x-ui-table-header>
-                        <x-ui-table-header-cell compact="true">Name</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Code</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Tarifvertrag</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Stufen</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
-                    </x-ui-table-header>
-                    
-                    <x-ui-table-body>
-                        @foreach($this->tariffGroups as $group)
-                            <x-ui-table-row 
-                                compact="true"
-                                clickable="true" 
-                                :href="route('hcm.tariff-groups.show', $group)"
-                            >
-                                <x-ui-table-cell compact="true">
-                                    <div class="font-medium">{{ $group->name }}</div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                        {{ $group->code }}
-                                    </span>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <div class="text-sm">{{ $group->tariffAgreement->name ?? 'N/A' }}</div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <span class="text-sm">{{ $group->tariffLevels->count() }} Stufen</span>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true" align="right">
-                                    <x-ui-button 
-                                        size="sm" 
-                                        variant="secondary" 
-                                        href="{{ route('hcm.tariff-groups.show', $group) }}" 
-                                        wire:navigate
-                                    >
-                                        Anzeigen
-                                    </x-ui-button>
-                                </x-ui-table-cell>
-                            </x-ui-table-row>
-                        @endforeach
-                    </x-ui-table-body>
-                </x-ui-table>
-            </div>
+                        <!-- Tarifgruppen -->
+                        <div class="p-6">
+                            @if($agreement->tariffGroups->count() > 0)
+                                <div class="space-y-4">
+                                    @foreach($agreement->tariffGroups as $group)
+                                        <div class="border border-[var(--ui-border)]/40 rounded-lg overflow-hidden">
+                                            <!-- Tarifgruppe Header -->
+                                            <div class="bg-gray-50 dark:bg-gray-800/50 px-4 py-3 border-b border-[var(--ui-border)]/40">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center gap-3">
+                                                        @svg('heroicon-o-squares-2x2', 'w-5 h-5 text-gray-600')
+                                                        <div>
+                                                            <h4 class="font-medium text-gray-900 dark:text-white">{{ $group->name }}</h4>
+                                                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $group->tariffLevels->count() }} Stufen</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+                                                            {{ $group->code }}
+                                                        </span>
+                                                        <x-ui-button 
+                                                            size="sm" 
+                                                            variant="secondary-outline" 
+                                                            href="{{ route('hcm.tariff-groups.show', $group) }}" 
+                                                            wire:navigate
+                                                        >
+                                                            Details
+                                                        </x-ui-button>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-            <!-- Tarifstufen Tabelle -->
-            <div class="mb-8">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tarifstufen</h2>
-                <x-ui-table compact="true">
-                    <x-ui-table-header>
-                        <x-ui-table-header-cell compact="true">Name</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Code</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Tarifgruppe</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Progression</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
-                    </x-ui-table-header>
-                    
-                    <x-ui-table-body>
-                        @foreach($this->tariffLevels as $level)
-                            <x-ui-table-row 
-                                compact="true"
-                                clickable="true" 
-                                :href="route('hcm.tariff-levels.show', $level)"
-                            >
-                                <x-ui-table-cell compact="true">
-                                    <div class="font-medium">{{ $level->name }}</div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                        {{ $level->code }}
-                                    </span>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <div class="text-sm">{{ $level->tariffGroup->name ?? 'N/A' }}</div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    @if($level->progression_months && $level->progression_months != 999)
-                                        <span class="text-sm">{{ $level->progression_months }} Monate</span>
-                                    @else
-                                        <span class="text-sm text-muted">Endstufe</span>
-                                    @endif
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true" align="right">
-                                    <x-ui-button 
-                                        size="sm" 
-                                        variant="secondary" 
-                                        href="{{ route('hcm.tariff-levels.show', $level) }}" 
-                                        wire:navigate
-                                    >
-                                        Anzeigen
-                                    </x-ui-button>
-                                </x-ui-table-cell>
-                            </x-ui-table-row>
-                        @endforeach
-                    </x-ui-table-body>
-                </x-ui-table>
-            </div>
+                                            <!-- Tarifstufen -->
+                                            @if($group->tariffLevels->count() > 0)
+                                                <div class="p-4">
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                        @foreach($group->tariffLevels as $level)
+                                                            <div class="border border-[var(--ui-border)]/40 rounded-lg p-3 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
+                                                                <div class="flex items-center justify-between mb-2">
+                                                                    <div class="flex items-center gap-2">
+                                                                        @svg('heroicon-o-bars-3', 'w-4 h-4 text-gray-500')
+                                                                        <span class="font-medium text-gray-900 dark:text-white">{{ $level->name }}</span>
+                                                                    </div>
+                                                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                                        {{ $level->code }}
+                                                                    </span>
+                                                                </div>
+                                                                
+                                                                @if($level->progression_months && $level->progression_months != 999)
+                                                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                                                        Progression: {{ $level->progression_months }} Monate
+                                                                    </div>
+                                                                @else
+                                                                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                                                                        Endstufe
+                                                                    </div>
+                                                                @endif
 
-            <!-- Tarifsätze Tabelle -->
-            <div>
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Tarifsätze</h2>
-                <x-ui-table compact="true">
-                    <x-ui-table-header>
-                        <x-ui-table-header-cell compact="true">Betrag</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Tarifstufe</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Tarifgruppe</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Gültig ab</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true">Status</x-ui-table-header-cell>
-                        <x-ui-table-header-cell compact="true" align="right">Aktionen</x-ui-table-header-cell>
-                    </x-ui-table-header>
-                    
-                    <x-ui-table-body>
-                        @foreach($this->tariffRates as $rate)
-                            <x-ui-table-row 
-                                compact="true"
-                                clickable="true" 
-                                :href="route('hcm.tariff-rates.show', $rate)"
-                            >
-                                <x-ui-table-cell compact="true">
-                                    <div class="font-medium text-green-600 dark:text-green-400">
-                                        {{ number_format((float)$rate->amount, 2, ',', '.') }} €
+                                                                <!-- Tarifsätze für diese Stufe -->
+                                                                @if($level->tariffRates->count() > 0)
+                                                                    <div class="space-y-1">
+                                                                        @foreach($level->tariffRates->take(3) as $rate)
+                                                                            <div class="flex items-center justify-between text-sm">
+                                                                                <span class="font-medium text-green-600 dark:text-green-400">
+                                                                                    {{ number_format((float)$rate->amount, 2, ',', '.') }} €
+                                                                                </span>
+                                                                                <x-ui-badge variant="{{ $rate->is_current ? 'success' : 'secondary' }}" size="xs">
+                                                                                    {{ $rate->is_current ? 'Aktuell' : 'Historisch' }}
+                                                                                </x-ui-badge>
+                                                                            </div>
+                                                                        @endforeach
+                                                                        @if($level->tariffRates->count() > 3)
+                                                                            <div class="text-xs text-gray-500">
+                                                                                +{{ $level->tariffRates->count() - 3 }} weitere Sätze
+                                                                            </div>
+                                                                        @endif
+                                                                    </div>
+                                                                @else
+                                                                    <div class="text-sm text-gray-500">Keine Tarifsätze</div>
+                                                                @endif
+
+                                                                <div class="mt-2">
+                                                                    <x-ui-button 
+                                                                        size="xs" 
+                                                                        variant="secondary-outline" 
+                                                                        href="{{ route('hcm.tariff-levels.show', $level) }}" 
+                                                                        wire:navigate
+                                                                        class="w-full"
+                                                                    >
+                                                                        Details
+                                                                    </x-ui-button>
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="p-4 text-center text-gray-500">
+                                                    <div class="flex flex-col items-center">
+                                                        @svg('heroicon-o-bars-3', 'w-8 h-8 text-gray-300 mb-2')
+                                                        <p class="text-sm">Keine Tarifstufen</p>
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="text-center py-8 text-gray-500">
+                                    <div class="flex flex-col items-center">
+                                        @svg('heroicon-o-squares-2x2', 'w-12 h-12 text-gray-300 mb-4')
+                                        <p class="text-lg font-medium">Keine Tarifgruppen</p>
+                                        <p class="text-sm">Dieser Tarifvertrag hat noch keine Gruppen.</p>
                                     </div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                                        {{ $rate->tariffLevel->code }}
-                                    </span>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <div class="text-sm">{{ $rate->tariffLevel->tariffGroup->name ?? 'N/A' }}</div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <div class="text-sm">{{ $rate->valid_from->format('d.m.Y') }}</div>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true">
-                                    <x-ui-badge variant="{{ $rate->is_current ? 'success' : 'secondary' }}" size="sm">
-                                        {{ $rate->is_current ? 'Aktuell' : 'Historisch' }}
-                                    </x-ui-badge>
-                                </x-ui-table-cell>
-                                <x-ui-table-cell compact="true" align="right">
-                                    <x-ui-button 
-                                        size="sm" 
-                                        variant="secondary" 
-                                        href="{{ route('hcm.tariff-rates.show', $rate) }}" 
-                                        wire:navigate
-                                    >
-                                        Anzeigen
-                                    </x-ui-button>
-                                </x-ui-table-cell>
-                            </x-ui-table-row>
-                        @endforeach
-                    </x-ui-table-body>
-                </x-ui-table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+
+                @if($this->tariffAgreements->count() === 0)
+                    <div class="text-center py-12 text-gray-500">
+                        <div class="flex flex-col items-center">
+                            @svg('heroicon-o-document-text', 'w-16 h-16 text-gray-300 mb-4')
+                            <p class="text-xl font-medium">Keine Tarifverträge</p>
+                            <p class="text-sm">Erstellen Sie Ihren ersten Tarifvertrag um zu beginnen.</p>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     </x-ui-page-container>

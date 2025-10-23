@@ -18,6 +18,7 @@
         {{-- Search --}}
         <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-6">
             <x-ui-input-text 
+                name="search"
                 wire:model.live.debounce.300ms="search" 
                 placeholder="Krankenkasse suchen..."
                 icon="heroicon-o-magnifying-glass"
