@@ -10,7 +10,7 @@ use Carbon\Carbon;
 class TariffProgressionService
 {
     /**
-     * Process tariff level progressions for all contracts
+     * Process tariff level progressions for all contracts (retroactive by default)
      */
     public function processProgressions(?string $date = null): array
     {
@@ -29,7 +29,8 @@ class TariffProgressionService
 
         foreach ($contracts as $contract) {
             try {
-                if ($this->shouldProgress($contract, $date)) {
+                // Check both current and retroactive progressions
+                if ($this->shouldProgress($contract, $date) || $this->shouldProgressRetroactively($contract, $date)) {
                     $this->progressToNextLevel($contract, $date);
                     $results['progressed']++;
                 }
@@ -73,19 +74,22 @@ class TariffProgressionService
      */
     public function progressToNextLevel(HcmEmployeeContract $contract, ?string $date = null): void
     {
-        $date = $date ?? now()->toDateString();
+        $commandDate = $date ?? now()->toDateString();
         $nextLevel = $contract->tariffLevel->getNextLevel();
 
         if (!$nextLevel) {
             throw new \Exception('No next tariff level available');
         }
 
-        // Create progression record
+        // Calculate the actual progression date (when the jump should have happened)
+        $actualProgressionDate = $this->calculateActualProgressionDate($contract, $commandDate);
+
+        // Create progression record with the actual progression date
         HcmTariffProgression::create([
             'employee_contract_id' => $contract->id,
             'from_tariff_level_id' => $contract->tariff_level_id,
             'to_tariff_level_id' => $nextLevel->id,
-            'progression_date' => $date,
+            'progression_date' => $actualProgressionDate,
             'progression_reason' => 'automatic',
             'progression_notes' => 'Automatische Tarifstufen-Progression'
         ]);
@@ -93,9 +97,29 @@ class TariffProgressionService
         // Update contract with new level
         $contract->update([
             'tariff_level_id' => $nextLevel->id,
-            'tariff_level_start_date' => $date,
-            'next_tariff_level_date' => $this->calculateNextProgressionDate($nextLevel, $date)
+            'tariff_level_start_date' => $actualProgressionDate,
+            'next_tariff_level_date' => $this->calculateNextProgressionDate($nextLevel, $actualProgressionDate)
         ]);
+    }
+
+    /**
+     * Calculate the actual progression date (when the jump should have happened)
+     */
+    public function calculateActualProgressionDate(HcmEmployeeContract $contract, string $commandDate): string
+    {
+        $startDate = $contract->tariff_level_start_date ?? $contract->start_date;
+        $progressionMonths = $contract->tariffLevel->progression_months;
+        
+        // Calculate when the progression should have happened
+        $progressionDate = Carbon::parse($startDate)
+            ->addMonths($progressionMonths)
+            ->toDateString();
+            
+        // If the progression date is in the future, use the command date
+        // If it's in the past, use the calculated progression date
+        return Carbon::parse($progressionDate)->isFuture() 
+            ? $commandDate 
+            : $progressionDate;
     }
 
     /**
@@ -198,12 +222,15 @@ class TariffProgressionService
         string $reason = 'manual',
         ?string $notes = null
     ): HcmTariffProgression {
+        // For manual progression, use the provided date as-is
+        $progressionDate = $date;
+
         // Create progression record
         $progression = HcmTariffProgression::create([
             'employee_contract_id' => $contract->id,
             'from_tariff_level_id' => $contract->tariff_level_id,
             'to_tariff_level_id' => $targetLevel->id,
-            'progression_date' => $date,
+            'progression_date' => $progressionDate,
             'progression_reason' => $reason,
             'progression_notes' => $notes ?? "Manuelle Progression zu {$targetLevel->name}"
         ]);
@@ -211,8 +238,8 @@ class TariffProgressionService
         // Update contract
         $contract->update([
             'tariff_level_id' => $targetLevel->id,
-            'tariff_level_start_date' => $date,
-            'next_tariff_level_date' => $this->calculateNextProgressionDate($targetLevel, $date)
+            'tariff_level_start_date' => $progressionDate,
+            'next_tariff_level_date' => $this->calculateNextProgressionDate($targetLevel, $progressionDate)
         ]);
 
         return $progression;
@@ -227,5 +254,99 @@ class TariffProgressionService
             ->with(['fromTariffLevel', 'toTariffLevel'])
             ->orderBy('progression_date', 'desc')
             ->get();
+    }
+
+    /**
+     * Process only current progressions (not retroactive)
+     */
+    public function processCurrentProgressions(?string $date = null): array
+    {
+        $date = $date ?? now()->toDateString();
+        $results = [
+            'processed' => 0,
+            'progressed' => 0,
+            'errors' => []
+        ];
+
+        $contracts = HcmEmployeeContract::with(['tariffGroup', 'tariffLevel'])
+            ->whereNotNull('tariff_group_id')
+            ->whereNotNull('tariff_level_id')
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($contracts as $contract) {
+            try {
+                // Check only current progressions (not retroactive)
+                if ($this->shouldProgress($contract, $date)) {
+                    $this->progressToNextLevel($contract, $date);
+                    $results['progressed']++;
+                }
+                $results['processed']++;
+            } catch (\Exception $e) {
+                $results['errors'][] = [
+                    'contract_id' => $contract->id,
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Process retroactive progressions (for contracts that should have progressed earlier)
+     */
+    public function processRetroactiveProgressions(?string $date = null): array
+    {
+        $date = $date ?? now()->toDateString();
+        $results = [
+            'processed' => 0,
+            'progressed' => 0,
+            'errors' => []
+        ];
+
+        $contracts = HcmEmployeeContract::with(['tariffGroup', 'tariffLevel'])
+            ->whereNotNull('tariff_group_id')
+            ->whereNotNull('tariff_level_id')
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($contracts as $contract) {
+            try {
+                if ($this->shouldProgressRetroactively($contract, $date)) {
+                    $this->progressToNextLevel($contract, $date);
+                    $results['progressed']++;
+                }
+                $results['processed']++;
+            } catch (\Exception $e) {
+                $results['errors'][] = [
+                    'contract_id' => $contract->id,
+                    'error' => $e->getMessage()
+                ];
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Check if a contract should progress retroactively
+     */
+    public function shouldProgressRetroactively(HcmEmployeeContract $contract, string $date): bool
+    {
+        if (!$contract->tariffLevel || $contract->tariffLevel->isFinalLevel()) {
+            return false;
+        }
+
+        $startDate = $contract->tariff_level_start_date ?? $contract->start_date;
+        $progressionMonths = $contract->tariffLevel->progression_months;
+        
+        // Calculate when the progression should have happened
+        $progressionDate = Carbon::parse($startDate)
+            ->addMonths($progressionMonths)
+            ->toDateString();
+            
+        // Check if the progression date is in the past
+        return Carbon::parse($progressionDate)->isPast();
     }
 }

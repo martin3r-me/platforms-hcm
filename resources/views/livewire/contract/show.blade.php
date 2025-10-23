@@ -111,7 +111,7 @@
                     
                     @if($editMode)
                         <div class="space-y-4">
-                            <x-ui-select 
+                            <x-ui-input-select 
                                 name="tariff_group_id" 
                                 label="Tarifgruppe"
                                 wire:model.live="tariff_group_id"
@@ -119,7 +119,7 @@
                                 placeholder="Tarifgruppe wählen..."
                             />
                             
-                            <x-ui-select 
+                            <x-ui-input-select 
                                 name="tariff_level_id" 
                                 label="Tarifstufe"
                                 wire:model="tariff_level_id"
