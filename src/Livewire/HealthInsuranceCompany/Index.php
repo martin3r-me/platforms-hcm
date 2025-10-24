@@ -152,7 +152,7 @@ class Index extends Component
         }
     }
 
-    public function getCompaniesProperty()
+    public function companies()
     {
         return HcmHealthInsuranceCompany::query()
             ->where('team_id', auth()->user()->current_team_id)

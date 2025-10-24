@@ -128,28 +128,28 @@
         <div class="space-y-6">
             <x-ui-input-text 
                 name="name"
-                wire:model="name" 
+                wire:model.live="name" 
                 label="Name *"
                 placeholder="Vollständiger Name der Krankenkasse"
             />
             
             <x-ui-input-text 
                 name="code"
-                wire:model="code" 
+                wire:model.live="code" 
                 label="Code *"
                 placeholder="Eindeutiger Code"
             />
             
             <x-ui-input-text 
                 name="short_name"
-                wire:model="short_name" 
+                wire:model.live="short_name" 
                 label="Kurzname"
                 placeholder="Kurzer Name (optional)"
             />
             
             <x-ui-input-textarea 
                 name="description"
-                wire:model="description" 
+                wire:model.live="description" 
                 label="Beschreibung"
                 placeholder="Beschreibung der Krankenkasse"
                 rows="3"
@@ -158,14 +158,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-ui-input-text 
                     name="website"
-                wire:model="website" 
+                    wire:model.live="website" 
                     label="Website"
                     placeholder="https://..."
                 />
                 
                 <x-ui-input-text 
                     name="phone"
-                wire:model="phone" 
+                    wire:model.live="phone" 
                     label="Telefon"
                     placeholder="+49 ..."
                 />
@@ -173,14 +173,14 @@
             
             <x-ui-input-text 
                 name="email"
-                wire:model="email" 
+                wire:model.live="email" 
                 label="E-Mail"
                 placeholder="kontakt@krankenkasse.de"
             />
             
             <x-ui-input-textarea 
                 name="address"
-                wire:model="address" 
+                wire:model.live="address" 
                 label="Adresse"
                 placeholder="Vollständige Adresse"
                 rows="3"
@@ -188,7 +188,7 @@
             
             <x-ui-input-checkbox 
                 name="is_active"
-                wire:model="is_active" 
+                wire:model.live="is_active" 
                 label="Aktiv"
             />
         </div>
@@ -211,28 +211,28 @@
         <div class="space-y-6">
             <x-ui-input-text 
                 name="name"
-                wire:model="name" 
+                wire:model.live="name" 
                 label="Name *"
                 placeholder="Vollständiger Name der Krankenkasse"
             />
             
             <x-ui-input-text 
                 name="code"
-                wire:model="code" 
+                wire:model.live="code" 
                 label="Code *"
                 placeholder="Eindeutiger Code"
             />
             
             <x-ui-input-text 
                 name="short_name"
-                wire:model="short_name" 
+                wire:model.live="short_name" 
                 label="Kurzname"
                 placeholder="Kurzer Name (optional)"
             />
             
             <x-ui-input-textarea 
                 name="description"
-                wire:model="description" 
+                wire:model.live="description" 
                 label="Beschreibung"
                 placeholder="Beschreibung der Krankenkasse"
                 rows="3"
@@ -241,14 +241,14 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-ui-input-text 
                     name="website"
-                wire:model="website" 
+                    wire:model.live="website" 
                     label="Website"
                     placeholder="https://..."
                 />
                 
                 <x-ui-input-text 
                     name="phone"
-                wire:model="phone" 
+                    wire:model.live="phone" 
                     label="Telefon"
                     placeholder="+49 ..."
                 />
@@ -256,14 +256,14 @@
             
             <x-ui-input-text 
                 name="email"
-                wire:model="email" 
+                wire:model.live="email" 
                 label="E-Mail"
                 placeholder="kontakt@krankenkasse.de"
             />
             
             <x-ui-input-textarea 
                 name="address"
-                wire:model="address" 
+                wire:model.live="address" 
                 label="Adresse"
                 placeholder="Vollständige Adresse"
                 rows="3"
@@ -271,7 +271,7 @@
             
             <x-ui-input-checkbox 
                 name="is_active"
-                wire:model="is_active" 
+                wire:model.live="is_active" 
                 label="Aktiv"
             />
         </div>
