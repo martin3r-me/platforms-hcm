@@ -4,6 +4,7 @@ namespace Platform\Hcm\Livewire\HealthInsuranceCompany;
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmHealthInsuranceCompany;
 
 class Index extends Component
@@ -152,6 +153,7 @@ class Index extends Component
         }
     }
 
+    #[Computed]
     public function companies()
     {
         return HcmHealthInsuranceCompany::query()
