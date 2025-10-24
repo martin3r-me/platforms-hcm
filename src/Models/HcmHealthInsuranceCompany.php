@@ -13,6 +13,7 @@ class HcmHealthInsuranceCompany extends Model
         'uuid',
         'name',
         'code',
+        'ik_number',
         'short_name',
         'description',
         'website',

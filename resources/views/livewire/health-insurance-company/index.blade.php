@@ -20,6 +20,7 @@
                 <x-slot name="header">
                     <x-ui-table-header>Name</x-ui-table-header>
                     <x-ui-table-header>Code</x-ui-table-header>
+                    <x-ui-table-header>IK-Nummer</x-ui-table-header>
                     <x-ui-table-header>Kurzname</x-ui-table-header>
                     <x-ui-table-header>Mitarbeiter</x-ui-table-header>
                     <x-ui-table-header>Status</x-ui-table-header>
@@ -44,6 +45,11 @@
                         <x-ui-table-cell>
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                                 {{ $company->code }}
+                            </span>
+                        </x-ui-table-cell>
+                        <x-ui-table-cell>
+                            <span class="text-sm text-[var(--ui-muted)]">
+                                {{ $company->ik_number ?: '-' }}
                             </span>
                         </x-ui-table-cell>
                         <x-ui-table-cell>
@@ -93,7 +99,7 @@
                     </x-ui-table-row>
                 @empty
                     <x-ui-table-row>
-                        <x-ui-table-cell colspan="6" class="text-center py-12">
+                        <x-ui-table-cell colspan="7" class="text-center py-12">
                             <div class="text-[var(--ui-muted)]">
                                 @svg('heroicon-o-heart', 'w-12 h-12 mx-auto mb-4 text-[var(--ui-muted)]')
                                 <p class="text-lg font-medium mb-2">Keine Krankenkassen gefunden</p>
@@ -127,6 +133,13 @@
                 wire:model.live="code" 
                 label="Code *"
                 placeholder="Eindeutiger Code"
+            />
+            
+            <x-ui-input-text 
+                name="ik_number"
+                wire:model.live="ik_number" 
+                label="IK-Nummer"
+                placeholder="Institutionskennzeichen (optional)"
             />
             
             <x-ui-input-text 
@@ -211,6 +224,13 @@
                 wire:model.live="code" 
                 label="Code *"
                 placeholder="Eindeutiger Code"
+            />
+            
+            <x-ui-input-text 
+                name="ik_number"
+                wire:model.live="ik_number" 
+                label="IK-Nummer"
+                placeholder="Institutionskennzeichen (optional)"
             />
             
             <x-ui-input-text 
