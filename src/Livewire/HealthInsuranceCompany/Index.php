@@ -222,7 +222,6 @@ class Index extends Component
                       ->orWhere('short_name', 'like', '%' . $this->search . '%');
                 });
             })
-            ->withCount('employees')
             ->orderBy('name')
             ->paginate(20);
     }

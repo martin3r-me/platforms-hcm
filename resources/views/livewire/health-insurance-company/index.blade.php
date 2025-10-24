@@ -21,7 +21,7 @@
                     <x-ui-table-header>Name</x-ui-table-header>
                     <x-ui-table-header>Code</x-ui-table-header>
                     <x-ui-table-header>Kurzname</x-ui-table-header>
-                    <x-ui-table-header>Mitarbeiter</x-ui-table-header>
+                    <x-ui-table-header>Info</x-ui-table-header>
                     <x-ui-table-header>Status</x-ui-table-header>
                     <x-ui-table-header class="text-right">Aktionen</x-ui-table-header>
                 </x-slot>
@@ -53,7 +53,7 @@
                         </x-ui-table-cell>
                         <x-ui-table-cell>
                             <span class="text-sm font-medium text-[var(--ui-secondary)]">
-                                {{ $company->employees_count }}
+                                -
                             </span>
                         </x-ui-table-cell>
                         <x-ui-table-cell>
