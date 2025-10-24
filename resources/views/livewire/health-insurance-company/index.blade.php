@@ -1,17 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Krankenkassen" icon="heroicon-o-heart">
-            <div class="flex items-center gap-3">
-                <x-ui-button variant="secondary" wire:click="importStandardCompanies">
-                    @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
-                    Standard-Kassen importieren
-                </x-ui-button>
-                <x-ui-button variant="primary" wire:click="openCreateModal">
-                    @svg('heroicon-o-plus', 'w-4 h-4')
-                    Neue Krankenkasse
-                </x-ui-button>
-            </div>
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="Krankenkassen" icon="heroicon-o-heart" />
     </x-slot>
 
     <x-ui-page-container spacing="space-y-6">
@@ -290,4 +279,93 @@
             </div>
         </x-slot>
     </x-ui-modal>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Aktionen" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                {{-- Aktionen --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary" size="sm" wire:click="importStandardCompanies" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
+                                Standard-Kassen importieren
+                            </span>
+                        </x-ui-button>
+                        <x-ui-button variant="primary" size="sm" wire:click="openCreateModal" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-plus', 'w-4 h-4')
+                                Neue Krankenkasse
+                            </span>
+                        </x-ui-button>
+                    </div>
+                </div>
+
+                {{-- Statistiken --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--ui-muted-5)] border border-[var(--ui-border)]/40">
+                            <span class="text-sm text-[var(--ui-secondary)]">Gesamt</span>
+                            <span class="text-sm font-semibold text-[var(--ui-secondary)]">{{ $this->companies->total() }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--ui-muted-5)] border border-[var(--ui-border)]/40">
+                            <span class="text-sm text-[var(--ui-secondary)]">Aktiv</span>
+                            <span class="text-sm font-semibold text-[var(--ui-success)]">{{ $this->companies->where('is_active', true)->count() }}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 px-3 rounded-lg bg-[var(--ui-muted-5)] border border-[var(--ui-border)]/40">
+                            <span class="text-sm text-[var(--ui-secondary)]">Inaktiv</span>
+                            <span class="text-sm font-semibold text-[var(--ui-muted)]">{{ $this->companies->where('is_active', false)->count() }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Quick Links --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Navigation</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.dashboard')" wire:navigate class="w-full">
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-home', 'w-4 h-4')
+                                HCM Dashboard
+                            </span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.index')" wire:navigate class="w-full">
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-user-group', 'w-4 h-4')
+                                Mitarbeiter
+                            </span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.tariff-overview')" wire:navigate class="w-full">
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-scale', 'w-4 h-4')
+                                Tarif-Übersicht
+                            </span>
+                        </x-ui-button>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-4 space-y-4">
+                <div class="text-sm text-[var(--ui-muted)]">Letzte Aktivitäten</div>
+                <div class="space-y-3 text-sm">
+                    @if($this->companies->count() > 0)
+                        @foreach($this->companies->take(5) as $company)
+                            <div class="p-2 rounded border border-[var(--ui-border)]/60 bg-[var(--ui-muted-5)]">
+                                <div class="font-medium text-[var(--ui-secondary)] truncate">{{ $company->name }}</div>
+                                <div class="text-[var(--ui-muted)]">{{ $company->created_at->format('d.m.Y H:i') }}</div>
+                            </div>
+                        @endforeach
+                    @else
+                        <div class="text-sm text-[var(--ui-muted)]">Keine Aktivitäten</div>
+                    @endif
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>
