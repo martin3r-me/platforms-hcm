@@ -139,15 +139,72 @@ class Index extends Component
     public function importStandardCompanies()
     {
         try {
-            $seeder = new \Platform\Hcm\Database\Seeders\HcmHealthInsuranceCompanySeeder();
-            $seeder->setCommand(new class {
-                public function option($key) {
-                    return $key === 'team-id' ? auth()->user()->current_team_id : null;
+            // Standard-Krankenkassen direkt erstellen
+            $standardCompanies = [
+                [
+                    'name' => 'AOK - Die Gesundheitskasse',
+                    'code' => 'AOK',
+                    'short_name' => 'AOK',
+                    'description' => 'Allgemeine Ortskrankenkasse',
+                    'website' => 'https://www.aok.de',
+                    'is_active' => true,
+                ],
+                [
+                    'name' => 'Techniker Krankenkasse',
+                    'code' => 'TK',
+                    'short_name' => 'TK',
+                    'description' => 'Techniker Krankenkasse',
+                    'website' => 'https://www.tk.de',
+                    'is_active' => true,
+                ],
+                [
+                    'name' => 'Barmer',
+                    'code' => 'BARMER',
+                    'short_name' => 'Barmer',
+                    'description' => 'Barmer Ersatzkasse',
+                    'website' => 'https://www.barmer.de',
+                    'is_active' => true,
+                ],
+                [
+                    'name' => 'DAK-Gesundheit',
+                    'code' => 'DAK',
+                    'short_name' => 'DAK',
+                    'description' => 'DAK-Gesundheit',
+                    'website' => 'https://www.dak.de',
+                    'is_active' => true,
+                ],
+                [
+                    'name' => 'IKK classic',
+                    'code' => 'IKK',
+                    'short_name' => 'IKK classic',
+                    'description' => 'IKK classic',
+                    'website' => 'https://www.ikk-classic.de',
+                    'is_active' => true,
+                ],
+            ];
+
+            $imported = 0;
+            foreach ($standardCompanies as $companyData) {
+                // Prüfen ob bereits vorhanden
+                $exists = HcmHealthInsuranceCompany::where('code', $companyData['code'])
+                    ->where('team_id', auth()->user()->current_team_id)
+                    ->exists();
+                
+                if (!$exists) {
+                    HcmHealthInsuranceCompany::create([
+                        ...$companyData,
+                        'team_id' => auth()->user()->current_team_id,
+                        'created_by_user_id' => auth()->id(),
+                    ]);
+                    $imported++;
                 }
-            });
-            $seeder->run();
+            }
             
-            session()->flash('success', 'Standard-Krankenkassen erfolgreich importiert!');
+            if ($imported > 0) {
+                session()->flash('success', "{$imported} Standard-Krankenkassen erfolgreich importiert!");
+            } else {
+                session()->flash('info', 'Alle Standard-Krankenkassen sind bereits vorhanden.');
+            }
         } catch (\Exception $e) {
             session()->flash('error', 'Fehler beim Import: ' . $e->getMessage());
         }

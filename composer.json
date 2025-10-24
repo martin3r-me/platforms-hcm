@@ -11,7 +11,8 @@
     ],
     "autoload": {
         "psr-4": {
-            "Platform\\Hcm\\": "src/"
+            "Platform\\Hcm\\": "src/",
+            "Platform\\Hcm\\Database\\Seeders\\": "database/seeders/"
         }
     },
     "extra": {
