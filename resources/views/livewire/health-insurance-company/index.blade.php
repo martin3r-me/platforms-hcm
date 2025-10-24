@@ -190,6 +190,7 @@
                 name="is_active"
                 wire:model.live="is_active" 
                 label="Aktiv"
+                :model="'is_active'"
             />
         </div>
 
@@ -273,6 +274,7 @@
                 name="is_active"
                 wire:model.live="is_active" 
                 label="Aktiv"
+                :model="'is_active'"
             />
         </div>
 
