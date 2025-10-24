@@ -310,7 +310,7 @@
                         <x-ui-button variant="secondary" size="sm" wire:click="importStandardCompanies" class="w-full">
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
-                                Standard-Kassen importieren
+                                Alle Krankenkassen importieren
                             </span>
                         </x-ui-button>
                         <x-ui-button variant="primary" size="sm" wire:click="openCreateModal" class="w-full">

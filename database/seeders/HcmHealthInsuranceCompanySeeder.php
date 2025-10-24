@@ -10,6 +10,8 @@ class HcmHealthInsuranceCompanySeeder extends Seeder
     public function run(): void
     {
         $teamId = $this->command->option('team-id') ?? auth()->user()->current_team_id ?? 1;
+        
+        $this->command->info("Importing health insurance companies for team ID: {$teamId}");
         $healthInsuranceCompanies = [
             ['name' => 'AOK - Die Gesundheitskasse für Niedersachsen', 'code' => '29720865'],
             ['name' => 'AOK Baden-Württemberg Hauptverwaltung', 'code' => '67450665'],
@@ -116,16 +118,29 @@ class HcmHealthInsuranceCompanySeeder extends Seeder
             ['name' => 'WMF Betriebskrankenkasse', 'code' => '61232769'],
         ];
 
+        $imported = 0;
+        $skipped = 0;
+        
         foreach ($healthInsuranceCompanies as $company) {
-            HcmHealthInsuranceCompany::updateOrCreate(
-                ['code' => $company['code'], 'team_id' => $teamId],
-                [
+            $exists = HcmHealthInsuranceCompany::where('code', $company['code'])
+                ->where('team_id', $teamId)
+                ->exists();
+                
+            if (!$exists) {
+                HcmHealthInsuranceCompany::create([
                     'name' => $company['name'],
                     'code' => $company['code'],
+                    'ik_number' => $company['code'], // Code ist die IK-Nummer
                     'is_active' => true,
                     'team_id' => $teamId,
-                ]
-            );
+                    'created_by_user_id' => auth()->id(),
+                ]);
+                $imported++;
+            } else {
+                $skipped++;
+            }
         }
+        
+        $this->command->info("Import completed: {$imported} new companies imported, {$skipped} already existed.");
     }
 }
