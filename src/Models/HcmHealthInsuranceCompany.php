@@ -39,8 +39,15 @@ class HcmHealthInsuranceCompany extends Model
         });
     }
 
-    // Note: Health insurance company relationship with employees would need to be implemented
-    // through employee contracts or a separate pivot table if needed in the future
+    public function employees(): HasMany
+    {
+        return $this->hasMany(HcmEmployee::class, 'health_insurance_company_id');
+    }
+
+    public function getActiveEmployeesCountAttribute(): int
+    {
+        return $this->employees()->where('is_active', true)->count();
+    }
 
     public function getDisplayNameAttribute(): string
     {

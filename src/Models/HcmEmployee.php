@@ -22,6 +22,7 @@ class HcmEmployee extends Model implements EmployeeInterface
         'employee_number',
         'employer_id', // FK zu HcmEmployer
         'company_employee_number', // Unternehmensspezifische Personalnummer
+        'health_insurance_company_id', // FK zu HcmHealthInsuranceCompany
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
@@ -167,6 +168,11 @@ class HcmEmployee extends Model implements EmployeeInterface
     public function contracts(): HasMany
     {
         return $this->hasMany(HcmEmployeeContract::class, 'employee_id');
+    }
+
+    public function healthInsuranceCompany()
+    {
+        return $this->belongsTo(HcmHealthInsuranceCompany::class, 'health_insurance_company_id');
     }
 
     public function activeContract(): ?HcmEmployeeContract
