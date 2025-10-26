@@ -9,9 +9,11 @@ class HcmHealthInsuranceCompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $teamId = $this->command->option('team-id') ?? auth()->user()->current_team_id ?? 1;
+        $teamId = $this->command ? $this->command->option('team-id') : auth()->user()->current_team_id;
         
-        $this->command->info("Importing health insurance companies for team ID: {$teamId}");
+        if ($this->command) {
+            $this->command->info("Importing health insurance companies for team ID: {$teamId}");
+        }
         $healthInsuranceCompanies = [
             ['name' => 'AOK - Die Gesundheitskasse für Niedersachsen', 'code' => '29720865'],
             ['name' => 'AOK Baden-Württemberg Hauptverwaltung', 'code' => '67450665'],
@@ -141,6 +143,8 @@ class HcmHealthInsuranceCompanySeeder extends Seeder
             }
         }
         
-        $this->command->info("Import completed: {$imported} new companies imported, {$skipped} already existed.");
+        if ($this->command) {
+            $this->command->info("Import completed: {$imported} new companies imported, {$skipped} already existed.");
+        }
     }
 }
