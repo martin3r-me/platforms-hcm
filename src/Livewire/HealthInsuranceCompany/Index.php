@@ -146,51 +146,17 @@ class Index extends Component
     {
         try {
             $teamId = auth()->user()->current_team_id;
-            $imported = 0;
             
-            // Vollständige Liste der deutschen Krankenkassen
-            $healthInsuranceCompanies = [
-                ['name' => 'AOK - Die Gesundheitskasse für Niedersachsen', 'code' => 'AOK-NDS', 'ik_number' => '29720865'],
-                ['name' => 'AOK Baden-Württemberg Hauptverwaltung', 'code' => 'AOK-BW', 'ik_number' => '67450665'],
-                ['name' => 'AOK Bayern Die Gesundheitskasse', 'code' => 'AOK-BY', 'ik_number' => '87880235'],
-                ['name' => 'AOK Bremen/Bremerhaven', 'code' => 'AOK-HB', 'ik_number' => '20012084'],
-                ['name' => 'AOK Hessen Direktion', 'code' => 'AOK-HE', 'ik_number' => '45118687'],
-                ['name' => 'AOK Nordost - Die Gesundheitskasse', 'code' => 'AOK-NO', 'ik_number' => '90235319'],
-                ['name' => 'AOK NordWest', 'code' => 'AOK-NW', 'ik_number' => '33526082'],
-                ['name' => 'AOK PLUS Die Gesundheitskasse', 'code' => 'AOK-PLUS', 'ik_number' => '5174740'],
-                ['name' => 'AOK Rheinland/Hamburg Die Gesundheitskasse', 'code' => 'AOK-RH', 'ik_number' => '34364249'],
-                ['name' => 'AOK Rheinland-Pfalz/Saarland', 'code' => 'AOK-RP', 'ik_number' => '51605725'],
-                ['name' => 'AOK Sachsen-Anhalt', 'code' => 'AOK-SA', 'ik_number' => '1029141'],
-                ['name' => 'BARMER (vormals BARMER GEK)', 'code' => 'BARMER', 'ik_number' => '42938966'],
-                ['name' => 'DAK-Gesundheit', 'code' => 'DAK', 'ik_number' => '48698890'],
-                ['name' => 'Techniker Krankenkasse -Rechtskreis West und Ost-', 'code' => 'TK', 'ik_number' => '15027365'],
-                ['name' => 'IKK classic', 'code' => 'IKK', 'ik_number' => '1049203'],
-                ['name' => 'hkk Handelskrankenkasse', 'code' => 'HKK', 'ik_number' => '20013461'],
-                ['name' => 'HEK Hanseatische Krankenkasse', 'code' => 'HEK', 'ik_number' => '15031806'],
-                ['name' => 'KKH Kaufmännische Krankenkasse', 'code' => 'KKH', 'ik_number' => '29137937'],
-                ['name' => 'BIG direkt gesund', 'code' => 'BIG', 'ik_number' => '97141402'],
-                ['name' => 'pronova BKK', 'code' => 'PRONOVA', 'ik_number' => '15872672'],
-            ];
-
-            foreach ($healthInsuranceCompanies as $companyData) {
-                $exists = HcmHealthInsuranceCompany::where('code', $companyData['code'])
-                    ->where('team_id', $teamId)
-                    ->exists();
-                
-                if (!$exists) {
-                    HcmHealthInsuranceCompany::create([
-                        'name' => $companyData['name'],
-                        'code' => $companyData['code'],
-                        'ik_number' => $companyData['ik_number'],
-                        'is_active' => true,
-                        'team_id' => $teamId,
-                        'created_by_user_id' => auth()->id(),
-                    ]);
-                    $imported++;
-                }
+            // Command über Artisan::call ausführen
+            $exitCode = \Artisan::call('hcm:import-health-insurance-companies', [
+                '--team-id' => $teamId
+            ]);
+            
+            if ($exitCode === 0) {
+                session()->flash('success', 'Alle deutschen Krankenkassen erfolgreich importiert!');
+            } else {
+                session()->flash('error', 'Fehler beim Import der Krankenkassen.');
             }
-            
-            session()->flash('success', "{$imported} Krankenkassen erfolgreich importiert!");
         } catch (\Exception $e) {
             session()->flash('error', 'Fehler beim Import: ' . $e->getMessage());
         }
