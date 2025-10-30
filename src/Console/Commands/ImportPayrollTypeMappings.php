@@ -11,7 +11,7 @@ use Platform\Hcm\Models\HcmPayrollTypeMapping;
 
 class ImportPayrollTypeMappings extends Command
 {
-    protected $signature = 'hcm:import-payroll-type-mappings {team_id} {provider_key} {csv_path} {--stichtag=} {--code-col=Nr. IPR365} {--new-code-col=Nr.} {--label-col=Bezeichnung neu}';
+    protected $signature = 'hcm:import-payroll-type-mappings {team_id} {provider_key} {csv_path} {--stichtag=} {--code-col=Nr. IPR365} {--new-code-col=Nr.} {--label-col=Bezeichnung neu} {--delimiter=;}';
 
     protected $description = 'Importiert Mapping von externen Lohnarten-Codes auf kanonische HCM-PayrollTypes mit Stichtag.';
 
@@ -28,6 +28,7 @@ class ImportPayrollTypeMappings extends Command
         $provider = HcmPayrollProvider::firstOrCreate(['key' => $providerKey], ['name' => strtoupper($providerKey)]);
 
         $csv = Reader::createFromPath($csvPath, 'r');
+        $csv->setDelimiter((string) $this->option('delimiter'));
         $csv->setHeaderOffset(0);
         $records = iterator_to_array($csv->getRecords());
 

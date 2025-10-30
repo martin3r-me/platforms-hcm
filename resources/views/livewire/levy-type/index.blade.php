@@ -40,18 +40,16 @@
     <x-ui-modal wire:model="showCreateModal">
         <x-slot:title>Neue Umlageart anlegen</x-slot:title>
         <x-slot:content>
-            <x-ui-form.group label="Code">
-                <x-ui-input-text wire:model.defer="code" />
-            </x-ui-form.group>
-            <x-ui-form.group label="Name" class="mt-3">
-                <x-ui-input-text wire:model.defer="name" />
-            </x-ui-form.group>
-            <x-ui-form.group label="Beschreibung" class="mt-3">
-                <x-ui-input-textarea wire:model.defer="description" />
-            </x-ui-form.group>
-            <x-ui-form.group label="Aktiv" class="mt-3">
-                <x-ui-input-checkbox wire:model.defer="is_active" />
-            </x-ui-form.group>
+            <x-ui-input-text label="Code" wire:model.defer="code" />
+            <div class="mt-3">
+                <x-ui-input-text label="Name" wire:model.defer="name" />
+            </div>
+            <div class="mt-3">
+                <x-ui-input-textarea label="Beschreibung" wire:model.defer="description" />
+            </div>
+            <div class="mt-3">
+                <x-ui-input-checkbox wire:model.defer="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+            </div>
         </x-slot:content>
         <x-slot:footer>
             <x-ui-button.secondary wire:click="closeModals">Abbrechen</x-ui-button.secondary>
@@ -62,18 +60,16 @@
     <x-ui-modal wire:model="showEditModal">
         <x-slot:title>Umlageart bearbeiten</x-slot:title>
         <x-slot:content>
-            <x-ui-form.group label="Code">
-                <x-ui-input-text wire:model.defer="code" />
-            </x-ui-form.group>
-            <x-ui-form.group label="Name" class="mt-3">
-                <x-ui-input-text wire:model.defer="name" />
-            </x-ui-form.group>
-            <x-ui-form.group label="Beschreibung" class="mt-3">
-                <x-ui-input-textarea wire:model.defer="description" />
-            </x-ui-form.group>
-            <x-ui-form.group label="Aktiv" class="mt-3">
-                <x-ui-input-checkbox wire:model.defer="is_active" />
-            </x-ui-form.group>
+            <x-ui-input-text label="Code" wire:model.defer="code" />
+            <div class="mt-3">
+                <x-ui-input-text label="Name" wire:model.defer="name" />
+            </div>
+            <div class="mt-3">
+                <x-ui-input-textarea label="Beschreibung" wire:model.defer="description" />
+            </div>
+            <div class="mt-3">
+                <x-ui-input-checkbox wire:model.defer="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+            </div>
         </x-slot:content>
         <x-slot:footer>
             <x-ui-button.secondary wire:click="closeModals">Abbrechen</x-ui-button.secondary>
