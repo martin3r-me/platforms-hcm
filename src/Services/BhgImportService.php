@@ -276,9 +276,9 @@ class BhgImportService
             $this->createJobTitle($title);
         }
 
-        // Create Job Activities
+        // Job Activities: keine neuen Datensätze erzeugen, sondern vorhandene (inkl. Aliasse) nutzen
         foreach ($jobActivities as $activity) {
-            $this->createJobActivity($activity);
+            $this->ensureJobActivityReference($activity);
         }
     }
 
@@ -301,34 +301,27 @@ class BhgImportService
         }
     }
 
-    private function createJobActivity($name)
+    private function ensureJobActivityReference(string $name): void
     {
+        $needle = mb_strtolower(trim($name));
+        // Prüfe direkte Namensübereinstimmung
         $existing = HcmJobActivity::where('team_id', $this->teamId)
-            ->where('name', $name)
+            ->whereRaw('LOWER(name) = ?', [$needle])
             ->first();
-
-        if (!$existing) {
-            // Prüfe ob Code bereits existiert
-            $code = 'JA_' . substr(md5($name), 0, 8);
-            $existingCode = HcmJobActivity::where('team_id', $this->teamId)
-                ->where('code', $code)
-                ->first();
-            
-            if ($existingCode) {
-                // Füge Zeitstempel hinzu um Eindeutigkeit zu gewährleisten
-                $code = 'JA_' . substr(md5($name . time()), 0, 8);
-            }
-            
-            HcmJobActivity::create([
-                'team_id' => $this->teamId,
-                'code' => $code,
-                'name' => $name,
-                'short_name' => substr($name, 0, 50),
-                'is_active' => true,
-                'created_by_user_id' => $this->userId,
-            ]);
-            $this->stats['job_activities_created']++;
+        if ($existing) {
+            return;
         }
+
+        // Prüfe Aliasse
+        $alias = \Platform\Hcm\Models\HcmJobActivityAlias::where('team_id', $this->teamId)
+            ->whereRaw('LOWER(alias) = ?', [$needle])
+            ->first();
+        if ($alias) {
+            return;
+        }
+
+        // Optional: als Alias zu einem best-passenden Datensatz hinzufügen? Hier: skip, nur Statistik.
+        $this->stats['job_activities_created']++; // signalisiert fehlende Referenz
     }
 
     private function importEmployees($data)
@@ -485,20 +478,23 @@ class BhgImportService
                 }
             }
 
-            // Job Activities verknüpfen
+            // Tätigkeit (1–5) als primary_job_activity_id verknüpfen; nutzt Aliasse
             if (!empty($row['tätigkeit'])) {
+                $activityName = trim($row['tätigkeit']);
+                $needle = mb_strtolower($activityName);
                 $jobActivity = HcmJobActivity::where('team_id', $this->teamId)
-                    ->where('name', $row['tätigkeit'])
+                    ->whereRaw('LOWER(name) = ?', [$needle])
                     ->first();
-                
+                if (!$jobActivity) {
+                    $alias = \Platform\Hcm\Models\HcmJobActivityAlias::where('team_id', $this->teamId)
+                        ->whereRaw('LOWER(alias) = ?', [$needle])
+                        ->first();
+                    if ($alias) {
+                        $jobActivity = HcmJobActivity::find($alias->job_activity_id);
+                    }
+                }
                 if ($jobActivity) {
-                    DB::table('hcm_employee_contract_activity_links')->insert([
-                        'contract_id' => $contract->id,
-                        'job_activity_id' => $jobActivity->id,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                    $this->stats['contract_activity_links_created']++;
+                    $contract->update(['primary_job_activity_id' => $jobActivity->id]);
                 }
             }
 
@@ -943,13 +939,18 @@ class BhgImportService
             }
         }
 
-        // Count Job Activities that would be created
+        // Count Job Activities ohne neue zu erzeugen: wenn weder Name noch Alias existiert => fehlt
         foreach ($jobActivities as $activity) {
             $existing = HcmJobActivity::where('team_id', $this->teamId)
                 ->where('name', $activity)
                 ->first();
-
-            if (!$existing) {
+            if ($existing) {
+                continue;
+            }
+            $alias = \Platform\Hcm\Models\HcmJobActivityAlias::where('team_id', $this->teamId)
+                ->where('alias', $activity)
+                ->first();
+            if (!$alias) {
                 $this->stats['job_activities_created']++;
             }
         }
