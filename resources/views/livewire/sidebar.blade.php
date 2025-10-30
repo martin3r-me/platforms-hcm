@@ -71,6 +71,26 @@
             @svg('heroicon-o-heart', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Krankenkassen</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.person-groups.index')">
+            @svg('heroicon-o-users', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Personengruppen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.insurance-statuses.index')">
+            @svg('heroicon-o-shield-check', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Versicherungsstatus</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.pension-types.index')">
+            @svg('heroicon-o-academic-cap', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Rentenarten</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.employment-relationships.index')">
+            @svg('heroicon-o-briefcase', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Beschäftigungsverhältnisse</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.levy-types.index')">
+            @svg('heroicon-o-banknotes', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Umlagearten</span>
+        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('hcm.tariffs.index')">
             @svg('heroicon-o-scale', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Tarifklassen</span>

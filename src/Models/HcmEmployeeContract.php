@@ -25,6 +25,14 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'hours_per_month',
         'annual_vacation_days',
         'working_time_model',
+        'insurance_status_id',
+        'pension_type_id',
+        'employment_relationship_id',
+        'primary_job_activity_id',
+        'schooling_level',
+        'vocational_training_level',
+        'is_temp_agency',
+        'contract_form',
         'tax_class_id',
         'tax_factor_id',
         'child_allowance',
@@ -64,7 +72,34 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'minimum_wage_hourly_rate' => 'decimal:2',
         'minimum_wage_monthly_hours' => 'decimal:2',
         'is_active' => 'boolean',
+        'is_temp_agency' => 'boolean',
     ];
+
+    public function insuranceStatus()
+    {
+        return $this->belongsTo(HcmInsuranceStatus::class, 'insurance_status_id');
+    }
+
+    public function pensionType()
+    {
+        return $this->belongsTo(HcmPensionType::class, 'pension_type_id');
+    }
+
+    public function employmentRelationship()
+    {
+        return $this->belongsTo(HcmEmploymentRelationship::class, 'employment_relationship_id');
+    }
+
+    public function primaryJobActivity()
+    {
+        return $this->belongsTo(HcmJobActivity::class, 'primary_job_activity_id');
+    }
+
+    public function levyTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(HcmLevyType::class, 'hcm_contract_levy_type', 'contract_id', 'levy_type_id')
+            ->withTimestamps();
+    }
 
     protected static function booted(): void
     {

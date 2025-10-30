@@ -17,7 +17,12 @@ class HcmServiceProvider extends ServiceProvider
     {
         // Falls in Zukunft Artisan Commands o.ä. nötig sind, hier rein
         
-        // Keine Services in Hcm vorhanden
+        // Commands registrieren
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Platform\Hcm\Console\Commands\ImportJobActivitiesFromMarkdown::class,
+            ]);
+        }
     }
 
     public function boot(): void

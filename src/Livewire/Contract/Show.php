@@ -26,6 +26,17 @@ class Show extends Component
     public $minimum_wage_monthly_hours;
     public $minimum_wage_notes;
 
+    // SV/Steuer-Zuordnungen
+    public $insurance_status_id;
+    public $pension_type_id;
+    public $employment_relationship_id;
+    public $selected_levy_type_ids = [];
+    public $schooling_level;
+    public $vocational_training_level;
+    public $is_temp_agency = false;
+    public $contract_form;
+    public $primary_job_activity_id;
+
     public function mount(HcmEmployeeContract $contract)
     {
         $this->contract = $contract->load([
@@ -35,7 +46,11 @@ class Show extends Component
             'tariffProgressions.fromTariffLevel',
             'tariffProgressions.toTariffLevel',
             'jobTitles',
-            'jobActivities'
+            'jobActivities',
+            'levyTypes',
+            'insuranceStatus',
+            'pensionType',
+            'employmentRelationship',
         ]);
         
         $this->loadFormData();
@@ -53,6 +68,16 @@ class Show extends Component
         $this->minimum_wage_hourly_rate = $this->contract->minimum_wage_hourly_rate;
         $this->minimum_wage_monthly_hours = $this->contract->minimum_wage_monthly_hours;
         $this->minimum_wage_notes = $this->contract->minimum_wage_notes;
+
+        $this->insurance_status_id = $this->contract->insurance_status_id;
+        $this->pension_type_id = $this->contract->pension_type_id;
+        $this->employment_relationship_id = $this->contract->employment_relationship_id;
+        $this->selected_levy_type_ids = $this->contract->levyTypes()->pluck('id')->toArray();
+        $this->primary_job_activity_id = $this->contract->primary_job_activity_id;
+        $this->schooling_level = $this->contract->schooling_level;
+        $this->vocational_training_level = $this->contract->vocational_training_level;
+        $this->is_temp_agency = (bool) $this->contract->is_temp_agency;
+        $this->contract_form = $this->contract->contract_form;
     }
 
     public function toggleEdit()
@@ -76,6 +101,16 @@ class Show extends Component
             'minimum_wage_hourly_rate' => 'nullable|numeric|min:0',
             'minimum_wage_monthly_hours' => 'nullable|numeric|min:0',
             'minimum_wage_notes' => 'nullable|string|max:500',
+            'insurance_status_id' => 'nullable|exists:hcm_insurance_statuses,id',
+            'pension_type_id' => 'nullable|exists:hcm_pension_types,id',
+            'employment_relationship_id' => 'nullable|exists:hcm_employment_relationships,id',
+            'selected_levy_type_ids' => 'array',
+            'selected_levy_type_ids.*' => 'exists:hcm_levy_types,id',
+            'primary_job_activity_id' => 'nullable|exists:hcm_job_activities,id',
+            'schooling_level' => 'nullable|in:1,2,3,4,9',
+            'vocational_training_level' => 'nullable|in:1,2,3,4,5,6,9',
+            'is_temp_agency' => 'boolean',
+            'contract_form' => 'nullable|in:1,2,3,4,5,6,7,8,9',
         ]);
 
         $this->contract->update([
@@ -89,7 +124,17 @@ class Show extends Component
             'minimum_wage_hourly_rate' => $this->minimum_wage_hourly_rate,
             'minimum_wage_monthly_hours' => $this->minimum_wage_monthly_hours,
             'minimum_wage_notes' => $this->minimum_wage_notes,
+            'insurance_status_id' => $this->insurance_status_id,
+            'pension_type_id' => $this->pension_type_id,
+            'employment_relationship_id' => $this->employment_relationship_id,
+            'primary_job_activity_id' => $this->primary_job_activity_id,
+            'schooling_level' => $this->schooling_level,
+            'vocational_training_level' => $this->vocational_training_level,
+            'is_temp_agency' => $this->is_temp_agency,
+            'contract_form' => $this->contract_form,
         ]);
+
+        $this->contract->levyTypes()->sync($this->selected_levy_type_ids ?? []);
 
         $this->editMode = false;
         $this->contract->refresh();
@@ -116,6 +161,73 @@ class Show extends Component
     public function updatedTariffGroupId()
     {
         $this->tariff_level_id = null;
+    }
+
+    public function getInsuranceStatusesProperty()
+    {
+        return \Platform\Hcm\Models\HcmInsuranceStatus::where('team_id', auth()->user()->current_team_id)->orderBy('code')->get();
+    }
+
+    public function getPensionTypesProperty()
+    {
+        return \Platform\Hcm\Models\HcmPensionType::where('team_id', auth()->user()->current_team_id)->orderBy('code')->get();
+    }
+
+    public function getEmploymentRelationshipsProperty()
+    {
+        return \Platform\Hcm\Models\HcmEmploymentRelationship::where('team_id', auth()->user()->current_team_id)->orderBy('code')->get();
+    }
+
+    public function getLevyTypesProperty()
+    {
+        return \Platform\Hcm\Models\HcmLevyType::where('team_id', auth()->user()->current_team_id)->orderBy('code')->get();
+    }
+
+    public function getJobActivitiesProperty()
+    {
+        return \Platform\Hcm\Models\HcmJobActivity::where('team_id', auth()->user()->current_team_id)
+            ->orderBy('code')
+            ->limit(500)
+            ->get();
+    }
+
+    public function getSchoolingLevelOptionsProperty()
+    {
+        return [
+            1 => 'Ohne Schulabschluss',
+            2 => 'Haupt-/Volksschule',
+            3 => 'Mittlere Reife',
+            4 => 'Abitur/Fachabitur',
+            9 => 'Unbekannt',
+        ];
+    }
+
+    public function getVocationalTrainingLevelOptionsProperty()
+    {
+        return [
+            1 => 'Ohne beruflichen Abschluss',
+            2 => 'Anerkannte Berufsausbildung',
+            3 => 'Meister/Techniker/Fachschule',
+            4 => 'Bachelor',
+            5 => 'Diplom/Master/Staatsexamen',
+            6 => 'Promotion',
+            9 => 'Unbekannt',
+        ];
+    }
+
+    public function getContractFormOptionsProperty()
+    {
+        return [
+            '1' => 'Unbefristet',
+            '2' => 'Befristet',
+            '3' => 'Ausbildung',
+            '4' => 'Praktikum',
+            '5' => 'Werkstudent',
+            '6' => 'Leiharbeit',
+            '7' => 'Minijob',
+            '8' => 'Teilzeit',
+            '9' => 'Sonstige',
+        ];
     }
 
     public function render()

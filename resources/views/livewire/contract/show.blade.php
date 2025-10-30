@@ -171,6 +171,159 @@
             </div>
         </div>
 
+        {{-- Sozialversicherung & Steuergrundlagen --}}
+        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
+            <div class="flex items-center gap-2 mb-6">
+                @svg('heroicon-o-shield-check', 'w-6 h-6 text-teal-600')
+                <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Sozialversicherung & Steuer</h2>
+            </div>
+
+            @if($editMode)
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <x-ui-input-select 
+                        name="primary_job_activity_id" 
+                        label="Tätigkeitsschlüssel (Stellen 1–5)"
+                        wire:model="primary_job_activity_id"
+                        :options="$this->jobActivities->pluck('name','id')->map(fn($n,$id)=>$id)->toArray()"
+                        placeholder="Tätigkeit auswählen..."
+                    />
+
+                    <x-ui-input-select 
+                        name="insurance_status_id" 
+                        label="Versicherungsstatus"
+                        wire:model="insurance_status_id"
+                        :options="$this->insuranceStatuses->pluck('name', 'id')->toArray()"
+                        placeholder="Status wählen..."
+                    />
+
+                    <x-ui-input-select 
+                        name="pension_type_id" 
+                        label="Rentenart"
+                        wire:model="pension_type_id"
+                        :options="$this->pensionTypes->pluck('name', 'id')->toArray()"
+                        placeholder="Rentenart wählen..."
+                    />
+
+                    <x-ui-input-select 
+                        name="employment_relationship_id" 
+                        label="Beschäftigungsverhältnis"
+                        wire:model="employment_relationship_id"
+                        :options="$this->employmentRelationships->pluck('name', 'id')->toArray()"
+                        placeholder="Verhältnis wählen..."
+                    />
+
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-2">Umlagearten</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            @foreach($this->levyTypes as $levy)
+                                <label class="inline-flex items-center gap-2 text-sm">
+                                    <input type="checkbox" class="form-checkbox" 
+                                           wire:model="selected_levy_type_ids" 
+                                           value="{{ $levy->id }}">
+                                    <span>{{ $levy->code }} – {{ $levy->name }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <x-ui-input-select 
+                        name="schooling_level" 
+                        label="Höchster Schulabschluss (Stelle 6)"
+                        wire:model="schooling_level"
+                        :options="$this->schoolingLevelOptions"
+                        placeholder="Auswahl..."
+                    />
+
+                    <x-ui-input-select 
+                        name="vocational_training_level" 
+                        label="Höchster beruflicher Abschluss (Stelle 7)"
+                        wire:model="vocational_training_level"
+                        :options="$this->vocationalTrainingLevelOptions"
+                        placeholder="Auswahl..."
+                    />
+
+                    <x-ui-input-checkbox 
+                        name="is_temp_agency" 
+                        label="Arbeitnehmerüberlassung (Stelle 8)"
+                        wire:model="is_temp_agency"
+                    />
+
+                    <x-ui-input-select 
+                        name="contract_form" 
+                        label="Vertragsform (Stelle 9)"
+                        wire:model="contract_form"
+                        :options="$this->contractFormOptions"
+                        placeholder="Auswahl..."
+                    />
+                </div>
+            @else
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Tätigkeitsschlüssel (1–5)</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ optional($contract->primaryJobActivity)->code }} {{ optional($contract->primaryJobActivity)->name }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Versicherungsstatus</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ optional($contract->insuranceStatus)->name ?? '—' }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Rentenart</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ optional($contract->pensionType)->name ?? '—' }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Beschäftigungsverhältnis</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ optional($contract->employmentRelationship)->name ?? '—' }}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Umlagearten</div>
+                        <div class="flex flex-wrap gap-2">
+                            @forelse($contract->levyTypes as $levy)
+                                <x-ui-badge variant="secondary">{{ $levy->code }}</x-ui-badge>
+                            @empty
+                                <span class="text-sm text-[var(--ui-muted)]">—</span>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Schulabschluss (Stelle 6)</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ $this->schoolingLevelOptions[$contract->schooling_level] ?? '—' }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Beruflicher Abschluss (Stelle 7)</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ $this->vocationalTrainingLevelOptions[$contract->vocational_training_level] ?? '—' }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Arbeitnehmerüberlassung (Stelle 8)</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ $contract->is_temp_agency ? 'Ja' : 'Nein' }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Vertragsform (Stelle 9)</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ $this->contractFormOptions[$contract->contract_form] ?? '—' }}
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+
         {{-- Übertarifliche Bezahlung --}}
         @if($contract->is_above_tariff || $editMode)
             <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">

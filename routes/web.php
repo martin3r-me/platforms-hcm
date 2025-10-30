@@ -11,6 +11,11 @@ use Platform\Hcm\Livewire\Tariff\Index as TariffIndex;
 use Platform\Hcm\Livewire\JobTitle\Index as JobTitleIndex;
 use Platform\Hcm\Livewire\JobActivity\Index as JobActivityIndex;
 use Platform\Hcm\Livewire\PayrollType\Index as PayrollTypeIndex;
+use Platform\Hcm\Livewire\PersonGroup\Index as PersonGroupIndex;
+use Platform\Hcm\Livewire\InsuranceStatus\Index as InsuranceStatusIndex;
+use Platform\Hcm\Livewire\PensionType\Index as PensionTypeIndex;
+use Platform\Hcm\Livewire\EmploymentRelationship\Index as EmploymentRelationshipIndex;
+use Platform\Hcm\Livewire\LevyType\Index as LevyTypeIndex;
 
 Route::get('/', Platform\Hcm\Livewire\Dashboard::class)->name('hcm.dashboard');
 
@@ -59,6 +64,21 @@ Route::get('/job-activities', JobActivityIndex::class)->name('hcm.job-activities
 Route::get('/payroll-types', PayrollTypeIndex::class)->name('hcm.payroll-types.index');
 Route::get('/payroll-types/export/csv', [PayrollTypeIndex::class, 'exportCsv'])->name('hcm.payroll-types.export-csv');
 Route::get('/payroll-types/export/pdf', [PayrollTypeIndex::class, 'exportPdf'])->name('hcm.payroll-types.export-pdf');
+
+// Personengruppenschlüssel (Lookup)
+Route::get('/person-groups', PersonGroupIndex::class)->name('hcm.person-groups.index');
+
+// Versicherungsstatus (Lookup)
+Route::get('/insurance-statuses', InsuranceStatusIndex::class)->name('hcm.insurance-statuses.index');
+
+// Rentenarten (Lookup)
+Route::get('/pension-types', PensionTypeIndex::class)->name('hcm.pension-types.index');
+
+// Beschäftigungsverhältnisse (Lookup)
+Route::get('/employment-relationships', EmploymentRelationshipIndex::class)->name('hcm.employment-relationships.index');
+
+// Umlagearten (Lookup)
+Route::get('/levy-types', LevyTypeIndex::class)->name('hcm.levy-types.index');
 
 // Arbeitgeber-spezifische Mitarbeiter
 Route::get('/employers/{employer}/employees', EmployeeIndex::class)->name('hcm.employers.employees.index');

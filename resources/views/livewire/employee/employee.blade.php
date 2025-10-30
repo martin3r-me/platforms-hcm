@@ -32,6 +32,22 @@
                     required
                     :errorKey="'employee.employee_number'"
                 />
+
+                <x-ui-input-select
+                    name="employee.schooling_level"
+                    label="Höchster Schulabschluss (Stelle 6)"
+                    :options="[1=>'Ohne Schulabschluss',2=>'Haupt-/Volksschule',3=>'Mittlere Reife',4=>'Abitur/Fachabitur',9=>'Unbekannt']"
+                    wire:model.live="employee.schooling_level"
+                    placeholder="Auswahl..."
+                />
+
+                <x-ui-input-select
+                    name="employee.vocational_training_level"
+                    label="Höchster beruflicher Abschluss (Stelle 7)"
+                    :options="[1=>'Ohne beruflichen Abschluss',2=>'Anerkannte Berufsausbildung',3=>'Meister/Techniker/Fachschule',4=>'Bachelor',5=>'Diplom/Master/Staatsexamen',6=>'Promotion',9=>'Unbekannt']"
+                    wire:model.live="employee.vocational_training_level"
+                    placeholder="Auswahl..."
+                />
             </div>
         </div>
 

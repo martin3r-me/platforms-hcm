@@ -23,6 +23,8 @@ class HcmEmployee extends Model implements EmployeeInterface
         'employer_id', // FK zu HcmEmployer
         'company_employee_number', // Unternehmensspezifische Personalnummer
         'health_insurance_company_id', // FK zu HcmHealthInsuranceCompany
+        'schooling_level',
+        'vocational_training_level',
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
@@ -31,6 +33,8 @@ class HcmEmployee extends Model implements EmployeeInterface
     
     protected $casts = [
         'is_active' => 'boolean',
+        'schooling_level' => 'integer',
+        'vocational_training_level' => 'integer',
     ];
     
     protected static function booted(): void
