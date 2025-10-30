@@ -10,30 +10,28 @@
 
     <div class="mt-4">
         <x-ui-table>
-            <x-slot:head>
-                <x-ui-table.th>Code</x-ui-table.th>
-                <x-ui-table.th>Name</x-ui-table.th>
-                <x-ui-table.th>Status</x-ui-table.th>
-                <x-ui-table.th class="text-right">Aktionen</x-ui-table.th>
-            </x-slot:head>
+            <x-slot name="header">
+                <x-ui-table-header>Code</x-ui-table-header>
+                <x-ui-table-header>Name</x-ui-table-header>
+                <x-ui-table-header>Status</x-ui-table-header>
+                <x-ui-table-header class="text-right">Aktionen</x-ui-table-header>
+            </x-slot>
 
-            <x-slot:body>
-                @foreach($items as $item)
-                    <x-ui-table.tr>
-                        <x-ui-table.td>{{ $item->code }}</x-ui-table.td>
-                        <x-ui-table.td>{{ $item->name }}</x-ui-table.td>
-                        <x-ui-table.td>
+            @foreach($items as $item)
+                <x-ui-table-row>
+                    <x-ui-table-cell>{{ $item->code }}</x-ui-table-cell>
+                    <x-ui-table-cell>{{ $item->name }}</x-ui-table-cell>
+                    <x-ui-table-cell>
                             <x-ui-badge variant="{{ $item->is_active ? 'success' : 'secondary' }}">
                                 {{ $item->is_active ? 'aktiv' : 'inaktiv' }}
                             </x-ui-badge>
-                        </x-ui-table.td>
-                        <x-ui-table.td class="text-right">
+                    </x-ui-table-cell>
+                    <x-ui-table-cell class="text-right">
                             <x-ui-button variant="secondary" size="sm" wire:click="openEditModal({{ $item->id }})">Bearbeiten</x-ui-button>
                             <x-ui-button variant="danger" size="sm" wire:click="delete({{ $item->id }})">Löschen</x-ui-button>
-                        </x-ui-table.td>
-                    </x-ui-table.tr>
-                @endforeach
-            </x-slot:body>
+                    </x-ui-table-cell>
+                </x-ui-table-row>
+            @endforeach
         </x-ui-table>
 
         <div class="mt-4">{{ $items->links() }}</div>
