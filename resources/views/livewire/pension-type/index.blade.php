@@ -52,7 +52,7 @@
                 <x-ui-input-textarea wire:model.defer="description" />
             </x-ui-form.group>
             <x-ui-form.group label="Aktiv" class="mt-3">
-                <x-ui-input-toggle wire:model.defer="is_active" />
+                <x-ui-input-checkbox wire:model.defer="is_active" />
             </x-ui-form.group>
         </x-slot:content>
         <x-slot:footer>
@@ -74,7 +74,7 @@
                 <x-ui-input-textarea wire:model.defer="description" />
             </x-ui-form.group>
             <x-ui-form.group label="Aktiv" class="mt-3">
-                <x-ui-input-toggle wire:model.defer="is_active" />
+                <x-ui-input-checkbox wire:model.defer="is_active" />
             </x-ui-form.group>
         </x-slot:content>
         <x-slot:footer>
