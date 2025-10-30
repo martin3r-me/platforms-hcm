@@ -9,12 +9,17 @@ class HcmPensionTypeSeeder extends Seeder
 {
     public function run(): void
     {
-        $teamId = $this->command ? $this->command->option('team-id') : auth()->user()->current_team_id;
+        $teamId = $this->command ? $this->command->option('team-id') : (config('hcm.seeder_team_id') ?? (auth()->user()->current_team_id ?? 0));
 
         $items = [
             ['code' => 'ALT', 'name' => 'Altersrente'],
+            ['code' => 'FRU', 'name' => 'Altersrente für langjährig Versicherte (früh)'],
+            ['code' => 'LANG', 'name' => 'Altersrente für besonders langjährig Versicherte'],
+            ['code' => 'TEIL', 'name' => 'Teilrente'],
             ['code' => 'ERW', 'name' => 'Erwerbsminderungsrente'],
             ['code' => 'WIT', 'name' => 'Witwen-/Witwerrente'],
+            ['code' => 'WAIS', 'name' => 'Waisenrente'],
+            ['code' => 'BGR', 'name' => 'Betriebsrente'],
         ];
 
         foreach ($items as $i) {

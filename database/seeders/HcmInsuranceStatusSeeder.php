@@ -9,12 +9,16 @@ class HcmInsuranceStatusSeeder extends Seeder
 {
     public function run(): void
     {
-        $teamId = $this->command ? $this->command->option('team-id') : auth()->user()->current_team_id;
+        $teamId = $this->command ? $this->command->option('team-id') : (config('hcm.seeder_team_id') ?? (auth()->user()->current_team_id ?? 0));
 
         $items = [
-            ['code' => '109', 'name' => 'Pflichtversichert (PGR 109)'],
-            ['code' => '110', 'name' => 'Freiwillig versichert (PGR 110)'],
-            ['code' => 'PRIV', 'name' => 'Privat versichert'],
+            ['code' => '109', 'name' => 'Pflichtversichert (gesetzlich)'],
+            ['code' => '110', 'name' => 'Freiwillig gesetzlich versichert'],
+            ['code' => 'PRIV', 'name' => 'Privat krankenversichert'],
+            ['code' => 'STUD', 'name' => 'Studentische Versicherung'],
+            ['code' => 'FAM', 'name' => 'Familienversichert'],
+            ['code' => 'KVDR', 'name' => 'Krankenversicherung der Rentner'],
+            ['code' => 'BEAM', 'name' => 'Beihilfe/Beamte (ergänzend)'],
         ];
 
         foreach ($items as $i) {

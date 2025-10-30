@@ -43,16 +43,16 @@
         <x-slot:title>Neue Rentenart anlegen</x-slot:title>
         <x-slot:content>
             <x-ui-form.group label="Code">
-                <x-ui-input wire:model.defer="code" />
+                <x-ui-input-text wire:model.defer="code" />
             </x-ui-form.group>
             <x-ui-form.group label="Name" class="mt-3">
-                <x-ui-input wire:model.defer="name" />
+                <x-ui-input-text wire:model.defer="name" />
             </x-ui-form.group>
             <x-ui-form.group label="Beschreibung" class="mt-3">
-                <x-ui-textarea wire:model.defer="description" />
+                <x-ui-input-textarea wire:model.defer="description" />
             </x-ui-form.group>
             <x-ui-form.group label="Aktiv" class="mt-3">
-                <x-ui-toggle wire:model.defer="is_active" />
+                <x-ui-input-toggle wire:model.defer="is_active" />
             </x-ui-form.group>
         </x-slot:content>
         <x-slot:footer>
@@ -65,16 +65,16 @@
         <x-slot:title>Rentenart bearbeiten</x-slot:title>
         <x-slot:content>
             <x-ui-form.group label="Code">
-                <x-ui-input wire:model.defer="code" />
+                <x-ui-input-text wire:model.defer="code" />
             </x-ui-form.group>
             <x-ui-form.group label="Name" class="mt-3">
-                <x-ui-input wire:model.defer="name" />
+                <x-ui-input-text wire:model.defer="name" />
             </x-ui-form.group>
             <x-ui-form.group label="Beschreibung" class="mt-3">
-                <x-ui-textarea wire:model.defer="description" />
+                <x-ui-input-textarea wire:model.defer="description" />
             </x-ui-form.group>
             <x-ui-form.group label="Aktiv" class="mt-3">
-                <x-ui-toggle wire:model.defer="is_active" />
+                <x-ui-input-toggle wire:model.defer="is_active" />
             </x-ui-form.group>
         </x-slot:content>
         <x-slot:footer>

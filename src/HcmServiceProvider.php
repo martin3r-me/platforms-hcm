@@ -21,6 +21,7 @@ class HcmServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Platform\Hcm\Console\Commands\ImportJobActivitiesFromMarkdown::class,
+                \Platform\Hcm\Console\Commands\SeedHcmLookupData::class,
             ]);
         }
     }

@@ -9,7 +9,7 @@ class HcmLevyTypeSeeder extends Seeder
 {
     public function run(): void
     {
-        $teamId = $this->command ? $this->command->option('team-id') : auth()->user()->current_team_id;
+        $teamId = $this->command ? $this->command->option('team-id') : (config('hcm.seeder_team_id') ?? (auth()->user()->current_team_id ?? 0));
 
         $items = [
             ['code' => 'U1', 'name' => 'Umlage U1'],
