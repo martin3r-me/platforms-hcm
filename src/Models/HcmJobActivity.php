@@ -28,6 +28,11 @@ class HcmJobActivity extends Model
             }
         });
     }
+
+    public function aliases()
+    {
+        return $this->hasMany(HcmJobActivityAlias::class, 'job_activity_id');
+    }
 }
 
 

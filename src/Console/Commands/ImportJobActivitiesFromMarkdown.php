@@ -4,6 +4,7 @@ namespace Platform\Hcm\Console\Commands;
 
 use Illuminate\Console\Command;
 use Platform\Hcm\Models\HcmJobActivity;
+use Platform\Hcm\Models\HcmJobActivityAlias;
 
 class ImportJobActivitiesFromMarkdown extends Command
 {
@@ -43,6 +44,8 @@ class ImportJobActivitiesFromMarkdown extends Command
         $skipped = 0;
         $inAlphabeticalList = false; // beginne Parsing erst ab der Tätigkeitsliste
 
+        $uniqueCodes = [];
+
         while (($line = fgets($handle)) !== false) {
             $line = rtrim($line, "\r\n");
             // Entferne Füllpunkte und Tabs
@@ -74,13 +77,9 @@ class ImportJobActivitiesFromMarkdown extends Command
                     $totalParsed++;
 
                     if (!$dryRun) {
-                        $exists = HcmJobActivity::where('team_id', $teamId)
-                            ->where('code', $code)
-                            ->exists();
-                        if ($exists) {
-                            $skipped++;
-                        } else {
-                            HcmJobActivity::create([
+                        $activity = HcmJobActivity::where('team_id', $teamId)->where('code', $code)->first();
+                        if (!$activity) {
+                            $activity = HcmJobActivity::create([
                                 'code' => $code,
                                 'name' => $name,
                                 'is_active' => true,
@@ -88,7 +87,27 @@ class ImportJobActivitiesFromMarkdown extends Command
                                 'created_by_user_id' => auth()->id(),
                             ]);
                             $inserted++;
+                            $uniqueCodes[$code] = true;
+                        } else {
+                            $skipped++;
                         }
+
+                        // Alias anlegen, wenn Name von Primärname abweicht und noch nicht vorhanden
+                        if ($activity && mb_strtolower($name) !== mb_strtolower($activity->name)) {
+                            $aliasExists = HcmJobActivityAlias::where('team_id', $teamId)
+                                ->where('alias', $name)
+                                ->exists();
+                            if (!$aliasExists) {
+                                HcmJobActivityAlias::create([
+                                    'job_activity_id' => $activity->id,
+                                    'alias' => $name,
+                                    'team_id' => $teamId,
+                                    'created_by_user_id' => auth()->id(),
+                                ]);
+                            }
+                        }
+                    } else {
+                        $uniqueCodes[$code] = true;
                     }
                 }
 
