@@ -41,6 +41,7 @@ class ImportJobActivitiesFromMarkdown extends Command
         $totalParsed = 0;
         $inserted = 0;
         $skipped = 0;
+        $inAlphabeticalList = false; // beginne Parsing erst ab der Tätigkeitsliste
 
         while (($line = fgets($handle)) !== false) {
             $line = rtrim($line, "\r\n");
@@ -48,7 +49,16 @@ class ImportJobActivitiesFromMarkdown extends Command
             $clean = preg_replace('/[\.·•]+/u', ' ', $line);
             $clean = preg_replace('/\s+/', ' ', $clean);
 
-            if ($clean === '' || preg_match('/^(IMPRESSUM|INHALTSVERZEICHNIS|Schlüsselverzeichnis|[A-ZÄÖÜ]$)/u', $clean)) {
+            // Starte erst ab der Überschrift der alphabetischen Liste
+            if (!$inAlphabeticalList) {
+                if (stripos($clean, 'ALPHABETISCHES VERZEICHNIS DER BERUFSBENENNUNGEN') !== false) {
+                    $inAlphabeticalList = true;
+                }
+                continue;
+            }
+
+            // Skip offensichtliche Metadaten-/Überschrifts-Zeilen
+            if ($clean === '' || preg_match('/^(IMPRESSUM|INHALTSVERZEICHNIS|Schlüsselverzeichnis|[A-ZÄÖÜ]$|Schlüsselverzeichnis für die Angaben zur Tätigkeit)/u', $clean)) {
                 continue;
             }
 
@@ -59,8 +69,8 @@ class ImportJobActivitiesFromMarkdown extends Command
                 $name = trim($m[1]);
                 $code = $m[2];
 
-                // Filter: Name darf nicht rein numerisch sein
-                if ($name !== '' && !preg_match('/^\d+$/', $name)) {
+                // Filter: valide Namen, sinnvolle Länge, muss Buchstaben enthalten
+                if ($name !== '' && !preg_match('/^\d+$/', $name) && preg_match('/[A-Za-zÄÖÜäöüß]/u', $name) && mb_strlen($name) <= 255) {
                     $totalParsed++;
 
                     if (!$dryRun) {
@@ -83,6 +93,12 @@ class ImportJobActivitiesFromMarkdown extends Command
                 }
 
                 // Buffer zurücksetzen nach erfolgreichem Match
+                $buffer = '';
+                continue;
+            }
+
+            // Sicherheitsreset, falls Buffer zu lang wird (Vermeidung von Fluten aus Meta-Abschnitten)
+            if (mb_strlen($buffer) > 500) {
                 $buffer = '';
             }
         }
