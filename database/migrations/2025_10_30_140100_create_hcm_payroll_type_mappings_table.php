@@ -20,8 +20,9 @@ return new class extends Migration {
                 $t->json('meta')->nullable();
                 $t->timestamps();
 
-                $t->index(['team_id','provider_id','external_code']);
-                $t->index(['team_id','provider_id','valid_from','valid_to']);
+                // Kurze, explizite Index-Namen (MySQL 64-char Limit vermeiden)
+                $t->index(['team_id','provider_id','external_code'], 'idx_hptm_team_prov_code');
+                $t->index(['team_id','provider_id','valid_from','valid_to'], 'idx_hptm_team_prov_valid');
             });
         }
     }
