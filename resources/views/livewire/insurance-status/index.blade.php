@@ -1,10 +1,10 @@
 <div>
     <x-ui-page-header title="Versicherungsstatus">
         <x-slot:actions>
-            <x-ui-button.primary wire:click="openCreateModal">
+            <x-ui-button variant="primary" wire:click="openCreateModal">
                 @svg('heroicon-o-plus', 'w-4 h-4')
                 <span class="ml-1">Neu</span>
-            </x-ui-button.primary>
+            </x-ui-button>
         </x-slot:actions>
     </x-ui-page-header>
 
@@ -23,13 +23,13 @@
                         <x-ui-table.td>{{ $item->code }}</x-ui-table.td>
                         <x-ui-table.td>{{ $item->name }}</x-ui-table.td>
                         <x-ui-table.td>
-                            <x-ui-badge :type="$item->is_active ? 'success' : 'secondary'">
+                            <x-ui-badge variant="{{ $item->is_active ? 'success' : 'secondary' }}">
                                 {{ $item->is_active ? 'aktiv' : 'inaktiv' }}
                             </x-ui-badge>
                         </x-ui-table.td>
                         <x-ui-table.td class="text-right">
-                            <x-ui-button.secondary size="sm" wire:click="openEditModal({{ $item->id }})">Bearbeiten</x-ui-button.secondary>
-                            <x-ui-button.danger size="sm" wire:click="delete({{ $item->id }})">Löschen</x-ui-button.danger>
+                            <x-ui-button variant="secondary" size="sm" wire:click="openEditModal({{ $item->id }})">Bearbeiten</x-ui-button>
+                            <x-ui-button variant="danger" size="sm" wire:click="delete({{ $item->id }})">Löschen</x-ui-button>
                         </x-ui-table.td>
                     </x-ui-table.tr>
                 @endforeach
