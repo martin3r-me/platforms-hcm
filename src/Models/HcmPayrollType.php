@@ -4,9 +4,12 @@ namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HcmPayrollType extends Model
 {
+    use SoftDeletes;
     protected $table = 'hcm_payroll_types';
 
     protected $fillable = [
@@ -27,6 +30,7 @@ class HcmPayrollType extends Model
         'credit_finance_account_id',
         'valid_from',
         'valid_to',
+        'successor_payroll_type_id',
         'is_active',
         'display_group',
         'sort_order',
@@ -59,5 +63,15 @@ class HcmPayrollType extends Model
     public function creditFinanceAccount(): BelongsTo
     {
         return $this->belongsTo(\Platform\Finance\Models\FinanceAccount::class, 'credit_finance_account_id');
+    }
+
+    public function successor(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'successor_payroll_type_id');
+    }
+
+    public function predecessors(): HasMany
+    {
+        return $this->hasMany(self::class, 'successor_payroll_type_id');
     }
 }

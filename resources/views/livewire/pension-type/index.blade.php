@@ -52,8 +52,8 @@
             </div>
         </x-slot:content>
         <x-slot:footer>
-            <x-ui-button.secondary wire:click="closeModals">Abbrechen</x-ui-button.secondary>
-            <x-ui-button.primary wire:click="save">Speichern</x-ui-button.primary>
+            <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
+            <x-ui-button variant="primary" wire:click="save">Speichern</x-ui-button>
         </x-slot:footer>
     </x-ui-modal>
 
@@ -72,8 +72,8 @@
             </div>
         </x-slot:content>
         <x-slot:footer>
-            <x-ui-button.secondary wire:click="closeModals">Abbrechen</x-ui-button.secondary>
-            <x-ui-button.primary wire:click="save">Speichern</x-ui-button.primary>
+            <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
+            <x-ui-button variant="primary" wire:click="save">Speichern</x-ui-button>
         </x-slot:footer>
     </x-ui-modal>
 </div>
