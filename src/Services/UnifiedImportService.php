@@ -417,12 +417,16 @@ class UnifiedImportService
                             $tariffName = trim((string) ($row['Tarif'] ?? ''));
                             $tariffGroup = trim((string) ($row['Tarifgruppe'] ?? ''));
                             $tariffLevel = trim((string) ($row['Tarifstufe'] ?? ''));
+                            
                             if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '') {
+                                echo " ($tariffName / $tariffGroup / $tariffLevel)...";
+                                
                                 // Agreement
                                 $agreement = HcmTariffAgreement::where('team_id', $teamId)
                                     ->where('name', $tariffName)
                                     ->first();
                                 if (!$agreement) {
+                                    echo " Agreement erstellen...";
                                     $agreement = HcmTariffAgreement::create([
                                         'team_id' => $teamId,
                                         'code' => 'TA_' . substr(md5($tariffName), 0, 8),
@@ -430,33 +434,41 @@ class UnifiedImportService
                                         'is_active' => true,
                                         'created_by_user_id' => $employer->created_by_user_id,
                                     ]);
+                                    echo " ✓";
                                 }
                                 
                                 // Group
+                                echo " Group prüfen...";
                                 $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
                                     ->where('name', $tariffGroup)
                                     ->first();
                                 if (!$group) {
+                                    echo " erstellen...";
                                     $group = HcmTariffGroup::create([
                                         'tariff_agreement_id' => $agreement->id,
                                         'code' => 'TG_' . substr(md5($tariffName.'|'.$tariffGroup), 0, 8),
                                         'name' => $tariffGroup,
                                     ]);
+                                    echo " ✓";
                                 }
                                 
                                 // Level
+                                echo " Level prüfen...";
                                 $level = HcmTariffLevel::where('tariff_group_id', $group->id)
                                     ->where('name', $tariffLevel)
                                     ->first();
                                 if (!$level) {
+                                    echo " erstellen...";
                                     $level = HcmTariffLevel::create([
                                         'tariff_group_id' => $group->id,
                                         'code' => 'TL_' . substr(md5($tariffName.'|'.$tariffGroup.'|'.$tariffLevel), 0, 8),
                                         'name' => $tariffLevel,
                                         'progression_months' => 999,
                                     ]);
+                                    echo " ✓";
                                 }
                                 
+                                echo " Vertrag aktualisieren...";
                                 if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
                                     $contract->tariff_group_id = $group->id;
                                     $contract->tariff_level_id = $level->id;
@@ -718,7 +730,7 @@ class UnifiedImportService
         $bav = trim((string) ($row['BetrieblicheAltersvorsorge'] ?? ''));
         if ($bav !== '' && $bav !== '[leer]') {
             $benefits[] = [
-                'type' => 'bav',
+                'benefit_type' => 'bav',
                 'name' => 'Betriebliche Altersvorsorge',
                 'description' => $bav,
                 'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
@@ -729,7 +741,7 @@ class UnifiedImportService
         $vwl = $this->toFloat($row['VermoegenswirksameLeistungen'] ?? null);
         if ($vwl !== null && $vwl > 0) {
             $benefits[] = [
-                'type' => 'vwl',
+                'benefit_type' => 'vwl',
                 'name' => 'Vermögenswirksame Leistungen',
                 'monthly_contribution_employee' => (string) $vwl,
                 'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
@@ -740,7 +752,7 @@ class UnifiedImportService
         $bkv = trim((string) ($row['PrivateKrankenversicherungName'] ?? ''));
         if ($bkv !== '' && $bkv !== '[leer]') {
             $benefits[] = [
-                'type' => 'bkv',
+                'benefit_type' => 'bkv',
                 'name' => 'Betriebliche Krankenversicherung',
                 'insurance_company' => $bkv,
                 'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
@@ -754,7 +766,7 @@ class UnifiedImportService
             // Prüfe ob bereits vorhanden
             $exists = HcmEmployeeBenefit::where('employee_id', $employee->id)
                 ->where('employee_contract_id', $contract->id)
-                ->where('benefit_type', $benefitData['type'])
+                ->where('benefit_type', $benefitData['benefit_type'])
                 ->where('is_active', true)
                 ->exists();
 
