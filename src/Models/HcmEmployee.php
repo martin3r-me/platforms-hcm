@@ -48,6 +48,40 @@ class HcmEmployee extends Model implements EmployeeInterface
         'bank_swift',
         'health_insurance_ik',
         'health_insurance_name',
+        // Phase 1: Notfallkontakt
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        // Phase 1: Zusätzliche Personaldaten
+        'birth_surname',
+        'birth_place',
+        'birth_country',
+        'title',
+        'name_prefix',
+        'name_suffix',
+        // Phase 1: Arbeitserlaubnis
+        'permanent_residence_permit',
+        'work_permit_until',
+        'border_worker_country',
+        // Phase 1: Behinderung Details
+        'has_disability_id',
+        'disability_id_number',
+        'disability_id_valid_from',
+        'disability_id_valid_until',
+        'disability_office',
+        'disability_office_location',
+        // Phase 1: Vorgesetzter/Organisation
+        'supervisor_id',
+        'deputy_id',
+        'alias',
+        // Phase 1: Schulungen
+        'hygiene_training_date',
+        'parent_eligibility_proof_date',
+        // Phase 1: Sonstiges
+        'business_email',
+        'web_time_pin',
+        'alternative_employee_number',
+        'is_seasonal_worker',
+        'is_disability_pensioner',
         'attributes'
     ];
     
@@ -59,6 +93,15 @@ class HcmEmployee extends Model implements EmployeeInterface
         'children_count' => 'integer',
         'disability_degree' => 'integer',
         'child_allowance' => 'integer',
+        'permanent_residence_permit' => 'boolean',
+        'work_permit_until' => 'date',
+        'has_disability_id' => 'boolean',
+        'disability_id_valid_from' => 'date',
+        'disability_id_valid_until' => 'date',
+        'hygiene_training_date' => 'date',
+        'parent_eligibility_proof_date' => 'date',
+        'is_seasonal_worker' => 'boolean',
+        'is_disability_pensioner' => 'boolean',
         'attributes' => 'array',
     ];
 
@@ -228,6 +271,21 @@ class HcmEmployee extends Model implements EmployeeInterface
     public function issues()
     {
         return $this->hasMany(HcmEmployeeIssue::class, 'employee_id');
+    }
+
+    public function benefits()
+    {
+        return $this->hasMany(HcmEmployeeBenefit::class, 'employee_id');
+    }
+
+    public function supervisor()
+    {
+        return $this->belongsTo(HcmEmployee::class, 'supervisor_id');
+    }
+
+    public function deputy()
+    {
+        return $this->belongsTo(HcmEmployee::class, 'deputy_id');
     }
     
     /**

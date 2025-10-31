@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use League\Csv\Reader;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Models\CrmContactLink;
+use Platform\Crm\Models\CrmPostalAddress;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Models\HcmEmployer;
@@ -22,6 +23,7 @@ use Platform\Organization\Models\OrganizationCostCenter;
 use Platform\Hcm\Models\HcmTariffAgreement;
 use Platform\Hcm\Models\HcmTariffGroup;
 use Platform\Hcm\Models\HcmTariffLevel;
+use Platform\Hcm\Models\HcmEmployeeBenefit;
 
 class UnifiedImportService
 {
@@ -118,6 +120,36 @@ class UnifiedImportService
                         'bank_swift' => $row['Swift'] ?? null,
                         'health_insurance_ik' => $row['KrankenkasseBetriebsnummer'] ?? null,
                         'health_insurance_name' => $row['KrankenkasseName'] ?? ($row['Krankenkasse'] ?? null),
+                        // Phase 1: Notfallkontakt
+                        'emergency_contact_name' => trim((string) ($row['NotfallAnsprechpartner'] ?? '')) ?: null,
+                        'emergency_contact_phone' => trim((string) ($row['NotfallTelefonnummer'] ?? '')) ?: null,
+                        // Phase 1: Zusätzliche Personaldaten
+                        'birth_surname' => trim((string) ($row['Geburtsname'] ?? '')) ?: null,
+                        'birth_place' => trim((string) ($row['GeburtsOrt'] ?? '')) ?: null,
+                        'birth_country' => trim((string) ($row['Geburtsland'] ?? '')) ?: null,
+                        'title' => trim((string) ($row['Titel'] ?? '')) ?: null,
+                        'name_prefix' => trim((string) ($row['Vorsatzwort'] ?? '')) ?: null,
+                        'name_suffix' => trim((string) ($row['Zusatzwort'] ?? '')) ?: null,
+                        // Phase 1: Arbeitserlaubnis
+                        'permanent_residence_permit' => $this->toBool($row['UnbefristeteAufenthaltserlaubnis'] ?? null),
+                        'work_permit_until' => $this->parseDate($row['ArbeitserlaubnisBis'] ?? null)?->toDateString(),
+                        'border_worker_country' => trim((string) ($row['GrenzgaengerLand'] ?? '')) ?: null,
+                        // Phase 1: Behinderung Details
+                        'has_disability_id' => $this->toBool($row['Behindertenausweis'] ?? null),
+                        'disability_id_number' => trim((string) ($row['Behindertenausweisnummer '] ?? ($row['Behindertenausweisnummer'] ?? ''))) ?: null,
+                        'disability_id_valid_from' => $this->parseDate($row['Behindertenausweis gültig ab'] ?? null)?->toDateString(),
+                        'disability_id_valid_until' => $this->parseDate($row['Behindertenausweis gültig bis'] ?? null)?->toDateString(),
+                        'disability_office' => trim((string) ($row['Dienststelle Behindertenausweis'] ?? '')) ?: null,
+                        'disability_office_location' => trim((string) ($row['Ort der Dienststelle Behindertenausweis'] ?? '')) ?: null,
+                        // Phase 1: Schulungen
+                        'hygiene_training_date' => $this->parseDate($row['Hygieneschulung'] ?? null)?->toDateString(),
+                        'parent_eligibility_proof_date' => $this->parseDate($row['NachweisElterneigenschaft'] ?? ($row['ElterneigenschaftNachweis'] ?? null))?->toDateString(),
+                        // Phase 1: Sonstiges
+                        'business_email' => trim((string) ($row['EMailGeschaeftlich'] ?? '')) ?: null,
+                        'web_time_pin' => trim((string) ($row['WebZeitPin'] ?? '')) ?: null,
+                        'alternative_employee_number' => trim((string) ($row['AbweichendePersonalNr'] ?? '')) ?: null,
+                        'is_seasonal_worker' => $this->toBool($row['Saisonarbeitnehmer'] ?? null) ?? false,
+                        'is_disability_pensioner' => $this->toBool($row['Erwerbsminderungsrentner'] ?? null) ?? false,
                     ];
                     $empAttributes = [
                         'extras' => [
@@ -205,6 +237,32 @@ class UnifiedImportService
                         'vacation_expiry_date' => $this->parseDate($row['UrlaubverfallenDateFuerMitarbeiter'] ?? null)?->toDateString(),
                         'vacation_allowance_enabled' => (bool) $this->toBool($row['UrlaubsgeldVerwenden'] ?? null),
                         'vacation_allowance_amount' => $this->toFloat($row['UrlaubsgeldBetrag'] ?? null),
+                        // Phase 1: Dienstwagen & Fahrtkosten
+                        'company_car_enabled' => $this->toBool($row['FirmenPKW'] ?? null) ?? false,
+                        'travel_cost_reimbursement' => $this->toFloat($row['Fahrtkosten'] ?? null) ? (string) $this->toFloat($row['Fahrtkosten']) : null,
+                        // Phase 1: Befristung/Probezeit
+                        'is_fixed_term' => $this->toBool($row['Befristung'] ?? null) ?? false,
+                        'fixed_term_end_date' => $this->parseDate($row['UrspruenglicheBefristungBis'] ?? null)?->toDateString(),
+                        'probation_end_date' => $this->parseDate($row['Probezeit'] ?? null)?->toDateString(),
+                        'employment_relationship_type' => trim((string) ($row['Beschäftigungsverhältnis'] ?? '')) ?: null,
+                        'contract_form' => trim((string) ($row['VertragsformID'] ?? '')) ?: null,
+                        // Phase 1: Behinderung Urlaub
+                        'additional_vacation_disability' => $this->toInt($row['ZusatzurlaubSchwerbehinderung'] ?? null),
+                        // Phase 1: Arbeitsort/Standort
+                        'work_location_name' => trim((string) ($row['TaetigkeitstaetteName'] ?? '')) ?: null,
+                        'work_location_address' => trim((string) ($row['TaetigkeitstaetteStrasse'] ?? '')) ?: null,
+                        'work_location_postal_code' => trim((string) ($row['TaetigkeitstaettePLZ'] ?? '')) ?: null,
+                        'work_location_city' => trim((string) ($row['TaetigkeitstaetteOrt'] ?? '')) ?: null,
+                        'work_location_state' => trim((string) ($row['TaetigkeitstaetteBundesland'] ?? '')) ?: null,
+                        'branch_name' => trim((string) ($row['BetriebsstaetteName'] ?? '')) ?: null,
+                        // Phase 1: Rentenversicherung
+                        'pension_insurance_company_number' => trim((string) ($row['BetriebsnummerRV'] ?? '')) ?: null,
+                        'pension_insurance_exempt' => $this->toBool($row['Rentenversicherungsfreiheit'] ?? null) ?? false,
+                        // Phase 1: Zusätzliche Beschäftigung
+                        'is_primary_employment' => $this->toBool($row['Hauptbeschaeftigt'] ?? null) ?? true,
+                        'has_additional_employment' => $this->toBool($row['ZusaetzlicheArbeitsvehaeltnisse'] ?? null) ?? false,
+                        // Phase 1: Logis
+                        'accommodation' => trim((string) ($row['Logis'] ?? '')) ?: null,
                     ];
 
                     if (!$contract && $start) {
@@ -290,39 +348,61 @@ class UnifiedImportService
                         }
 
                         // Tariff mapping
-                        $tariffName = trim((string) ($row['Tarif'] ?? ''));
-                        $tariffGroup = trim((string) ($row['Tarifgruppe'] ?? ''));
-                        $tariffLevel = trim((string) ($row['Tarifstufe'] ?? ''));
-                        if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '') {
-                            $agreement = HcmTariffAgreement::firstOrCreate(
-                                ['team_id' => $teamId, 'name' => $tariffName],
-                                [
-                                    'code' => 'TA_' . substr(md5($tariffName), 0, 8),
-                                    'is_active' => true,
-                                    'created_by_user_id' => $employer->created_by_user_id,
-                                ]
-                            );
-                            $group = HcmTariffGroup::firstOrCreate(
-                                ['tariff_agreement_id' => $agreement->id, 'name' => $tariffGroup],
-                                [
-                                    'code' => 'TG_' . substr(md5($tariffName.'|'.$tariffGroup), 0, 8),
-                                ]
-                            );
-                            $level = HcmTariffLevel::firstOrCreate(
-                                ['tariff_group_id' => $group->id, 'name' => $tariffLevel],
-                                [
-                                    'code' => 'TL_' . substr(md5($tariffName.'|'.$tariffGroup.'|'.$tariffLevel), 0, 8),
-                                    'progression_months' => 12,
-                                ]
-                            );
-                            if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
-                                $contract->tariff_group_id = $group->id;
-                                $contract->tariff_level_id = $level->id;
-                                $contract->tariff_assignment_date = ($effectiveDate ?: $start?->toDateString());
-                                $contract->tariff_level_start_date = ($effectiveDate ?: $start?->toDateString());
-                                $contract->save();
-                                $stats['lookups_created']++;
+                        try {
+                            $tariffName = trim((string) ($row['Tarif'] ?? ''));
+                            $tariffGroup = trim((string) ($row['Tarifgruppe'] ?? ''));
+                            $tariffLevel = trim((string) ($row['Tarifstufe'] ?? ''));
+                            if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '') {
+                                // Agreement
+                                $agreement = HcmTariffAgreement::where('team_id', $teamId)
+                                    ->where('name', $tariffName)
+                                    ->first();
+                                if (!$agreement) {
+                                    $agreement = HcmTariffAgreement::create([
+                                        'team_id' => $teamId,
+                                        'code' => 'TA_' . substr(md5($tariffName), 0, 8),
+                                        'name' => $tariffName,
+                                        'is_active' => true,
+                                        'created_by_user_id' => $employer->created_by_user_id,
+                                    ]);
+                                }
+                                
+                                // Group
+                                $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
+                                    ->where('name', $tariffGroup)
+                                    ->first();
+                                if (!$group) {
+                                    $group = HcmTariffGroup::create([
+                                        'tariff_agreement_id' => $agreement->id,
+                                        'code' => 'TG_' . substr(md5($tariffName.'|'.$tariffGroup), 0, 8),
+                                        'name' => $tariffGroup,
+                                    ]);
+                                }
+                                
+                                // Level
+                                $level = HcmTariffLevel::where('tariff_group_id', $group->id)
+                                    ->where('name', $tariffLevel)
+                                    ->first();
+                                if (!$level) {
+                                    $level = HcmTariffLevel::create([
+                                        'tariff_group_id' => $group->id,
+                                        'code' => 'TL_' . substr(md5($tariffName.'|'.$tariffGroup.'|'.$tariffLevel), 0, 8),
+                                        'name' => $tariffLevel,
+                                        'progression_months' => 999,
+                                    ]);
+                                }
+                                
+                                if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
+                                    $contract->tariff_group_id = $group->id;
+                                    $contract->tariff_level_id = $level->id;
+                                    $contract->tariff_assignment_date = ($effectiveDate ?: $start?->toDateString());
+                                    $contract->tariff_level_start_date = ($effectiveDate ?: $start?->toDateString());
+                                    $contract->save();
+                                    $stats['lookups_created']++;
+                                }
                             }
+                        } catch (\Throwable $e) {
+                            $stats['errors'][] = 'tariff: ' . $e->getMessage();
                         }
 
                         // Equipment-Ausgaben aus CSV anlegen
@@ -372,6 +452,14 @@ class UnifiedImportService
                             }
                         } catch (\Throwable $e) {
                             $stats['errors'][] = 'vac_event: ' . $e->getMessage();
+                        }
+
+                        // Benefits: BAV, VWL, BKV, JobRad
+                        try {
+                            $this->mapBenefitsFromRow($employee, $contract, $row, $teamId, (int) $employer->created_by_user_id, $effectiveDate ?: $start);
+                            $stats['lookups_created']++;
+                        } catch (\Throwable $e) {
+                            $stats['errors'][] = 'benefits: ' . $e->getMessage();
                         }
                     }
 
@@ -460,6 +548,44 @@ class UnifiedImportService
             $updated = true;
         }
 
+        // Adressdaten setzen (wenn vorhanden)
+        $street = trim((string) ($row['Strasse'] ?? ''));
+        $postalCode = trim((string) ($row['Plz'] ?? ''));
+        $city = trim((string) ($row['Ort'] ?? ''));
+        $addressSuffix = trim((string) ($row['Adresszusatz'] ?? ''));
+        $country = trim((string) ($row['Staat'] ?? ''));
+        
+        if ($contact && ($street || $postalCode || $city)) {
+            // Prüfe ob bereits eine primäre Adresse existiert
+            $hasPrimaryAddress = $contact->postalAddresses()
+                ->where('is_primary', true)
+                ->where('is_active', true)
+                ->exists();
+            
+            if (!$hasPrimaryAddress) {
+                // Parse Straße + Hausnummer
+                $streetParts = preg_match('/^(.+?)\s+(\d+[a-z]?)$/i', $street, $matches) 
+                    ? ['street' => $matches[1], 'house_number' => $matches[2]]
+                    : ['street' => $street, 'house_number' => null];
+                
+                // Hole Adresstyp "Privat" (ID 1 als Default, falls existiert)
+                $addressTypeId = 1; // Default: Privat
+                
+                CrmPostalAddress::create([
+                    'addressable_type' => CrmContact::class,
+                    'addressable_id' => $contact->id,
+                    'street' => $streetParts['street'],
+                    'house_number' => $streetParts['house_number'],
+                    'postal_code' => $postalCode,
+                    'city' => $city,
+                    'additional_info' => $addressSuffix ?: null,
+                    'address_type_id' => $addressTypeId,
+                    'is_primary' => true,
+                    'is_active' => true,
+                ]);
+            }
+        }
+
         $link = CrmContactLink::where('linkable_type', HcmEmployee::class)
             ->where('linkable_id', $employee->id)
             ->where('contact_id', $contact->id)
@@ -475,6 +601,68 @@ class UnifiedImportService
         }
 
         return ['created' => $created, 'updated' => $updated];
+    }
+
+    private function mapBenefitsFromRow(HcmEmployee $employee, ?HcmEmployeeContract $contract, array $row, int $teamId, ?int $createdByUserId, ?Carbon $startDate = null): void
+    {
+        if (!$contract) { return; }
+
+        $benefits = [];
+
+        // BAV - Betriebliche Altersvorsorge
+        $bav = trim((string) ($row['BetrieblicheAltersvorsorge'] ?? ''));
+        if ($bav !== '' && $bav !== '[leer]') {
+            $benefits[] = [
+                'type' => 'bav',
+                'name' => 'Betriebliche Altersvorsorge',
+                'description' => $bav,
+                'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
+            ];
+        }
+
+        // VWL - Vermögenswirksame Leistungen
+        $vwl = $this->toFloat($row['VermoegenswirksameLeistungen'] ?? null);
+        if ($vwl !== null && $vwl > 0) {
+            $benefits[] = [
+                'type' => 'vwl',
+                'name' => 'Vermögenswirksame Leistungen',
+                'monthly_contribution_employee' => (string) $vwl,
+                'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
+            ];
+        }
+
+        // BKV - Betriebliche Krankenversicherung (PrivateKrankenversicherungName kann als Hinweis dienen)
+        $bkv = trim((string) ($row['PrivateKrankenversicherungName'] ?? ''));
+        if ($bkv !== '' && $bkv !== '[leer]') {
+            $benefits[] = [
+                'type' => 'bkv',
+                'name' => 'Betriebliche Krankenversicherung',
+                'insurance_company' => $bkv,
+                'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
+            ];
+        }
+
+        // JobRad - noch nicht in CSV, aber Struktur vorbereitet
+        // Wird später über UI/API gepflegt
+
+        foreach ($benefits as $benefitData) {
+            // Prüfe ob bereits vorhanden
+            $exists = HcmEmployeeBenefit::where('employee_id', $employee->id)
+                ->where('employee_contract_id', $contract->id)
+                ->where('benefit_type', $benefitData['type'])
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$exists) {
+                HcmEmployeeBenefit::create(array_merge([
+                    'team_id' => $teamId,
+                    'employee_id' => $employee->id,
+                    'employee_contract_id' => $contract->id,
+                    'is_active' => true,
+                    'created_by_user_id' => $createdByUserId,
+                ], $benefitData));
+            }
+        }
     }
 
     private function parseDate(?string $value): ?Carbon

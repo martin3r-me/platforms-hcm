@@ -70,6 +70,32 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'vacation_allowance_enabled',
         'vacation_allowance_amount',
         'cost_center_id',
+        // Phase 1: Dienstwagen & Fahrtkosten
+        'company_car_enabled',
+        'travel_cost_reimbursement',
+        // Phase 1: Befristung/Probezeit
+        'is_fixed_term',
+        'fixed_term_end_date',
+        'probation_end_date',
+        'employment_relationship_type',
+        'contract_form',
+        // Phase 1: Behinderung Urlaub
+        'additional_vacation_disability',
+        // Phase 1: Arbeitsort/Standort
+        'work_location_name',
+        'work_location_address',
+        'work_location_postal_code',
+        'work_location_city',
+        'work_location_state',
+        'branch_name',
+        // Phase 1: Rentenversicherung
+        'pension_insurance_company_number',
+        'pension_insurance_exempt',
+        // Phase 1: Zusätzliche Beschäftigung
+        'is_primary_employment',
+        'has_additional_employment',
+        // Phase 1: Logis
+        'accommodation',
         'attributes',
     ];
 
@@ -84,24 +110,37 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'above_tariff_start_date' => 'date',
         'is_above_tariff' => 'boolean',
         'is_minimum_wage' => 'boolean',
-        'above_tariff_amount' => 'decimal:2',
-        'minimum_wage_hourly_rate' => 'decimal:2',
+        // folgende Beträge sind verschlüsselt (TEXT) und werden nicht gecastet:
+        // above_tariff_amount, minimum_wage_hourly_rate, vacation_allowance_amount, hourly_wage, base_salary
         'minimum_wage_monthly_hours' => 'decimal:2',
-        'hourly_wage' => 'decimal:2',
-        'base_salary' => 'decimal:2',
+        // hourly_wage und base_salary sind verschlüsselt (TEXT), kein Cast
         'vacation_entitlement' => 'decimal:2',
         'vacation_prev_year' => 'decimal:2',
         'vacation_taken' => 'decimal:2',
         'vacation_expiry_date' => 'date',
         'vacation_allowance_enabled' => 'boolean',
-        'vacation_allowance_amount' => 'decimal:2',
+        // 'vacation_allowance_amount' verschlüsselt (TEXT)
         'is_active' => 'boolean',
         'is_temp_agency' => 'boolean',
+        'company_car_enabled' => 'boolean',
+        'is_fixed_term' => 'boolean',
+        'fixed_term_end_date' => 'date',
+        'probation_end_date' => 'date',
+        'additional_vacation_disability' => 'integer',
+        'pension_insurance_exempt' => 'boolean',
+        'is_primary_employment' => 'boolean',
+        'has_additional_employment' => 'boolean',
         'attributes' => 'array',
     ];
 
     protected array $encryptable = [
         'social_security_number' => 'string',
+        'hourly_wage' => 'string',
+        'base_salary' => 'string',
+        'above_tariff_amount' => 'string',
+        'minimum_wage_hourly_rate' => 'string',
+        'vacation_allowance_amount' => 'string',
+        'travel_cost_reimbursement' => 'string',
     ];
 
     public function insuranceStatus()
@@ -233,6 +272,11 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     public function vacationEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(HcmContractVacationEvent::class, 'employee_contract_id');
+    }
+
+    public function benefits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmEmployeeBenefit::class, 'employee_contract_id');
     }
 
     /**
