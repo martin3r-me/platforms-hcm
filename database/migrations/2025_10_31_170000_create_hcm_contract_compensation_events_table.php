@@ -9,7 +9,7 @@ return new class extends Migration {
     {
         Schema::create('hcm_contract_compensation_events', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('team_id')->constrained('core_teams')->onDelete('cascade');
+            $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
             $table->foreignId('employee_id')->constrained('hcm_employees')->onDelete('cascade');
             $table->foreignId('employee_contract_id')->constrained('hcm_employee_contracts')->onDelete('cascade');
             $table->date('effective_date');
@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->decimal('base_salary', 12, 2)->nullable();
             $table->string('reason')->default('import_initial');
             $table->text('notes')->nullable();
-            $table->foreignId('created_by_user_id')->nullable()->constrained('core_users')->onDelete('set null');
+            $table->foreignId('created_by_user_id')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
         });
     }
