@@ -253,9 +253,12 @@ class UnifiedImportService
                         if ($ik !== '') {
                             $kasse = HcmHealthInsuranceCompany::where('team_id', $teamId)->where('ik_number', $ik)->first();
                             if (!$kasse) {
+                                $name = trim((string) ($row['KrankenkasseName'] ?? ($row['Krankenkasse'] ?? '')));
+                                if ($name === '') { $name = 'IK ' . $ik; }
                                 $kasse = HcmHealthInsuranceCompany::create([
                                     'team_id' => $teamId,
-                                    'name' => ($row['KrankenkasseName'] ?? 'Krankenkasse'),
+                                    'code' => 'HIK_' . $ik,
+                                    'name' => $name,
                                     'ik_number' => $ik,
                                     'created_by_user_id' => $employer->created_by_user_id,
                                 ]);
