@@ -263,7 +263,13 @@ class UnifiedImportService
                         // Health insurance by IK
                         $ik = trim((string) ($row['KrankenkasseBetriebsnummer'] ?? ''));
                         if ($ik !== '') {
-                            $kasse = HcmHealthInsuranceCompany::where('team_id', $teamId)->where('ik_number', $ik)->first();
+                            // Suche zuerst per ik_number, dann per code (für Seeder-Daten, die code = IK setzen)
+                            $kasse = HcmHealthInsuranceCompany::where('team_id', $teamId)
+                                ->where(function($q) use ($ik) {
+                                    $q->where('ik_number', $ik)
+                                      ->orWhere('code', $ik);
+                                })
+                                ->first();
                             if (!$kasse) {
                                 $name = trim((string) ($row['KrankenkasseName'] ?? ($row['Krankenkasse'] ?? '')));
                                 if ($name === '') { $name = 'IK ' . $ik; }
