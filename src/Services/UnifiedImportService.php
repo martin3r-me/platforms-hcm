@@ -297,7 +297,8 @@ class UnifiedImportService
                         'fixed_term_end_date' => $this->parseDate($row['UrspruenglicheBefristungBis'] ?? null)?->toDateString(),
                         'probation_end_date' => $this->parseDate($row['Probezeit'] ?? null)?->toDateString(),
                         'employment_relationship_type' => trim((string) ($row['Beschäftigungsverhältnis'] ?? '')) ?: null,
-                        'contract_form' => trim((string) ($row['VertragsformID'] ?? '')) ?: null,
+                        // contract_form wird später aus Tätigkeitsschlüssel gesetzt (falls vorhanden), sonst aus VertragsformID
+                        'contract_form' => null, // Wird später gesetzt
                         // Phase 1: Behinderung Urlaub
                         'additional_vacation_disability' => $this->toInt($row['ZusatzurlaubSchwerbehinderung'] ?? null),
                         // Phase 1: Arbeitsort/Standort
@@ -355,7 +356,65 @@ class UnifiedImportService
                             $stats['titles_linked']++;
                         }
 
-                        // Activities via Taetigkeit / Taetigkeitsbez / Taetigkeitsschluessel optional
+                        // Tätigkeitsschlüssel parsen: 9-stellig (Stellen 1-5 = Tätigkeit, 6-9 = Contract-Felder)
+                        $activityKey = trim((string) ($row['Taetigkeitsschluessel'] ?? ''));
+                        if (strlen($activityKey) >= 9) {
+                            echo " (Tätigkeitsschlüssel: $activityKey)";
+                            
+                            // Stellen 1-5: Tätigkeit (Code) - verknüpfe mit HcmJobActivity
+                            $activityCode = substr($activityKey, 0, 5);
+                            $activity = HcmJobActivity::where('team_id', $teamId)->where('code', $activityCode)->first();
+                            if ($activity) {
+                                $contract->jobActivities()->syncWithoutDetaching([$activity->id]);
+                                $stats['activities_linked']++;
+                                echo " [Tätigkeit: $activityCode]";
+                            } else {
+                                echo " [Tätigkeit $activityCode nicht gefunden]";
+                            }
+                            
+                            // Stelle 6: Schulabschluss (auf Employee und Contract)
+                            $schoolingLevel = (int) substr($activityKey, 5, 1);
+                            if ($schoolingLevel > 0 && $schoolingLevel <= 9) {
+                                $employee->schooling_level = $schoolingLevel;
+                                $contract->schooling_level = $schoolingLevel;
+                                $employee->saveQuietly();
+                                echo " [Schulabschluss: $schoolingLevel]";
+                            }
+                            
+                            // Stelle 7: Berufsausbildung (auf Employee und Contract)
+                            $vocationalLevel = (int) substr($activityKey, 6, 1);
+                            if ($vocationalLevel > 0 && $vocationalLevel <= 9) {
+                                $employee->vocational_training_level = $vocationalLevel;
+                                $contract->vocational_training_level = $vocationalLevel;
+                                $employee->saveQuietly();
+                                echo " [Ausbildung: $vocationalLevel]";
+                            }
+                            
+                            // Stelle 8: Leiharbeit (auf Contract)
+                            $tempAgency = (int) substr($activityKey, 7, 1);
+                            $contract->is_temp_agency = ($tempAgency === 1);
+                            if ($tempAgency === 1) {
+                                echo " [Leiharbeit: ja]";
+                            }
+                            
+                            // Stelle 9: Vertragsform (auf Contract) - hat Vorrang vor VertragsformID
+                            $contractForm = substr($activityKey, 8, 1);
+                            if ($contractForm !== '' && $contractForm !== '0') {
+                                $contract->contract_form = $contractForm;
+                                echo " [Vertragsform: $contractForm]";
+                            }
+                            
+                            $contract->saveQuietly();
+                        } else {
+                            // Fallback: Vertragsform aus VertragsformID wenn kein Tätigkeitsschlüssel
+                            $contractFormId = trim((string) ($row['VertragsformID'] ?? ''));
+                            if ($contractFormId !== '') {
+                                $contract->contract_form = $contractFormId;
+                                $contract->saveQuietly();
+                            }
+                        }
+                        
+                        // Activities via Taetigkeit / Taetigkeitsbez (zusätzlich zu Tätigkeitsschlüssel)
                         $activities = array_filter([
                             trim((string) ($row['Taetigkeit'] ?? '')),
                             trim((string) ($row['Taetigkeitsbez'] ?? '')),
@@ -418,18 +477,35 @@ class UnifiedImportService
                             $tariffGroupRaw = trim((string) ($row['Tarifgruppe'] ?? ''));
                             $tariffLevelRaw = trim((string) ($row['Tarifstufe'] ?? ''));
                             
-                            // Wenn Tarifgruppe einen Punkt enthält (z.B. "3.2"), aufteilen in Band (3) und Stufe (2)
-                            // Ansonsten: Tarifgruppe = Band, Tarifstufe = Stufe
-                            if (strpos($tariffGroupRaw, '.') !== false) {
-                                // Aufteilen: "3.2" -> Group="3", Level="2"
-                                list($tariffGroup, $tariffLevel) = explode('.', $tariffGroupRaw, 2);
-                                $tariffGroup = trim($tariffGroup);
-                                $tariffLevel = trim($tariffLevel);
-                                echo " (Tarifgruppe mit Punkt erkannt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe='$tariffLevel')";
+                            // Normalisiere Tarifgruppe: entferne "Bd." oder ähnliche Präfixe
+                            $tariffGroupCleaned = preg_replace('/^(Bd\.?|Band\.?)\s*/i', '', $tariffGroupRaw);
+                            $tariffGroupCleaned = trim($tariffGroupCleaned);
+                            
+                            // Normalisiere Tarifstufe: entferne "Stufe" oder ähnliche Präfixe
+                            $tariffLevelCleaned = preg_replace('/^(Stufe|Level)\s*/i', '', $tariffLevelRaw);
+                            $tariffLevelCleaned = trim($tariffLevelCleaned);
+                            
+                            // Wenn Tarifgruppe einen Punkt enthält (z.B. "3.2" oder "Bd. 3.2"), aufteilen in Band (3) und Stufe (2)
+                            // ABER: Wenn Tarifstufe-Feld vorhanden ist, hat das Vorrang für die Stufe
+                            if (strpos($tariffGroupCleaned, '.') !== false) {
+                                // Aufteilen: "3.2" -> Group="3", Level aus Punkt="2"
+                                list($groupPart, $levelPartFromGroup) = explode('.', $tariffGroupCleaned, 2);
+                                $tariffGroup = trim($groupPart);
+                                
+                                // Stufe: Verwende Tarifstufe-Feld wenn vorhanden, sonst aus der Punkt-Aufteilung
+                                if ($tariffLevelCleaned !== '' && $tariffLevelCleaned !== null && is_numeric($tariffLevelCleaned)) {
+                                    // Tarifstufe-Feld hat Vorrang (z.B. "Stufe 1" überschreibt "2" aus "3.2")
+                                    $tariffLevel = $tariffLevelCleaned;
+                                    echo " (Tarifgruppe mit Punkt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe aus Tarifstufe-Feld='$tariffLevel')";
+                                } else {
+                                    // Kein Tarifstufe-Feld, verwende aus Punkt-Aufteilung
+                                    $tariffLevel = trim($levelPartFromGroup);
+                                    echo " (Tarifgruppe mit Punkt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe aus Punkt='$tariffLevel')";
+                                }
                             } else {
                                 // Normale Verwendung: separate Felder
-                                $tariffGroup = $tariffGroupRaw;
-                                $tariffLevel = $tariffLevelRaw ?: null; // Falls leer, wird später geprüft
+                                $tariffGroup = $tariffGroupCleaned;
+                                $tariffLevel = $tariffLevelCleaned ?: null; // Falls leer, wird später geprüft
                             }
                             
                             if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '' && $tariffLevel !== null) {
@@ -598,6 +674,41 @@ class UnifiedImportService
                                     echo " (keine Änderung nötig)";
                                 }
                                 echo " ✓";
+                                
+                                // Prüfe ob übertariflich: Vergleiche tatsächlichen Lohn mit Tarifsatz
+                                if ($contract && $group && $level) {
+                                    $contract->refresh();
+                                    $tariffRate = $contract->getCurrentTariffRate($effectiveDate);
+                                    $actualSalary = null;
+                                    $tariffSalary = null;
+                                    
+                                    // Berechne tatsächliches Gehalt
+                                    if ($contract->base_salary) {
+                                        $actualSalary = (float) $contract->base_salary;
+                                    } elseif ($contract->hourly_wage && $contract->hours_per_month) {
+                                        $actualSalary = (float) $contract->hourly_wage * (float) $contract->hours_per_month;
+                                    }
+                                    
+                                    // Tarifsatz ermitteln
+                                    if ($tariffRate) {
+                                        $tariffSalary = (float) $tariffRate->amount;
+                                    }
+                                    
+                                    // Wenn tatsächlicher Lohn > Tarifsatz, dann übertariflich
+                                    if ($actualSalary && $tariffSalary && $actualSalary > $tariffSalary) {
+                                        $aboveAmount = $actualSalary - $tariffSalary;
+                                        if (!$contract->is_above_tariff || (float) $contract->above_tariff_amount !== $aboveAmount) {
+                                            \DB::table('hcm_employee_contracts')
+                                                ->where('id', $contract->id)
+                                                ->update([
+                                                    'is_above_tariff' => true,
+                                                    'above_tariff_amount' => (string) $aboveAmount,
+                                                    'above_tariff_start_date' => ($effectiveDate ?: $start?->toDateString() ?: now()->toDateString()),
+                                                ]);
+                                            echo "\n      (Übertariflich erkannt: {$actualSalary} > {$tariffSalary}, Differenz: {$aboveAmount})";
+                                        }
+                                    }
+                                }
                             } else {
                                 echo " leer, überspringen";
                             }

@@ -38,11 +38,14 @@ class Index extends Component
         $query = HcmEmployee::with([
             'employer', 
             'crmContactLinks.contact.emailAddresses',
+            'crmContactLinks.contact.phoneNumbers',
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
             },
             'contracts.jobTitles',
-            'contracts.jobActivities'
+            'contracts.jobActivities',
+            'contracts.tariffGroup',
+            'contracts.tariffLevel'
         ])
             ->forTeam(auth()->user()->currentTeam->id);
 

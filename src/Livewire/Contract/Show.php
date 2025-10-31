@@ -47,6 +47,7 @@ class Show extends Component
             'tariffProgressions.toTariffLevel',
             'jobTitles',
             'jobActivities',
+            'primaryJobActivity',
             'levyTypes',
             'insuranceStatus',
             'pensionType',
