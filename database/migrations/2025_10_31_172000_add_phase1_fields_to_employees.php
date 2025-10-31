@@ -45,8 +45,7 @@ return new class extends Migration
             
             // Sonstiges
             $table->string('business_email')->nullable()->after('parent_eligibility_proof_date'); // EMailGeschaeftlich
-            $table->string('web_time_pin')->nullable()->after('business_email'); // WebZeitPin
-            $table->string('alternative_employee_number')->nullable()->after('web_time_pin'); // Abweichende PersonalNr
+            $table->string('alternative_employee_number')->nullable()->after('business_email'); // Abweichende PersonalNr
             
             // Saisonarbeitnehmer, Erwerbsminderungsrentner
             $table->boolean('is_seasonal_worker')->default(false)->after('alternative_employee_number');
@@ -81,7 +80,6 @@ return new class extends Migration
                 'hygiene_training_date',
                 'parent_eligibility_proof_date',
                 'business_email',
-                'web_time_pin',
                 'alternative_employee_number',
                 'is_seasonal_worker',
                 'is_disability_pensioner',

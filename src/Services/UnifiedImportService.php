@@ -146,7 +146,6 @@ class UnifiedImportService
                         'parent_eligibility_proof_date' => $this->parseDate($row['NachweisElterneigenschaft'] ?? ($row['ElterneigenschaftNachweis'] ?? null))?->toDateString(),
                         // Phase 1: Sonstiges
                         'business_email' => trim((string) ($row['EMailGeschaeftlich'] ?? '')) ?: null,
-                        'web_time_pin' => trim((string) ($row['WebZeitPin'] ?? '')) ?: null,
                         'alternative_employee_number' => trim((string) ($row['AbweichendePersonalNr'] ?? '')) ?: null,
                         'is_seasonal_worker' => $this->toBool($row['Saisonarbeitnehmer'] ?? null) ?? false,
                         'is_disability_pensioner' => $this->toBool($row['Erwerbsminderungsrentner'] ?? null) ?? false,

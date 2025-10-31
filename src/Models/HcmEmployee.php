@@ -78,7 +78,6 @@ class HcmEmployee extends Model implements EmployeeInterface
         'parent_eligibility_proof_date',
         // Phase 1: Sonstiges
         'business_email',
-        'web_time_pin',
         'alternative_employee_number',
         'is_seasonal_worker',
         'is_disability_pensioner',
