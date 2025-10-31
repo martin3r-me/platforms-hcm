@@ -303,20 +303,16 @@ class UnifiedImportService
                                 ]
                             );
                             $group = HcmTariffGroup::firstOrCreate(
-                                ['team_id' => $teamId, 'tariff_agreement_id' => $agreement->id, 'name' => $tariffGroup],
+                                ['tariff_agreement_id' => $agreement->id, 'name' => $tariffGroup],
                                 [
                                     'code' => 'TG_' . substr(md5($tariffName.'|'.$tariffGroup), 0, 8),
-                                    'is_active' => true,
-                                    'created_by_user_id' => $employer->created_by_user_id,
                                 ]
                             );
                             $level = HcmTariffLevel::firstOrCreate(
-                                ['team_id' => $teamId, 'tariff_group_id' => $group->id, 'name' => $tariffLevel],
+                                ['tariff_group_id' => $group->id, 'name' => $tariffLevel],
                                 [
                                     'code' => 'TL_' . substr(md5($tariffName.'|'.$tariffGroup.'|'.$tariffLevel), 0, 8),
                                     'progression_months' => 12,
-                                    'is_active' => true,
-                                    'created_by_user_id' => $employer->created_by_user_id,
                                 ]
                             );
                             if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
