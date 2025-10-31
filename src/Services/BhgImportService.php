@@ -566,17 +566,39 @@ class BhgImportService
                     'last_name' => $row['nachname'],
                 ];
                 
+                // Primär: Geschlecht aus Haupt-CSV ableiten (m/w/d) und Anrede daraus
+                if (!empty($row['geschlecht'])) {
+                    $genderId = $this->resolveGenderId($row['geschlecht']);
+                    if ($genderId) {
+                        $updateData['gender_id'] = $genderId;
+                        // Salutation aus Gender ableiten, wenn sinnvoll
+                        $sal = null;
+                        $g = mb_strtolower(trim($row['geschlecht']));
+                        if (in_array($g, ['m','male','männlich','herr'])) { $sal = 'Herr'; }
+                        if (in_array($g, ['w','f','female','weiblich','frau'])) { $sal = 'Frau'; }
+                        if ($sal) {
+                            $salId = $this->resolveSalutationId($sal);
+                            if ($salId) { $updateData['salutation_id'] = $salId; }
+                        }
+                    }
+                }
+
                 // Add additional data if available
                 if (isset($additionalData[$personalnummer])) {
                     $additional = $additionalData[$personalnummer];
                     if (!empty($additional['birthdate'])) {
                         $updateData['birth_date'] = $this->parseDateValue($additional['birthdate']);
                     }
-                    if (!empty($additional['salutation'])) {
-                        $updateData['salutation_id'] = $this->resolveSalutationId($additional['salutation']);
-                    }
-                    if (!empty($additional['gender'])) {
-                        $updateData['gender_id'] = $this->resolveGenderId($additional['gender']);
+                    // Salutation/Gender aus Ergänzung nur als Fallback, falls in CSV leer
+                    if (empty($row['geschlecht'])) {
+                        if (!empty($additional['gender'])) {
+                            $gid = $this->resolveGenderId($additional['gender']);
+                            if ($gid) { $updateData['gender_id'] = $gid; }
+                        }
+                        if (!empty($additional['salutation'])) {
+                            $sid = $this->resolveSalutationId($additional['salutation']);
+                            if ($sid) { $updateData['salutation_id'] = $sid; }
+                        }
                     }
                 }
                 
@@ -593,6 +615,9 @@ class BhgImportService
                 echo "DEBUG: *** FINISHED updateContactData for {$row['vorname']} ***\n";
             } else {
                 // Neuer CRM Kontakt erstellen
+                // 1) Versuche Existenz zu erkennen (E-Mail, Telefon/Mobil, Name+Geburtsdatum)
+                $contact = $this->findExistingContactCandidate($row, $additionalData[$personalnummer] ?? null);
+
                 $contactData = [
                     'team_id' => $this->teamId,
                     'first_name' => $row['vorname'],
@@ -601,22 +626,49 @@ class BhgImportService
                     'created_by_user_id' => $this->userId,
                 ];
                 
+                // Primär: Geschlecht aus Haupt-CSV ableiten (m/w/d) und Anrede daraus
+                if (!empty($row['geschlecht'])) {
+                    $genderId = $this->resolveGenderId($row['geschlecht']);
+                    if ($genderId) {
+                        $contactData['gender_id'] = $genderId;
+                        $sal = null;
+                        $g = mb_strtolower(trim($row['geschlecht']));
+                        if (in_array($g, ['m','male','männlich','herr'])) { $sal = 'Herr'; }
+                        if (in_array($g, ['w','f','female','weiblich','frau'])) { $sal = 'Frau'; }
+                        if ($sal) {
+                            $salId = $this->resolveSalutationId($sal);
+                            if ($salId) { $contactData['salutation_id'] = $salId; }
+                        }
+                    }
+                }
+
                 // Add additional data if available
                 if (isset($additionalData[$personalnummer])) {
                     $additional = $additionalData[$personalnummer];
                     if (!empty($additional['birthdate'])) {
                         $contactData['birth_date'] = $this->parseDateValue($additional['birthdate']);
                     }
-                    if (!empty($additional['salutation'])) {
-                        $contactData['salutation_id'] = $this->resolveSalutationId($additional['salutation']);
-                    }
-                    if (!empty($additional['gender'])) {
-                        $contactData['gender_id'] = $this->resolveGenderId($additional['gender']);
+                    // Salutation/Gender aus Ergänzung nur als Fallback, falls CSV leer
+                    if (empty($row['geschlecht'])) {
+                        if (!empty($additional['gender'])) {
+                            $gid = $this->resolveGenderId($additional['gender']);
+                            if ($gid) { $contactData['gender_id'] = $gid; }
+                        }
+                        if (!empty($additional['salutation'])) {
+                            $sid = $this->resolveSalutationId($additional['salutation']);
+                            if ($sid) { $contactData['salutation_id'] = $sid; }
+                        }
                     }
                 }
                 
-                $contact = CrmContact::create($contactData);
-                echo "DEBUG: Erstelle CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
+                if ($contact) {
+                    // Update existierenden Kontakt mit Basisdaten
+                    $contact->update($contactData);
+                    echo "DEBUG: Aktualisiere bestehenden CRM Kontakt für {$row['vorname']} {$row['nachname']} (De-Dupe)\n";
+                } else {
+                    $contact = CrmContact::create($contactData);
+                    echo "DEBUG: Erstelle CRM Kontakt für {$row['vorname']} {$row['nachname']}\n";
+                }
                 
                 // Initial creation of email/phone/address for new contacts
                 if (!empty($row['email']) && trim($row['email']) !== '') {
@@ -676,13 +728,81 @@ class BhgImportService
             }
 
             if (!$existingLink) {
-                $this->stats['crm_contacts_created']++;
+                // Wenn Kontakt neu erstellt wurde, gezählt als created, sonst updated
+                if ($contact->wasRecentlyCreated ?? false) {
+                    $this->stats['crm_contacts_created']++;
+                } else {
+                    $this->stats['crm_contacts_updated']++;
+                }
             } else {
                 $this->stats['crm_contacts_updated']++;
             }
         } catch (\Exception $e) {
             $this->stats['errors'][] = "CRM Contact {$row['personalnummer']}: " . $e->getMessage();
         }
+    }
+
+    private function findExistingContactCandidate(array $row, ?array $additional): ?CrmContact
+    {
+        // 1) Via E-Mail
+        $email = trim((string)($row['email'] ?? ''));
+        if ($email !== '') {
+            $contactId = \Platform\Crm\Models\CrmEmailAddress::query()
+                ->where('email_address', $email)
+                ->whereHas('emailable', function ($q) {
+                    $q->where('team_id', $this->teamId);
+                })
+                ->value('emailable_id');
+            if ($contactId) {
+                return CrmContact::find($contactId);
+            }
+        }
+
+        // 2) Via Telefon/Mobil (exakter raw_input-Match)
+        $phones = [];
+        if (!empty($row['telefon'])) { $phones[] = trim($row['telefon']); }
+        if (!empty($row['mobil'])) { $phones[] = trim($row['mobil']); }
+        if (!empty($phones)) {
+            $contactId = \Platform\Crm\Models\CrmPhoneNumber::query()
+                ->whereIn('raw_input', $phones)
+                ->whereHas('phoneable', function ($q) {
+                    $q->where('team_id', $this->teamId);
+                })
+                ->value('phoneable_id');
+            if ($contactId) {
+                return CrmContact::find($contactId);
+            }
+        }
+
+        // 3) Via Name + Geburtsdatum
+        if (!empty($additional['birthdate'])) {
+            $birth = $this->parseDateValue($additional['birthdate']);
+            if ($birth) {
+                $match = CrmContact::query()
+                    ->where('team_id', $this->teamId)
+                    ->whereRaw('LOWER(first_name) = ?', [mb_strtolower($row['vorname'])])
+                    ->whereRaw('LOWER(last_name) = ?', [mb_strtolower($row['nachname'])])
+                    ->whereDate('birth_date', $birth->toDateString())
+                    ->first();
+                if ($match) {
+                    return $match;
+                }
+            }
+        }
+
+        // 4) Fallback: Name-Match, wenn bestehender Kontakt kein Geburtsdatum hat
+        //    (verhindert Dubletten, wenn birth_date jetzt neu geliefert wird)
+        $nameOnly = CrmContact::query()
+            ->where('team_id', $this->teamId)
+            ->whereRaw('LOWER(first_name) = ?', [mb_strtolower($row['vorname'])])
+            ->whereRaw('LOWER(last_name) = ?', [mb_strtolower($row['nachname'])])
+            ->whereNull('birth_date')
+            ->get();
+        if ($nameOnly->count() === 1) {
+            return $nameOnly->first();
+        }
+
+        return null;
     }
 
     private function createCompanyRelation($contact, $row)
