@@ -243,6 +243,7 @@ class Show extends Component
 
     public function render()
     {
-        return view('hcm::livewire.contract.show');
+        return view('hcm::livewire.contract.show')
+            ->layout('platform::layouts.app');
     }
 }
