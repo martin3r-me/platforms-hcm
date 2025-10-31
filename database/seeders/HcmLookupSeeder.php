@@ -15,6 +15,7 @@ class HcmLookupSeeder extends Seeder
         (new HcmEmploymentRelationshipSeeder())->run();
         (new HcmLevyTypeSeeder())->run();
         (new HcmPersonGroupSeeder())->run();
+        (new HcmInsuranceStatusSeeder())->run();
     }
 }
 

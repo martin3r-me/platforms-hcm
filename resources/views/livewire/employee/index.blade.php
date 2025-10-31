@@ -70,9 +70,8 @@
                                 optionLabel="name"
                                 :nullable="true"
                                 nullLabel="Ohne Stelle"
-                                :value="$contract->jobTitles->first()?->id"
-                                wire:change="updateContractTitle({{ $contract->id }}, $event.target.value)"
-                                class="w-44"
+                                wire:model.live="titleByContract.{{ $contract->id }}"
+                                class="w-44 whitespace-normal break-words"
                             />
                         @else
                             <span class="text-xs text-muted">–</span>
@@ -87,9 +86,8 @@
                                 optionValue="id"
                                 optionLabel="name"
                                 :multiple="true"
-                                :value="$contract->jobActivities->pluck('id')->all()"
-                                wire:change="updateContractActivities({{ $contract->id }}, Array.from($event.target.selectedOptions).map(o=>o.value))"
-                                class="w-56"
+                                wire:model.live="activitiesByContract.{{ $contract->id }}"
+                                class="w-56 whitespace-normal break-words"
                             />
                         @else
                             <span class="text-xs text-muted">–</span>
@@ -126,9 +124,8 @@
                                 optionLabel="name"
                                 :nullable="true"
                                 nullLabel="Ohne Stelle"
-                                :value="$c->jobTitles->first()?->id"
-                                wire:change="updateContractTitle({{ $c->id }}, $event.target.value)"
-                                class="w-44"
+                                wire:model.live="titleByContract.{{ $c->id }}"
+                                class="w-44 whitespace-normal break-words"
                             />
                         </x-ui-table-cell>
                         <x-ui-table-cell compact="true">
@@ -138,9 +135,8 @@
                                 optionValue="id"
                                 optionLabel="name"
                                 :multiple="true"
-                                :value="$c->jobActivities->pluck('id')->all()"
-                                wire:change="updateContractActivities({{ $c->id }}, Array.from($event.target.selectedOptions).map(o=>o.value))"
-                                class="w-full max-w-xl"
+                                wire:model.live="activitiesByContract.{{ $c->id }}"
+                                class="w-full max-w-xl whitespace-normal break-words"
                             />
                         </x-ui-table-cell>
                         <x-ui-table-cell compact="true"></x-ui-table-cell>

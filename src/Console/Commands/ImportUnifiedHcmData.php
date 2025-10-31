@@ -7,7 +7,7 @@ use Platform\Hcm\Services\UnifiedImportService;
 
 class ImportUnifiedHcmData extends Command
 {
-    protected $signature = 'hcm:import-unified {employer_id} {csv_path} {--dry-run}';
+    protected $signature = 'hcm:import-unified {employer_id} {csv_path} {--dry-run} {--effective=}';
 
     protected $description = 'Importiert Mitarbeiter-, Vertrags- und Lookup-Daten aus einer einheitlichen HCM-CSV (UTF-8, ;)';
 
@@ -16,6 +16,7 @@ class ImportUnifiedHcmData extends Command
         $employerId = (int) $this->argument('employer_id');
         $csvPath = (string) $this->argument('csv_path');
         $dry = (bool) $this->option('dry-run');
+        $effective = $this->option('effective');
 
         if (!is_file($csvPath)) {
             $this->error("CSV nicht gefunden: {$csvPath}");
@@ -24,7 +25,7 @@ class ImportUnifiedHcmData extends Command
 
         $this->info(($dry ? 'DRY-RUN ' : '') . "Unified Import startet: Employer {$employerId}");
         $service = new UnifiedImportService($employerId);
-        $stats = $service->run($csvPath, $dry);
+        $stats = $service->run($csvPath, $dry, $effective);
 
         $this->table(['metric','value'], [
             ['rows', $stats['rows']],

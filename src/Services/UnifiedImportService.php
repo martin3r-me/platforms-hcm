@@ -19,6 +19,9 @@ use Platform\Hcm\Models\HcmEmployeeIssueType;
 use Platform\Hcm\Models\HcmEmployeeIssue;
 use Platform\Hcm\Models\HcmPayoutMethod;
 use Platform\Organization\Models\OrganizationCostCenter;
+use Platform\Hcm\Models\HcmTariffAgreement;
+use Platform\Hcm\Models\HcmTariffGroup;
+use Platform\Hcm\Models\HcmTariffLevel;
 
 class UnifiedImportService
 {
@@ -26,7 +29,7 @@ class UnifiedImportService
         private int $employerId
     ) {}
 
-    public function run(string $csvPath, bool $dryRun = true): array
+    public function run(string $csvPath, bool $dryRun = true, ?string $effectiveMonth = null): array
     {
         $stats = [
             'rows' => 0,
@@ -53,7 +56,16 @@ class UnifiedImportService
 
         $records = $csv->getRecords();
 
-        $execute = function () use (&$stats, $records, $teamId, $employer) {
+        $execute = function () use (&$stats, $records, $teamId, $employer, $effectiveMonth) {
+            $effectiveDate = null;
+            if ($effectiveMonth) {
+                // Expect YYYY-MM -> first day of month
+                try {
+                    $effectiveDate = Carbon::createFromFormat('Y-m', $effectiveMonth)->startOfMonth()->toDateString();
+                } catch (\Throwable $e) {
+                    $effectiveDate = null;
+                }
+            }
             foreach ($records as $row) {
                 $stats['rows']++;
                 try {
@@ -264,7 +276,51 @@ class UnifiedImportService
                                 ]);
                                 $stats['lookups_created']++;
                             }
-                            // optional: employee->health_insurance_company_id = $kasse->id; (falls Model unterstützt)
+                            // Verknüpfe Mitarbeiter mit vorhandener/neu angelegter Kasse
+                            if ($kasse && $employee->health_insurance_company_id !== $kasse->id) {
+                                $employee->health_insurance_company_id = $kasse->id;
+                                $employee->save();
+                            }
+                        }
+
+                        // Tariff mapping
+                        $tariffName = trim((string) ($row['Tarif'] ?? ''));
+                        $tariffGroup = trim((string) ($row['Tarifgruppe'] ?? ''));
+                        $tariffLevel = trim((string) ($row['Tarifstufe'] ?? ''));
+                        if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '') {
+                            $agreement = HcmTariffAgreement::firstOrCreate(
+                                ['team_id' => $teamId, 'name' => $tariffName],
+                                [
+                                    'code' => 'TA_' . substr(md5($tariffName), 0, 8),
+                                    'is_active' => true,
+                                    'created_by_user_id' => $employer->created_by_user_id,
+                                ]
+                            );
+                            $group = HcmTariffGroup::firstOrCreate(
+                                ['team_id' => $teamId, 'tariff_agreement_id' => $agreement->id, 'name' => $tariffGroup],
+                                [
+                                    'code' => 'TG_' . substr(md5($tariffName.'|'.$tariffGroup), 0, 8),
+                                    'is_active' => true,
+                                    'created_by_user_id' => $employer->created_by_user_id,
+                                ]
+                            );
+                            $level = HcmTariffLevel::firstOrCreate(
+                                ['team_id' => $teamId, 'tariff_group_id' => $group->id, 'name' => $tariffLevel],
+                                [
+                                    'code' => 'TL_' . substr(md5($tariffName.'|'.$tariffGroup.'|'.$tariffLevel), 0, 8),
+                                    'progression_months' => 12,
+                                    'is_active' => true,
+                                    'created_by_user_id' => $employer->created_by_user_id,
+                                ]
+                            );
+                            if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
+                                $contract->tariff_group_id = $group->id;
+                                $contract->tariff_level_id = $level->id;
+                                $contract->tariff_assignment_date = ($effectiveDate ?: $start?->toDateString());
+                                $contract->tariff_level_start_date = ($effectiveDate ?: $start?->toDateString());
+                                $contract->save();
+                                $stats['lookups_created']++;
+                            }
                         }
 
                         // Equipment-Ausgaben aus CSV anlegen
@@ -272,7 +328,7 @@ class UnifiedImportService
 
                         // Historisierung: Lohn-Ereignis initial
                         try {
-                            $effective = $start?->toDateString() ?: now()->toDateString();
+                            $effective = $effectiveDate ?: ($start?->toDateString() ?: now()->toDateString());
                             $hasComp = \Platform\Hcm\Models\HcmContractCompensationEvent::where('employee_contract_id', $contract->id)
                                 ->whereDate('effective_date', $effective)
                                 ->exists();
@@ -295,7 +351,7 @@ class UnifiedImportService
 
                         // Historisierung: Urlaub-Ereignis initial
                         try {
-                            $effective = $start?->toDateString() ?: now()->toDateString();
+                            $effective = $effectiveDate ?: ($start?->toDateString() ?: now()->toDateString());
                             $hasVac = \Platform\Hcm\Models\HcmContractVacationEvent::where('employee_contract_id', $contract->id)
                                 ->whereDate('effective_date', $effective)
                                 ->exists();
