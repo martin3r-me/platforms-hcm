@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Platform\Organization\Traits\HasCostCenterLinksTrait;
 use Platform\Organization\Contracts\CostCenterLinkableInterface;
 use Symfony\Component\Uid\UuidV7;
+use Platform\Core\Traits\Encryptable;
 
 class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
 {
-    use HasCostCenterLinksTrait;
+    use HasCostCenterLinksTrait, Encryptable;
 
     protected $table = 'hcm_employee_contracts';
 
@@ -23,6 +24,7 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'contract_type',
         'employment_status',
         'hours_per_month',
+        'work_days_per_week',
         'annual_vacation_days',
         'working_time_model',
         'insurance_status_id',
@@ -57,11 +59,25 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'owned_by_user_id',
         'team_id',
         'is_active',
+        // Lohn & Urlaub modern
+        'wage_base_type',
+        'hourly_wage',
+        'base_salary',
+        'vacation_entitlement',
+        'vacation_prev_year',
+        'vacation_taken',
+        'vacation_expiry_date',
+        'vacation_allowance_enabled',
+        'vacation_allowance_amount',
+        'cost_center_id',
+        'attributes',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'work_days_per_week' => 'decimal:2',
+        'hours_per_month' => 'decimal:2',
         'tariff_assignment_date' => 'date',
         'tariff_level_start_date' => 'date',
         'next_tariff_level_date' => 'date',
@@ -71,8 +87,21 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'above_tariff_amount' => 'decimal:2',
         'minimum_wage_hourly_rate' => 'decimal:2',
         'minimum_wage_monthly_hours' => 'decimal:2',
+        'hourly_wage' => 'decimal:2',
+        'base_salary' => 'decimal:2',
+        'vacation_entitlement' => 'decimal:2',
+        'vacation_prev_year' => 'decimal:2',
+        'vacation_taken' => 'decimal:2',
+        'vacation_expiry_date' => 'date',
+        'vacation_allowance_enabled' => 'boolean',
+        'vacation_allowance_amount' => 'decimal:2',
         'is_active' => 'boolean',
         'is_temp_agency' => 'boolean',
+        'attributes' => 'array',
+    ];
+
+    protected array $encryptable = [
+        'social_security_number' => 'string',
     ];
 
     public function insuranceStatus()
@@ -123,6 +152,11 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     public function employee(): BelongsTo
     {
         return $this->belongsTo(HcmEmployee::class, 'employee_id');
+    }
+
+    public function team(): BelongsTo
+    {
+        return $this->belongsTo(\Platform\Core\Models\Team::class, 'team_id');
     }
 
     public function taxClass(): BelongsTo
@@ -181,9 +215,24 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         return $this->belongsTo(HcmTariffLevel::class, 'tariff_level_id');
     }
 
+    public function issues()
+    {
+        return $this->hasMany(HcmEmployeeIssue::class, 'contract_id');
+    }
+
     public function tariffProgressions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(HcmTariffProgression::class, 'employee_contract_id');
+    }
+
+    public function compensationEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmContractCompensationEvent::class, 'employee_contract_id');
+    }
+
+    public function vacationEvents(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmContractVacationEvent::class, 'employee_contract_id');
     }
 
     /**

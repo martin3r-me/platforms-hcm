@@ -4,6 +4,7 @@ namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Platform\ActivityLog\Traits\LogsActivity;
+use Platform\Core\Traits\Encryptable;
 use Platform\Hcm\Contracts\EmployeeInterface;
 use Platform\Hcm\Traits\HasEmployeeContact;
 use Platform\Crm\Contracts\CompanyInterface;
@@ -13,7 +14,7 @@ use Symfony\Component\Uid\UuidV7;
 
 class HcmEmployee extends Model implements EmployeeInterface
 {
-    use LogsActivity, HasEmployeeContact;
+    use LogsActivity, HasEmployeeContact, Encryptable;
     
     protected $table = 'hcm_employees';
     
@@ -28,13 +29,44 @@ class HcmEmployee extends Model implements EmployeeInterface
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
-        'is_active'
+        'is_active',
+        // Core person fields
+        'birth_date',
+        'gender',
+        'nationality',
+        'children_count',
+        'disability_degree',
+        'tax_class',
+        'church_tax',
+        'tax_id_number',
+        'child_allowance',
+        'insurance_status',
+        'payout_type',
+        'payout_method_id',
+        'bank_account_holder',
+        'bank_iban',
+        'bank_swift',
+        'health_insurance_ik',
+        'health_insurance_name',
+        'attributes'
     ];
     
     protected $casts = [
         'is_active' => 'boolean',
         'schooling_level' => 'integer',
         'vocational_training_level' => 'integer',
+        'birth_date' => 'date',
+        'children_count' => 'integer',
+        'disability_degree' => 'integer',
+        'child_allowance' => 'integer',
+        'attributes' => 'array',
+    ];
+
+    protected array $encryptable = [
+        'tax_id_number' => 'string',
+        'bank_iban' => 'string',
+        'bank_swift' => 'string',
+        'bank_account_holder' => 'string',
     ];
     
     protected static function booted(): void
@@ -191,6 +223,11 @@ class HcmEmployee extends Model implements EmployeeInterface
             })
             ->orderByDesc('start_date')
             ->first();
+    }
+
+    public function issues()
+    {
+        return $this->hasMany(HcmEmployeeIssue::class, 'employee_id');
     }
     
     /**
