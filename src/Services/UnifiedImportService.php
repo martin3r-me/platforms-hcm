@@ -471,13 +471,37 @@ class UnifiedImportService
                                 echo " Vertrag aktualisieren...";
                                 if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
                                     echo " (Werte ändern: group={$group->id}, level={$level->id})...";
-                                    $contract->tariff_group_id = $group->id;
-                                    $contract->tariff_level_id = $level->id;
-                                    $contract->tariff_assignment_date = ($effectiveDate ?: $start?->toDateString());
-                                    $contract->tariff_level_start_date = ($effectiveDate ?: $start?->toDateString());
-                                    echo " save() aufrufen...";
-                                    $contract->save();
-                                    echo " save() fertig...";
+                                    // Umgehe Observer durch direktes Update in DB
+                                    $updateData = [
+                                        'tariff_group_id' => $group->id,
+                                        'tariff_level_id' => $level->id,
+                                        'tariff_assignment_date' => ($effectiveDate ?: $start?->toDateString()),
+                                        'tariff_level_start_date' => ($effectiveDate ?: $start?->toDateString()),
+                                    ];
+                                    echo " update() aufrufen...";
+                                    \DB::table('hcm_employee_contracts')
+                                        ->where('id', $contract->id)
+                                        ->update($updateData);
+                                    
+                                    // Refresh Model
+                                    $contract->refresh();
+                                    
+                                    // Manuell next_tariff_level_date setzen falls nötig (ohne Observer)
+                                    if ($contract->tariff_level_id && !$contract->next_tariff_level_date) {
+                                        $startDate = $contract->tariff_level_start_date ?? $contract->start_date;
+                                        $progressionMonths = $contract->tariffLevel?->progression_months ?? 999;
+                                        
+                                        if ($progressionMonths !== 999 && $startDate) {
+                                            $nextDate = \Carbon\Carbon::parse($startDate)
+                                                ->addMonths($progressionMonths)
+                                                ->toDateString();
+                                            \DB::table('hcm_employee_contracts')
+                                                ->where('id', $contract->id)
+                                                ->update(['next_tariff_level_date' => $nextDate]);
+                                        }
+                                    }
+                                    
+                                    echo " fertig...";
                                     $stats['lookups_created']++;
                                 } else {
                                     echo " (keine Änderung nötig)";
