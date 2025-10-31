@@ -698,24 +698,24 @@ class UnifiedImportService
                             $tariffLevelCleaned = trim($tariffLevelCleaned);
                             
                             // Wenn Tarifgruppe einen Punkt enthält (z.B. "3.2" oder "Bd. 3.2"), aufteilen in Band (3) und Stufe (2)
-                            // ABER: Wenn Tarifstufe-Feld vorhanden ist, hat das Vorrang für die Stufe
+                            // Die Stufe aus dem Punkt hat Vorrang, da sie explizit in der Tarifgruppe steht
                             if (strpos($tariffGroupCleaned, '.') !== false) {
                                 // Aufteilen: "3.2" -> Group="3", Level aus Punkt="2"
                                 list($groupPart, $levelPartFromGroup) = explode('.', $tariffGroupCleaned, 2);
                                 $tariffGroup = trim($groupPart);
                                 
-                                // Stufe: Verwende Tarifstufe-Feld wenn vorhanden, sonst aus der Punkt-Aufteilung
-                                if ($tariffLevelCleaned !== '' && $tariffLevelCleaned !== null && is_numeric($tariffLevelCleaned)) {
-                                    // Tarifstufe-Feld hat Vorrang (z.B. "Stufe 1" überschreibt "2" aus "3.2")
-                                    $tariffLevel = $tariffLevelCleaned;
-                                    echo " (Tarifgruppe mit Punkt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe aus Tarifstufe-Feld='$tariffLevel')";
-                                } else {
-                                    // Kein Tarifstufe-Feld, verwende aus Punkt-Aufteilung
-                                    $tariffLevel = trim($levelPartFromGroup);
+                                // Stufe: Verwende IMMER die Stufe aus dem Punkt, wenn vorhanden
+                                // Das separate Tarifstufe-Feld wird ignoriert, wenn die Gruppe einen Punkt enthält
+                                $tariffLevel = trim($levelPartFromGroup);
+                                if ($tariffLevel !== '' && $tariffLevel !== null) {
                                     echo " (Tarifgruppe mit Punkt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe aus Punkt='$tariffLevel')";
+                                } else {
+                                    // Fallback: Verwende Tarifstufe-Feld, wenn Punkt-Stufe leer ist
+                                    $tariffLevel = $tariffLevelCleaned ?: null;
+                                    echo " (Tarifgruppe mit Punkt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe aus Tarifstufe-Feld='$tariffLevel')";
                                 }
                             } else {
-                                // Normale Verwendung: separate Felder
+                                // Normale Verwendung: separate Felder (kein Punkt in Tarifgruppe)
                                 $tariffGroup = $tariffGroupCleaned;
                                 $tariffLevel = $tariffLevelCleaned ?: null; // Falls leer, wird später geprüft
                             }
