@@ -470,12 +470,17 @@ class UnifiedImportService
                                 
                                 echo " Vertrag aktualisieren...";
                                 if ($contract->tariff_group_id !== $group->id || $contract->tariff_level_id !== $level->id) {
+                                    echo " (Werte ändern: group={$group->id}, level={$level->id})...";
                                     $contract->tariff_group_id = $group->id;
                                     $contract->tariff_level_id = $level->id;
                                     $contract->tariff_assignment_date = ($effectiveDate ?: $start?->toDateString());
                                     $contract->tariff_level_start_date = ($effectiveDate ?: $start?->toDateString());
+                                    echo " save() aufrufen...";
                                     $contract->save();
+                                    echo " save() fertig...";
                                     $stats['lookups_created']++;
+                                } else {
+                                    echo " (keine Änderung nötig)";
                                 }
                                 echo " ✓";
                             } else {
