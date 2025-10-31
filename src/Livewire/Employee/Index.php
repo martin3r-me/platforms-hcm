@@ -8,6 +8,9 @@ use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployer;
 use Platform\Crm\Models\CrmContact;
+use Platform\Hcm\Models\HcmJobTitle;
+use Platform\Hcm\Models\HcmJobActivity;
+use Platform\Hcm\Models\HcmEmployeeContract;
 
 class Index extends Component
 {
@@ -93,6 +96,24 @@ class Index extends Component
             ->get();
     }
 
+    #[Computed]
+    public function availableJobTitles()
+    {
+        return HcmJobTitle::query()
+            ->where('team_id', auth()->user()->currentTeam->id)
+            ->orderBy('name')
+            ->get(['id','name']);
+    }
+
+    #[Computed]
+    public function availableJobActivities()
+    {
+        return HcmJobActivity::query()
+            ->where('team_id', auth()->user()->currentTeam->id)
+            ->orderBy('name')
+            ->get(['id','name']);
+    }
+
     public function sortBy($field)
     {
         if ($this->sortField === $field) {
@@ -107,6 +128,27 @@ class Index extends Component
     {
         return view('hcm::livewire.employee.index')
             ->layout('platform::layouts.app');
+    }
+
+    public function updateContractTitle(int $contractId, ?int $jobTitleId): void
+    {
+        $contract = HcmEmployeeContract::find($contractId);
+        if (!$contract) { return; }
+        if ($jobTitleId) {
+            $contract->jobTitles()->sync([$jobTitleId]);
+        } else {
+            $contract->jobTitles()->sync([]);
+        }
+        $this->dispatch('toast', ['type' => 'success', 'message' => 'Stelle aktualisiert']);
+    }
+
+    public function updateContractActivities(int $contractId, array $activityIds): void
+    {
+        $contract = HcmEmployeeContract::find($contractId);
+        if (!$contract) { return; }
+        $ids = array_values(array_filter($activityIds, fn($v) => !empty($v)));
+        $contract->jobActivities()->sync($ids);
+        $this->dispatch('toast', ['type' => 'success', 'message' => 'Tätigkeiten aktualisiert']);
     }
 
     public function createEmployee()

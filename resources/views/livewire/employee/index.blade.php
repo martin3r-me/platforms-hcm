@@ -61,28 +61,36 @@
                         @endif
                     </x-ui-table-cell>
                     <x-ui-table-cell compact="true">
-                        @if($employee->contracts->isNotEmpty() && $employee->contracts->first()->jobTitles->isNotEmpty())
-                            <div class="text-xs">
-                                <div class="font-medium">{{ $employee->contracts->first()->jobTitles->first()->name }}</div>
-                                <div class="text-muted">{{ $employee->contracts->first()->jobTitles->first()->code }}</div>
-                            </div>
+                        @php($contract = $employee->contracts->first())
+                        @if($contract)
+                            <x-ui-input-select 
+                                name="job_title_{{ $contract->id }}"
+                                :options="$this->availableJobTitles"
+                                optionValue="id"
+                                optionLabel="name"
+                                :nullable="true"
+                                nullLabel="Ohne Stelle"
+                                :value="$contract->jobTitles->first()?->id"
+                                wire:change="updateContractTitle({{ $contract->id }}, $event.target.value)"
+                                class="w-44"
+                            />
                         @else
                             <span class="text-xs text-muted">–</span>
                         @endif
                     </x-ui-table-cell>
                     <x-ui-table-cell compact="true">
-                        @if($employee->contracts->isNotEmpty() && $employee->contracts->first()->jobActivities->isNotEmpty())
-                            <div class="space-y-1">
-                                @foreach($employee->contracts->first()->jobActivities->take(2) as $activity)
-                                    <div class="text-xs d-flex items-center gap-1">
-                                        @svg('heroicon-o-clipboard-document', 'w-3 h-3 text-muted')
-                                        {{ $activity->name }}
-                                    </div>
-                                @endforeach
-                                @if($employee->contracts->first()->jobActivities->count() > 2)
-                                    <div class="text-xs text-muted">+{{ $employee->contracts->first()->jobActivities->count() - 2 }} weitere</div>
-                                @endif
-                            </div>
+                        @php($contract = $employee->contracts->first())
+                        @if($contract)
+                            <x-ui-input-select 
+                                name="job_activities_{{ $contract->id }}[]"
+                                :options="$this->availableJobActivities"
+                                optionValue="id"
+                                optionLabel="name"
+                                :multiple="true"
+                                :value="$contract->jobActivities->pluck('id')->all()"
+                                wire:change="updateContractActivities({{ $contract->id }}, Array.from($event.target.selectedOptions).map(o=>o.value))"
+                                class="w-56"
+                            />
                         @else
                             <span class="text-xs text-muted">–</span>
                         @endif
@@ -103,6 +111,50 @@
                         </x-ui-button>
                     </x-ui-table-cell>
                 </x-ui-table-row>
+                @if($employee->contracts->isNotEmpty())
+                    <x-ui-table-row compact="true" muted="true">
+                        <x-ui-table-cell colspan="7">
+                            <div class="p-3 rounded border border-[var(--ui-border)]/50 bg-[var(--ui-muted-5)]">
+                                <div class="text-xs font-semibold mb-2">Verträge</div>
+                                <div class="space-y-2">
+                                    @foreach($employee->contracts as $c)
+                                        <div class="d-flex items-center gap-3 text-xs">
+                                            <div class="w-44">
+                                                @svg('heroicon-o-calendar', 'w-3 h-3 text-muted inline')
+                                                {{ optional($c->start_date)->format('d.m.Y') }} – {{ optional($c->end_date)->format('d.m.Y') ?: 'offen' }}
+                                            </div>
+                                            <div class="w-48">
+                                                <x-ui-input-select 
+                                                    name="job_title_row_{{ $c->id }}"
+                                                    :options="$this->availableJobTitles"
+                                                    optionValue="id"
+                                                    optionLabel="name"
+                                                    :nullable="true"
+                                                    nullLabel="Ohne Stelle"
+                                                    :value="$c->jobTitles->first()?->id"
+                                                    wire:change="updateContractTitle({{ $c->id }}, $event.target.value)"
+                                                    class="w-44"
+                                                />
+                                            </div>
+                                            <div class="flex-1">
+                                                <x-ui-input-select 
+                                                    name="job_activities_row_{{ $c->id }}[]"
+                                                    :options="$this->availableJobActivities"
+                                                    optionValue="id"
+                                                    optionLabel="name"
+                                                    :multiple="true"
+                                                    :value="$c->jobActivities->pluck('id')->all()"
+                                                    wire:change="updateContractActivities({{ $c->id }}, Array.from($event.target.selectedOptions).map(o=>o.value))"
+                                                    class="w-full max-w-xl"
+                                                />
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </x-ui-table-cell>
+                    </x-ui-table-row>
+                @endif
             @endforeach
         </x-ui-table-body>
     </x-ui-table>
