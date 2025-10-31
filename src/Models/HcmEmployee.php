@@ -73,8 +73,7 @@ class HcmEmployee extends Model implements EmployeeInterface
         'supervisor_id',
         'deputy_id',
         'alias',
-        // Phase 1: Schulungen
-        'hygiene_training_date',
+        // Phase 1: Schulungen (hygiene_training_date wird über Trainings-System erfasst)
         'parent_eligibility_proof_date',
         // Phase 1: Sonstiges
         'business_email',
@@ -97,7 +96,6 @@ class HcmEmployee extends Model implements EmployeeInterface
         'has_disability_id' => 'boolean',
         'disability_id_valid_from' => 'date',
         'disability_id_valid_until' => 'date',
-        'hygiene_training_date' => 'date',
         'parent_eligibility_proof_date' => 'date',
         'is_seasonal_worker' => 'boolean',
         'is_disability_pensioner' => 'boolean',

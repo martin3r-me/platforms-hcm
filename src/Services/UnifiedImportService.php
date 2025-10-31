@@ -56,9 +56,11 @@ class UnifiedImportService
         $csv->setDelimiter(';');
         $csv->setHeaderOffset(0);
 
+        // Zähle Gesamtzeilen (ohne Header)
+        $totalRows = count($csv) - 1;
         $records = $csv->getRecords();
 
-        $execute = function () use (&$stats, $records, $teamId, $employer, $effectiveMonth) {
+        $execute = function () use (&$stats, $records, $teamId, $employer, $effectiveMonth, $totalRows) {
             $effectiveDate = null;
             if ($effectiveMonth) {
                 // Expect YYYY-MM -> first day of month
@@ -68,12 +70,33 @@ class UnifiedImportService
                     $effectiveDate = null;
                 }
             }
+            $processed = 0;
+            
             foreach ($records as $row) {
                 $stats['rows']++;
+                $processed++;
+                
+                // Fortschritt alle 10 Zeilen ausgeben
+                if ($processed % 10 === 0 || $processed === 1) {
+                    echo sprintf("\r[%d/%d] Verarbeitung... (Mitarbeiter: %d erstellt, %d aktualisiert)", 
+                        $processed, 
+                        $totalRows, 
+                        $stats['employees_created'], 
+                        $stats['employees_updated']
+                    );
+                }
+                
                 try {
                     $personalNr = trim((string) ($row['PersonalNr'] ?? ''));
+                    $employeeName = trim((string) ($row['Vorname'] ?? '')) . ' ' . trim((string) ($row['Nachname'] ?? ''));
+                    
                     if ($personalNr === '' || !ctype_digit(preg_replace('/\D/','', $personalNr))) {
                         continue;
+                    }
+                    
+                    // Detailliertes Logging für jeden Mitarbeiter
+                    if ($processed % 5 === 0) {
+                        echo sprintf("\n  → Zeile %d: %s (PersonalNr: %s)", $processed, $employeeName ?: 'unbekannt', $personalNr);
                     }
 
                     // Ensure cost center
@@ -141,8 +164,7 @@ class UnifiedImportService
                         'disability_id_valid_until' => $this->parseDate($row['Behindertenausweis gültig bis'] ?? null)?->toDateString(),
                         'disability_office' => trim((string) ($row['Dienststelle Behindertenausweis'] ?? '')) ?: null,
                         'disability_office_location' => trim((string) ($row['Ort der Dienststelle Behindertenausweis'] ?? '')) ?: null,
-                        // Phase 1: Schulungen
-                        'hygiene_training_date' => $this->parseDate($row['Hygieneschulung'] ?? null)?->toDateString(),
+                        // Phase 1: Schulungen (hygiene_training_date wird über Trainings-System erfasst)
                         'parent_eligibility_proof_date' => $this->parseDate($row['NachweisElterneigenschaft'] ?? ($row['ElterneigenschaftNachweis'] ?? null))?->toDateString(),
                         // Phase 1: Sonstiges
                         'business_email' => trim((string) ($row['EMailGeschaeftlich'] ?? '')) ?: null,
@@ -167,6 +189,7 @@ class UnifiedImportService
                     ];
 
                     if (!$employee) {
+                        echo sprintf("\n    ✓ Neuer Mitarbeiter: %s (PersonalNr: %s)", $employeeName ?: 'unbekannt', $personalNr);
                         $employee = HcmEmployee::create(array_merge([
                             'team_id' => $teamId,
                             'employer_id' => $employer->id,
@@ -473,9 +496,13 @@ class UnifiedImportService
                         $stats['samples'][] = Arr::only($row, ['PersonalNr','Nachname','Vorname','BeginnTaetigkeit','Stellenbezeichnung','Taetigkeit']);
                     }
                 } catch (\Throwable $e) {
-                    $stats['errors'][] = $e->getMessage();
+                    $errorMsg = sprintf("Fehler bei Zeile %d (%s): %s", $processed, $employeeName ?? 'unbekannt', $e->getMessage());
+                    echo "\n    ✗ " . $errorMsg;
+                    $stats['errors'][] = $errorMsg;
                 }
             }
+            
+            echo "\n\nFertig! Verarbeitet: $processed Zeilen\n";
         };
 
         if ($dryRun) {

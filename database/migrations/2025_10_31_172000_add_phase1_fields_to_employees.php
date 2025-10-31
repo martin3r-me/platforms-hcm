@@ -39,9 +39,8 @@ return new class extends Migration
             $table->foreignId('deputy_id')->nullable()->after('supervisor_id')->constrained('hcm_employees')->nullOnDelete();
             $table->string('alias')->nullable()->after('deputy_id');
             
-            // Schulungen/Nachweise
-            $table->date('hygiene_training_date')->nullable()->after('alias');
-            $table->date('parent_eligibility_proof_date')->nullable()->after('hygiene_training_date');
+            // Schulungen/Nachweise (hygiene_training_date wird über hcm_employee_trainings erfasst)
+            $table->date('parent_eligibility_proof_date')->nullable()->after('alias');
             
             // Sonstiges
             $table->string('business_email')->nullable()->after('parent_eligibility_proof_date'); // EMailGeschaeftlich
@@ -77,7 +76,6 @@ return new class extends Migration
                 'disability_office',
                 'disability_office_location',
                 'alias',
-                'hygiene_training_date',
                 'parent_eligibility_proof_date',
                 'business_email',
                 'alternative_employee_number',
