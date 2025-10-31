@@ -415,11 +415,25 @@ class UnifiedImportService
                         echo "\n      [12/12] Tarif-Mapping...";
                         try {
                             $tariffName = trim((string) ($row['Tarif'] ?? ''));
-                            $tariffGroup = trim((string) ($row['Tarifgruppe'] ?? ''));
-                            $tariffLevel = trim((string) ($row['Tarifstufe'] ?? ''));
+                            $tariffGroupRaw = trim((string) ($row['Tarifgruppe'] ?? ''));
+                            $tariffLevelRaw = trim((string) ($row['Tarifstufe'] ?? ''));
                             
-                            if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '') {
-                                echo " ($tariffName / $tariffGroup / $tariffLevel)...";
+                            // Wenn Tarifgruppe einen Punkt enthält (z.B. "3.2"), aufteilen in Band (3) und Stufe (2)
+                            // Ansonsten: Tarifgruppe = Band, Tarifstufe = Stufe
+                            if (strpos($tariffGroupRaw, '.') !== false) {
+                                // Aufteilen: "3.2" -> Group="3", Level="2"
+                                list($tariffGroup, $tariffLevel) = explode('.', $tariffGroupRaw, 2);
+                                $tariffGroup = trim($tariffGroup);
+                                $tariffLevel = trim($tariffLevel);
+                                echo " (Tarifgruppe mit Punkt erkannt: '$tariffGroupRaw' -> Band='$tariffGroup', Stufe='$tariffLevel')";
+                            } else {
+                                // Normale Verwendung: separate Felder
+                                $tariffGroup = $tariffGroupRaw;
+                                $tariffLevel = $tariffLevelRaw ?: null; // Falls leer, wird später geprüft
+                            }
+                            
+                            if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '' && $tariffLevel !== null) {
+                                echo " ($tariffName / Band: $tariffGroup / Stufe: $tariffLevel)...";
                                 
                                 // Agreement: Suche case-insensitive nach Name, falls nicht gefunden: erstellen
                                 $agreement = HcmTariffAgreement::where('team_id', $teamId)
@@ -448,30 +462,46 @@ class UnifiedImportService
                                     echo " Agreement gefunden (ID: {$agreement->id}, Code: {$agreement->code})";
                                 }
                                 
-                                // Group: Suche case-insensitive nach Name innerhalb des Agreements
+                                // Group: Suche nach Code oder Name innerhalb des Agreements
                                 echo " Group prüfen...";
+                                // Zuerst nach Code suchen (direkt wenn numerisch)
                                 $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
-                                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffGroup)])
+                                    ->where('code', $tariffGroup)
                                     ->first();
                                 if (!$group) {
-                                    // Prüfe auch nach Code (falls im CSV ein Code übergeben wurde)
+                                    // Dann nach Name suchen (case-insensitive)
                                     $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
-                                        ->whereRaw('LOWER(code) = ?', [mb_strtolower($tariffGroup)])
+                                        ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffGroup)])
                                         ->first();
                                 }
                                 if (!$group) {
-                                    echo " erstellen...";
-                                    // Code muss unique sein innerhalb des Agreements (nicht global)
-                                    $baseCode = 'TG_' . strtoupper(substr(md5($agreement->id . '|' . $tariffGroup), 0, 8));
-                                    $code = $baseCode;
-                                    $counter = 1;
-                                    while (HcmTariffGroup::where('tariff_agreement_id', $agreement->id)->where('code', $code)->exists()) {
-                                        $code = $baseCode . '_' . $counter++;
+                                    // Auch nach "Band X" Name-Schema suchen
+                                    if (is_numeric($tariffGroup)) {
+                                        $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
+                                            ->whereRaw('LOWER(name) = ?', [mb_strtolower("Band $tariffGroup")])
+                                            ->first();
                                     }
+                                }
+                                if (!$group) {
+                                    echo " erstellen...";
+                                    // Code für Group: Verwende den Band-Wert direkt (z.B. "3") oder generiere
+                                    // Falls numerisch, verwende direkt als Code, sonst generiere
+                                    if (is_numeric($tariffGroup) && strlen($tariffGroup) <= 10) {
+                                        $code = $tariffGroup;
+                                    } else {
+                                        $baseCode = 'TG_' . strtoupper(substr(md5($agreement->id . '|' . $tariffGroup), 0, 8));
+                                        $code = $baseCode;
+                                        $counter = 1;
+                                        while (HcmTariffGroup::where('tariff_agreement_id', $agreement->id)->where('code', $code)->exists()) {
+                                            $code = $baseCode . '_' . $counter++;
+                                        }
+                                    }
+                                    // Name für Group: "Band 3" statt nur "3"
+                                    $groupName = is_numeric($tariffGroup) ? "Band $tariffGroup" : $tariffGroup;
                                     $group = new HcmTariffGroup([
                                         'tariff_agreement_id' => $agreement->id,
                                         'code' => $code,
-                                        'name' => $tariffGroup,
+                                        'name' => $groupName,
                                     ]);
                                     $group->save();
                                     $group->refresh();
@@ -480,30 +510,46 @@ class UnifiedImportService
                                     echo " gefunden (ID: {$group->id}, Code: {$group->code})";
                                 }
                                 
-                                // Level: Suche case-insensitive nach Name innerhalb der Group
+                                // Level: Suche nach Code oder Name innerhalb der Group
                                 echo " Level prüfen...";
+                                // Zuerst nach Code suchen (direkt wenn numerisch)
                                 $level = HcmTariffLevel::where('tariff_group_id', $group->id)
-                                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffLevel)])
+                                    ->where('code', $tariffLevel)
                                     ->first();
                                 if (!$level) {
-                                    // Prüfe auch nach Code (falls im CSV ein Code übergeben wurde)
+                                    // Dann nach Name suchen (case-insensitive)
                                     $level = HcmTariffLevel::where('tariff_group_id', $group->id)
-                                        ->whereRaw('LOWER(code) = ?', [mb_strtolower($tariffLevel)])
+                                        ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffLevel)])
                                         ->first();
                                 }
                                 if (!$level) {
-                                    echo " erstellen...";
-                                    // Code muss unique sein innerhalb der Group (nicht global)
-                                    $baseCode = 'TL_' . strtoupper(substr(md5($group->id . '|' . $tariffLevel), 0, 8));
-                                    $code = $baseCode;
-                                    $counter = 1;
-                                    while (HcmTariffLevel::where('tariff_group_id', $group->id)->where('code', $code)->exists()) {
-                                        $code = $baseCode . '_' . $counter++;
+                                    // Auch nach "Stufe X" Name-Schema suchen
+                                    if (is_numeric($tariffLevel)) {
+                                        $level = HcmTariffLevel::where('tariff_group_id', $group->id)
+                                            ->whereRaw('LOWER(name) = ?', [mb_strtolower("Stufe $tariffLevel")])
+                                            ->first();
                                     }
+                                }
+                                if (!$level) {
+                                    echo " erstellen...";
+                                    // Code für Level: Verwende den Stufen-Wert direkt (z.B. "2") oder generiere
+                                    // Falls numerisch, verwende direkt als Code, sonst generiere
+                                    if (is_numeric($tariffLevel) && strlen($tariffLevel) <= 10) {
+                                        $code = $tariffLevel;
+                                    } else {
+                                        $baseCode = 'TL_' . strtoupper(substr(md5($group->id . '|' . $tariffLevel), 0, 8));
+                                        $code = $baseCode;
+                                        $counter = 1;
+                                        while (HcmTariffLevel::where('tariff_group_id', $group->id)->where('code', $code)->exists()) {
+                                            $code = $baseCode . '_' . $counter++;
+                                        }
+                                    }
+                                    // Name für Level: "Stufe 2" statt nur "2"
+                                    $levelName = is_numeric($tariffLevel) ? "Stufe $tariffLevel" : $tariffLevel;
                                     $level = new HcmTariffLevel([
                                         'tariff_group_id' => $group->id,
                                         'code' => $code,
-                                        'name' => $tariffLevel,
+                                        'name' => $levelName,
                                         'progression_months' => 999,
                                     ]);
                                     $level->save();
