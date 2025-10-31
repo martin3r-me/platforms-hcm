@@ -9,7 +9,7 @@ class HcmHealthInsuranceCompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $teamId = $this->command ? $this->command->option('team-id') : auth()->user()->current_team_id;
+        $teamId = $this->command ? ($this->command->option('team-id') ?: config('hcm.seeder_team_id')) : (config('hcm.seeder_team_id') ?: auth()->user()->current_team_id);
         
         if ($this->command) {
             $this->command->info("Importing health insurance companies for team ID: {$teamId}");

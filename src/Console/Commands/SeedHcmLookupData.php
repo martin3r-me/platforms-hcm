@@ -8,7 +8,7 @@ use Platform\Hcm\Database\Seeders\HcmPensionTypeSeeder;
 use Platform\Hcm\Database\Seeders\HcmEmploymentRelationshipSeeder;
 use Platform\Hcm\Database\Seeders\HcmLevyTypeSeeder;
 use Platform\Hcm\Database\Seeders\HcmPersonGroupSeeder;
-// duplicate import removed
+use Platform\Hcm\Database\Seeders\HcmHealthInsuranceCompanySeeder;
 
 class SeedHcmLookupData extends Command
 {
@@ -35,6 +35,13 @@ class SeedHcmLookupData extends Command
         config(['hcm.seeder_team_id' => $teamId]);
 
         $this->info('Seeding HCM lookup data for team: ' . $teamId);
+
+        // Krankenkassen zuerst
+        $healthInsuranceSeeder = new HcmHealthInsuranceCompanySeeder();
+        $healthInsuranceSeeder->setCommand($this);
+        // Manuell team-id setzen, da der Seeder $this->command->option() nutzt
+        // Wir setzen die team-id per Config
+        $healthInsuranceSeeder->run();
 
         (new HcmInsuranceStatusSeeder())->run();
         (new HcmPensionTypeSeeder())->run();
