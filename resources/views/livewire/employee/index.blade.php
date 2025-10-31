@@ -53,8 +53,8 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2">
-                                    @if($contract && $contract->jobTitles->count() > 0)
-                                        <div class="space-y-1">
+                                    @if($contract && $contract->jobTitles && $contract->jobTitles->count() > 0)
+                                        <div class="flex flex-wrap gap-1">
                                             @foreach($contract->jobTitles as $title)
                                                 <x-ui-badge variant="secondary" size="xs">{{ $title->name }}</x-ui-badge>
                                             @endforeach
@@ -64,8 +64,8 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2">
-                                    @if($contract && $contract->jobActivities->count() > 0)
-                                        <div class="space-y-1">
+                                    @if($contract && $contract->jobActivities && $contract->jobActivities->count() > 0)
+                                        <div class="flex flex-wrap gap-1">
                                             @foreach($contract->jobActivities as $activity)
                                                 <x-ui-badge variant="secondary" size="xs">{{ $activity->name }}</x-ui-badge>
                                             @endforeach
@@ -102,8 +102,8 @@
                                     <td class="px-4 py-2"></td>
                                     <td class="px-4 py-2"></td>
                                     <td class="px-4 py-2">
-                                        @if($c->jobTitles->count() > 0)
-                                            <div class="space-y-1">
+                                        @if($c->jobTitles && $c->jobTitles->count() > 0)
+                                            <div class="flex flex-wrap gap-1">
                                                 @foreach($c->jobTitles as $title)
                                                     <x-ui-badge variant="secondary" size="xs">{{ $title->name }}</x-ui-badge>
                                                 @endforeach
@@ -113,8 +113,8 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-2">
-                                        @if($c->jobActivities->count() > 0)
-                                            <div class="space-y-1">
+                                        @if($c->jobActivities && $c->jobActivities->count() > 0)
+                                            <div class="flex flex-wrap gap-1">
                                                 @foreach($c->jobActivities as $activity)
                                                     <x-ui-badge variant="secondary" size="xs">{{ $activity->name }}</x-ui-badge>
                                                 @endforeach

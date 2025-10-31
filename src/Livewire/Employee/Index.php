@@ -37,7 +37,7 @@ class Index extends Component
     {
         $query = HcmEmployee::with([
             'employer', 
-            'crmContactLinks.contact',
+            'crmContactLinks.contact.emailAddresses',
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
             },
@@ -52,7 +52,19 @@ class Index extends Component
             $query->orderBy($this->sortField, $this->sortDirection);
         }
 
-        return $query->get();
+        $employees = $query->get();
+        
+        // Stelle sicher, dass alle jobActivities geladen sind
+        foreach ($employees as $employee) {
+            foreach ($employee->contracts as $contract) {
+                // Lade jobActivities nach, falls sie nicht geladen wurden
+                if (!$contract->relationLoaded('jobActivities')) {
+                    $contract->load('jobActivities');
+                }
+            }
+        }
+        
+        return $employees;
     }
 
     #[Computed]
