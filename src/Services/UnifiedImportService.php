@@ -421,51 +421,96 @@ class UnifiedImportService
                             if ($tariffName !== '' && $tariffGroup !== '' && $tariffLevel !== '') {
                                 echo " ($tariffName / $tariffGroup / $tariffLevel)...";
                                 
-                                // Agreement
+                                // Agreement: Suche case-insensitive nach Name, falls nicht gefunden: erstellen
                                 $agreement = HcmTariffAgreement::where('team_id', $teamId)
-                                    ->where('name', $tariffName)
+                                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffName)])
                                     ->first();
                                 if (!$agreement) {
                                     echo " Agreement erstellen...";
-                                    $agreement = HcmTariffAgreement::create([
+                                    // Prüfe ob Code bereits existiert (Code ist global unique, nicht nur team-basiert!)
+                                    $baseCode = 'TA_' . strtoupper(substr(md5($tariffName . '|' . $teamId), 0, 8));
+                                    $code = $baseCode;
+                                    $counter = 1;
+                                    while (HcmTariffAgreement::where('code', $code)->exists()) {
+                                        $code = $baseCode . '_' . $counter++;
+                                    }
+                                    $agreement = new HcmTariffAgreement([
                                         'team_id' => $teamId,
-                                        'code' => 'TA_' . substr(md5($tariffName), 0, 8),
+                                        'code' => $code,
                                         'name' => $tariffName,
                                         'is_active' => true,
                                         'created_by_user_id' => $employer->created_by_user_id,
                                     ]);
-                                    echo " ✓";
+                                    $agreement->save();
+                                    $agreement->refresh();
+                                    echo " ✓ (ID: {$agreement->id}, Code: {$agreement->code})";
+                                } else {
+                                    echo " Agreement gefunden (ID: {$agreement->id}, Code: {$agreement->code})";
                                 }
                                 
-                                // Group
+                                // Group: Suche case-insensitive nach Name innerhalb des Agreements
                                 echo " Group prüfen...";
                                 $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
-                                    ->where('name', $tariffGroup)
+                                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffGroup)])
                                     ->first();
                                 if (!$group) {
+                                    // Prüfe auch nach Code (falls im CSV ein Code übergeben wurde)
+                                    $group = HcmTariffGroup::where('tariff_agreement_id', $agreement->id)
+                                        ->whereRaw('LOWER(code) = ?', [mb_strtolower($tariffGroup)])
+                                        ->first();
+                                }
+                                if (!$group) {
                                     echo " erstellen...";
-                                    $group = HcmTariffGroup::create([
+                                    // Code muss unique sein innerhalb des Agreements (nicht global)
+                                    $baseCode = 'TG_' . strtoupper(substr(md5($agreement->id . '|' . $tariffGroup), 0, 8));
+                                    $code = $baseCode;
+                                    $counter = 1;
+                                    while (HcmTariffGroup::where('tariff_agreement_id', $agreement->id)->where('code', $code)->exists()) {
+                                        $code = $baseCode . '_' . $counter++;
+                                    }
+                                    $group = new HcmTariffGroup([
                                         'tariff_agreement_id' => $agreement->id,
-                                        'code' => 'TG_' . substr(md5($tariffName.'|'.$tariffGroup), 0, 8),
+                                        'code' => $code,
                                         'name' => $tariffGroup,
                                     ]);
-                                    echo " ✓";
+                                    $group->save();
+                                    $group->refresh();
+                                    echo " ✓ (ID: {$group->id}, Code: {$group->code})";
+                                } else {
+                                    echo " gefunden (ID: {$group->id}, Code: {$group->code})";
                                 }
                                 
-                                // Level
+                                // Level: Suche case-insensitive nach Name innerhalb der Group
                                 echo " Level prüfen...";
                                 $level = HcmTariffLevel::where('tariff_group_id', $group->id)
-                                    ->where('name', $tariffLevel)
+                                    ->whereRaw('LOWER(name) = ?', [mb_strtolower($tariffLevel)])
                                     ->first();
                                 if (!$level) {
+                                    // Prüfe auch nach Code (falls im CSV ein Code übergeben wurde)
+                                    $level = HcmTariffLevel::where('tariff_group_id', $group->id)
+                                        ->whereRaw('LOWER(code) = ?', [mb_strtolower($tariffLevel)])
+                                        ->first();
+                                }
+                                if (!$level) {
                                     echo " erstellen...";
-                                    $level = HcmTariffLevel::create([
+                                    // Code muss unique sein innerhalb der Group (nicht global)
+                                    $baseCode = 'TL_' . strtoupper(substr(md5($group->id . '|' . $tariffLevel), 0, 8));
+                                    $code = $baseCode;
+                                    $counter = 1;
+                                    while (HcmTariffLevel::where('tariff_group_id', $group->id)->where('code', $code)->exists()) {
+                                        $code = $baseCode . '_' . $counter++;
+                                    }
+                                    $level = new HcmTariffLevel([
                                         'tariff_group_id' => $group->id,
-                                        'code' => 'TL_' . substr(md5($tariffName.'|'.$tariffGroup.'|'.$tariffLevel), 0, 8),
+                                        'code' => $code,
                                         'name' => $tariffLevel,
                                         'progression_months' => 999,
                                     ]);
-                                    echo " ✓";
+                                    $level->save();
+                                    $level->refresh();
+                                    echo " ✓ (ID: {$level->id}, Code: {$level->code})";
+                                } else {
+                                    echo " gefunden (ID: {$level->id}, Code: {$level->code})";
                                 }
                                 
                                 echo " Vertrag aktualisieren...";

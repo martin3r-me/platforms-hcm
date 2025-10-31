@@ -75,22 +75,18 @@
                                         </div>
                                     </td>
                                     <td class="px-4 py-2">
-                                        <div class="pl-5 space-y-1">
+                                        <div class="pl-5 flex flex-wrap items-center gap-2 text-xs">
                                             @if($c->jobTitles && $c->jobTitles->count() > 0)
-                                                <div class="flex flex-wrap gap-1 mb-1">
-                                                    <span class="text-xs text-[var(--ui-muted)] mr-1">Stelle:</span>
-                                                    @foreach($c->jobTitles as $title)
-                                                        <x-ui-badge variant="secondary" size="xs">{{ $title->name }}</x-ui-badge>
-                                                    @endforeach
-                                                </div>
+                                                <span class="text-[var(--ui-muted)]">Stelle:</span>
+                                                @foreach($c->jobTitles as $title)
+                                                    <x-ui-badge variant="secondary" size="xs">{{ $title->name }}</x-ui-badge>
+                                                @endforeach
                                             @endif
                                             @if($c->jobActivities && $c->jobActivities->count() > 0)
-                                                <div class="flex flex-wrap gap-1">
-                                                    <span class="text-xs text-[var(--ui-muted)] mr-1">Tätigkeiten:</span>
-                                                    @foreach($c->jobActivities as $activity)
-                                                        <x-ui-badge variant="secondary" size="xs">{{ $activity->name }}</x-ui-badge>
-                                                    @endforeach
-                                                </div>
+                                                <span class="text-[var(--ui-muted)] ml-2">Tätigkeiten:</span>
+                                                @foreach($c->jobActivities as $activity)
+                                                    <x-ui-badge variant="secondary" size="xs">{{ $activity->name }}</x-ui-badge>
+                                                @endforeach
                                             @endif
                                         </div>
                                     </td>
