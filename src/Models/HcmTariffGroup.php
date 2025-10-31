@@ -23,7 +23,8 @@ class HcmTariffGroup extends Model
 
     public function tariffLevels(): HasMany
     {
-        return $this->hasMany(HcmTariffLevel::class, 'tariff_group_id');
+        return $this->hasMany(HcmTariffLevel::class, 'tariff_group_id')
+            ->orderByRaw('CAST(code AS UNSIGNED), code');
     }
 
     public function tariffRates(): HasMany

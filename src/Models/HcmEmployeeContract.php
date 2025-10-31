@@ -30,6 +30,7 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'insurance_status_id',
         'pension_type_id',
         'employment_relationship_id',
+        'person_group_id',
         'primary_job_activity_id',
         'schooling_level',
         'vocational_training_level',
@@ -156,6 +157,11 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     public function employmentRelationship()
     {
         return $this->belongsTo(HcmEmploymentRelationship::class, 'employment_relationship_id');
+    }
+
+    public function personGroup()
+    {
+        return $this->belongsTo(HcmPersonGroup::class, 'person_group_id');
     }
 
     public function primaryJobActivity()

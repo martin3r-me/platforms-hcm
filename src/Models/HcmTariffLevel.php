@@ -38,8 +38,8 @@ class HcmTariffLevel extends Model
     {
         return $this->tariffGroup
             ->tariffLevels()
-            ->where('code', '>', $this->code)
-            ->orderBy('code')
+            ->whereRaw('CAST(code AS UNSIGNED) > CAST(? AS UNSIGNED)', [$this->code])
+            ->orderByRaw('CAST(code AS UNSIGNED), code')
             ->first();
     }
 

@@ -28,6 +28,8 @@ class HcmPersonGroupSeeder extends Seeder
             ['code' => '113', 'name' => 'Sabbatical/ohne Entgelt (beschäftigt)'],
             ['code' => '120', 'name' => 'Leiharbeitnehmer (überlassen)'],
             ['code' => '121', 'name' => 'Stammpersonal Verleiher'],
+            ['code' => '901', 'name' => 'Gesellschafter(in)/ Geschäftsführer(in)'],
+            ['code' => '904', 'name' => 'Betriebsrentner'],
         ];
 
         foreach ($items as $i) {

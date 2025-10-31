@@ -30,6 +30,7 @@ class Show extends Component
     public $insurance_status_id;
     public $pension_type_id;
     public $employment_relationship_id;
+    public $person_group_id;
     public $selected_levy_type_ids = [];
     public $schooling_level;
     public $vocational_training_level;
@@ -52,6 +53,7 @@ class Show extends Component
             'insuranceStatus',
             'pensionType',
             'employmentRelationship',
+            'personGroup',
         ]);
         
         $this->loadFormData();
@@ -73,7 +75,8 @@ class Show extends Component
         $this->insurance_status_id = $this->contract->insurance_status_id;
         $this->pension_type_id = $this->contract->pension_type_id;
         $this->employment_relationship_id = $this->contract->employment_relationship_id;
-        $this->selected_levy_type_ids = $this->contract->levyTypes()->pluck('id')->toArray();
+        $this->person_group_id = $this->contract->person_group_id;
+        $this->selected_levy_type_ids = $this->contract->levyTypes->pluck('id')->toArray();
         $this->primary_job_activity_id = $this->contract->primary_job_activity_id;
         $this->schooling_level = $this->contract->schooling_level;
         $this->vocational_training_level = $this->contract->vocational_training_level;
@@ -105,6 +108,7 @@ class Show extends Component
             'insurance_status_id' => 'nullable|exists:hcm_insurance_statuses,id',
             'pension_type_id' => 'nullable|exists:hcm_pension_types,id',
             'employment_relationship_id' => 'nullable|exists:hcm_employment_relationships,id',
+            'person_group_id' => 'nullable|exists:hcm_person_groups,id',
             'selected_levy_type_ids' => 'array',
             'selected_levy_type_ids.*' => 'exists:hcm_levy_types,id',
             'primary_job_activity_id' => 'nullable|exists:hcm_job_activities,id',
@@ -128,6 +132,7 @@ class Show extends Component
             'insurance_status_id' => $this->insurance_status_id,
             'pension_type_id' => $this->pension_type_id,
             'employment_relationship_id' => $this->employment_relationship_id,
+            'person_group_id' => $this->person_group_id,
             'primary_job_activity_id' => $this->primary_job_activity_id,
             'schooling_level' => $this->schooling_level,
             'vocational_training_level' => $this->vocational_training_level,
@@ -155,7 +160,7 @@ class Show extends Component
             return collect();
         }
         return \Platform\Hcm\Models\HcmTariffLevel::where('tariff_group_id', $this->tariff_group_id)
-            ->orderBy('code')
+            ->orderByRaw('CAST(code AS UNSIGNED), code')
             ->get();
     }
 
@@ -182,6 +187,11 @@ class Show extends Component
     public function getLevyTypesProperty()
     {
         return \Platform\Hcm\Models\HcmLevyType::where('team_id', auth()->user()->current_team_id)->orderBy('code')->get();
+    }
+
+    public function getPersonGroupsProperty()
+    {
+        return \Platform\Hcm\Models\HcmPersonGroup::where('team_id', auth()->user()->current_team_id)->orderBy('code')->get();
     }
 
     public function getJobActivitiesProperty()

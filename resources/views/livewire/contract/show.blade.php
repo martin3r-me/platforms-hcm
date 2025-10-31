@@ -212,6 +212,14 @@
                         placeholder="Verhältnis wählen..."
                     />
 
+                    <x-ui-input-select 
+                        name="person_group_id" 
+                        label="Personengruppe"
+                        wire:model="person_group_id"
+                        :options="$this->personGroups->pluck('name', 'id')->toArray()"
+                        placeholder="Personengruppe wählen..."
+                    />
+
                     <div>
                         <div class="text-sm font-medium text-[var(--ui-secondary)] mb-2">Umlagearten</div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -380,6 +388,15 @@
                             {{ optional($contract->employmentRelationship)->name ?? '—' }}
                             @if($contract->employmentRelationship && $contract->employmentRelationship->code)
                                 <span class="text-xs">({{ $contract->employmentRelationship->code }})</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Personengruppe</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            {{ optional($contract->personGroup)->name ?? '—' }}
+                            @if($contract->personGroup && $contract->personGroup->code)
+                                <span class="text-xs">({{ $contract->personGroup->code }})</span>
                             @endif
                         </div>
                     </div>

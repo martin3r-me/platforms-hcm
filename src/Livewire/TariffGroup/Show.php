@@ -11,7 +11,13 @@ class Show extends Component
 
     public function mount(HcmTariffGroup $tariffGroup)
     {
-        $this->tariffGroup = $tariffGroup->load(['tariffAgreement', 'tariffLevels', 'tariffRates']);
+        $this->tariffGroup = $tariffGroup->load([
+            'tariffAgreement', 
+            'tariffLevels' => function($q) {
+                $q->orderByRaw('CAST(code AS UNSIGNED), code');
+            },
+            'tariffRates'
+        ]);
     }
 
     public function getProgressionStatsProperty()

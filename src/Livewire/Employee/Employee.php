@@ -46,11 +46,17 @@ class Employee extends Component
     public function mount(HcmEmployee $employee)
     {
         $this->employee = $employee->load([
-            'crmContactLinks.contact', 
+            'crmContactLinks.contact.emailAddresses',
+            'crmContactLinks.contact.phoneNumbers',
             'employer', 
             'activities',
+            'contracts' => function($q) {
+                $q->orderBy('start_date', 'desc');
+            },
             'contracts.jobTitles',
-            'contracts.jobActivities'
+            'contracts.jobActivities',
+            'contracts.tariffGroup',
+            'contracts.tariffLevel'
         ]);
         
         // Verfügbare Kontakte für Verknüpfung laden

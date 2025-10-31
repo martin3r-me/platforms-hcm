@@ -24,6 +24,10 @@ use Platform\Hcm\Models\HcmTariffAgreement;
 use Platform\Hcm\Models\HcmTariffGroup;
 use Platform\Hcm\Models\HcmTariffLevel;
 use Platform\Hcm\Models\HcmEmployeeBenefit;
+use Platform\Hcm\Models\HcmInsuranceStatus;
+use Platform\Hcm\Models\HcmPensionType;
+use Platform\Hcm\Models\HcmEmploymentRelationship;
+use Platform\Hcm\Models\HcmPersonGroup;
 
 class UnifiedImportService
 {
@@ -437,8 +441,132 @@ class UnifiedImportService
                         }
                         echo " ✓";
 
+                        // Lookup-Matching: VersicherungsStatus, Rentenart, Beschäftigungsverhältnis, Personengruppe
+                        echo "\n      [11/13] Lookup-Daten zuordnen...";
+                        try {
+                            // VersicherungsStatus -> insurance_status_id
+                            $insuranceStatusRaw = trim((string) ($row['VersicherungsStatus'] ?? ''));
+                            if ($insuranceStatusRaw !== '') {
+                                // Versuche zuerst per Name zu matchen
+                                $insuranceStatus = HcmInsuranceStatus::where('team_id', $teamId)
+                                    ->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($insuranceStatusRaw) . '%'])
+                                    ->first();
+                                
+                                if (!$insuranceStatus) {
+                                    // Mapping für häufige Werte
+                                    $statusMapping = [
+                                        'PrivatKrankenversichert' => 'PRIV',
+                                        'Privat krankenversichert' => 'PRIV',
+                                        'Gesetzlich versichert' => '109',
+                                        'Pflichtversichert' => '109',
+                                    ];
+                                    $code = $statusMapping[mb_strtolower($insuranceStatusRaw)] ?? null;
+                                    if ($code) {
+                                        $insuranceStatus = HcmInsuranceStatus::where('team_id', $teamId)
+                                            ->where('code', $code)
+                                            ->first();
+                                    }
+                                }
+                                
+                                if ($insuranceStatus) {
+                                    $contract->insurance_status_id = $insuranceStatus->id;
+                                    echo " [VersicherungsStatus: {$insuranceStatus->name}]";
+                                }
+                            }
+                            
+                            // AbfuehrungAVRV -> pension_type_id (mapping: "Ja" = Beitragspflicht, "Nein" = keine)
+                            // Note: AbfuehrungAVRV ist eher ein Flag, aber wir können es als Rentenart interpretieren
+                            // Da wir aktuell keine "Keine Abführung" Option haben, setzen wir es optional
+                            
+                            // Beschäftigungsverhältnis -> employment_relationship_id
+                            $employmentRaw = trim((string) ($row['Beschäftigungsverhältnis'] ?? ''));
+                            if ($employmentRaw !== '') {
+                                // Versuche zuerst per Code zu matchen (falls numerisch wie "1")
+                                $employment = HcmEmploymentRelationship::where('team_id', $teamId)
+                                    ->where('code', $employmentRaw)
+                                    ->first();
+                                
+                                if (!$employment) {
+                                    // Mapping für häufige Werte
+                                    $employmentMapping = [
+                                        '1' => 'FT',
+                                        '2' => 'PT',
+                                        'Vollzeit' => 'FT',
+                                        'Teilzeit' => 'PT',
+                                        'Minijob' => 'MINI',
+                                        'Ausbildung' => 'AUSB',
+                                    ];
+                                    $code = $employmentMapping[$employmentRaw] ?? ($employmentMapping[mb_strtolower($employmentRaw)] ?? null);
+                                    if ($code) {
+                                        $employment = HcmEmploymentRelationship::where('team_id', $teamId)
+                                            ->where('code', $code)
+                                            ->first();
+                                    }
+                                }
+                                
+                                if (!$employment) {
+                                    // Versuche per Name zu matchen
+                                    $employment = HcmEmploymentRelationship::where('team_id', $teamId)
+                                        ->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($employmentRaw) . '%'])
+                                        ->first();
+                                }
+                                
+                                if ($employment) {
+                                    $contract->employment_relationship_id = $employment->id;
+                                    echo " [Beschäftigungsverhältnis: {$employment->name}]";
+                                }
+                            }
+                            
+                            // GruppeID/Gruppename -> person_group_id
+                            $groupCode = trim((string) ($row['GruppeID'] ?? ''));
+                            $groupName = trim((string) ($row['Gruppename'] ?? ''));
+                            
+                            $personGroup = null;
+                            if ($groupCode !== '') {
+                                // Suche zuerst per Code
+                                $personGroup = HcmPersonGroup::where('team_id', $teamId)
+                                    ->where('code', $groupCode)
+                                    ->first();
+                            }
+                            
+                            if (!$personGroup && $groupName !== '') {
+                                // Fallback: Suche per Name
+                                $personGroup = HcmPersonGroup::where('team_id', $teamId)
+                                    ->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($groupName) . '%'])
+                                    ->first();
+                            }
+                            
+                            if (!$personGroup && ($groupCode !== '' || $groupName !== '')) {
+                                // Erstelle neue Personengruppe falls nicht vorhanden
+                                $createName = $groupName ?: ('Gruppe ' . $groupCode);
+                                $createCode = $groupCode ?: ('PG_' . substr(md5($createName), 0, 8));
+                                $personGroup = HcmPersonGroup::create([
+                                    'team_id' => $teamId,
+                                    'code' => $createCode,
+                                    'name' => $createName,
+                                    'is_active' => true,
+                                    'created_by_user_id' => $employer->created_by_user_id,
+                                ]);
+                                $stats['lookups_created']++;
+                                echo " [Personengruppe erstellt: {$personGroup->name}]";
+                            }
+                            
+                            if ($personGroup) {
+                                $contract->person_group_id = $personGroup->id;
+                                if (!$personGroup->wasRecentlyCreated) {
+                                    echo " [Personengruppe: {$personGroup->name}]";
+                                }
+                            }
+                            
+                            $contract->saveQuietly();
+                            echo " ✓";
+                        } catch (\Exception $e) {
+                            echo " FEHLER: " . $e->getMessage();
+                            $stats['errors'][] = "Lookup-Matching Fehler für {$employee->employee_number}: " . $e->getMessage();
+                        }
+
                         // Health insurance by IK
-                        echo "\n      [11/12] Krankenkasse verknüpfen...";
+                        echo "\n      [12/13] Krankenkasse verknüpfen...";
                         $ik = trim((string) ($row['KrankenkasseBetriebsnummer'] ?? ''));
                         if ($ik !== '') {
                             // Suche zuerst per ik_number, dann per code (für Seeder-Daten, die code = IK setzen)
@@ -471,7 +599,7 @@ class UnifiedImportService
                         }
 
                         // Tariff mapping
-                        echo "\n      [12/12] Tarif-Mapping...";
+                        echo "\n      [13/13] Tarif-Mapping...";
                         try {
                             $tariffName = trim((string) ($row['Tarif'] ?? ''));
                             $tariffGroupRaw = trim((string) ($row['Tarifgruppe'] ?? ''));

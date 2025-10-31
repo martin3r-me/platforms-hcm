@@ -19,10 +19,67 @@
         </x-ui-page-navbar>
     </x-slot>
 
-    <x-ui-page-container>
-        <!-- Mitarbeiter-Daten -->
-        <div class="mb-8">
-            <h3 class="text-lg font-semibold mb-4 text-[var(--ui-secondary)]">Mitarbeiter-Daten</h3>
+    <x-ui-page-container spacing="space-y-8">
+        {{-- Modern Header --}}
+        @php
+            $primaryContact = $employee->crmContactLinks->first()?->contact;
+            $primaryEmail = $primaryContact?->emailAddresses->first()?->email_address;
+            $primaryPhone = $primaryContact?->phoneNumbers->first()?->phone_number;
+            $birthDate = $primaryContact?->birth_date ?? $employee->birth_date;
+        @endphp
+        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
+            <div class="flex items-start justify-between mb-6">
+                <div class="flex-1 min-w-0">
+                    <h1 class="text-3xl font-bold text-[var(--ui-secondary)] mb-4 tracking-tight">
+                        {{ $primaryContact?->full_name ?? 'Mitarbeiter #' . $employee->employee_number }}
+                    </h1>
+                    <div class="flex items-center gap-6 text-sm text-[var(--ui-muted)] flex-wrap">
+                        <span class="flex items-center gap-2">
+                            @svg('heroicon-o-identification', 'w-4 h-4')
+                            <span class="font-medium text-[var(--ui-secondary)]">Mitarbeiternummer:</span>
+                            {{ $employee->employee_number }}
+                        </span>
+                        @if($employee->employer)
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-building-office', 'w-4 h-4')
+                                {{ $employee->employer->display_name }}
+                            </span>
+                        @endif
+                        @if($birthDate)
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-cake', 'w-4 h-4')
+                                {{ \Carbon\Carbon::parse($birthDate)->format('d.m.Y') }}
+                                <span class="text-xs">({{ \Carbon\Carbon::parse($birthDate)->age }} Jahre)</span>
+                            </span>
+                        @endif
+                        @if($primaryEmail)
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-envelope', 'w-4 h-4')
+                                {{ $primaryEmail }}
+                            </span>
+                        @endif
+                        @if($primaryPhone)
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-phone', 'w-4 h-4')
+                                {{ $primaryPhone }}
+                            </span>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <x-ui-badge variant="{{ $employee->is_active ? 'success' : 'secondary' }}" size="lg">
+                        {{ $employee->is_active ? 'Aktiv' : 'Inaktiv' }}
+                    </x-ui-badge>
+                </div>
+            </div>
+        </div>
+
+        {{-- Mitarbeiter-Daten --}}
+        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
+            <div class="flex items-center gap-2 mb-6">
+                @svg('heroicon-o-identification', 'w-6 h-6 text-blue-600')
+                <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Mitarbeiter-Daten</h2>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <x-ui-input-text 
                     name="employee.employee_number"
@@ -109,181 +166,211 @@
             @endif
         </x-ui-panel>
 
-        <!-- Verträge -->
-        <x-ui-panel title="Verträge" subtitle="Arbeitsverträge und Beschäftigungsverhältnisse">
+        {{-- Verträge --}}
+        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-2">
+                    @svg('heroicon-o-document-text', 'w-6 h-6 text-indigo-600')
+                    <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Verträge</h2>
+                </div>
+                <x-ui-button variant="primary" size="sm" wire:click="addContract">
+                    @svg('heroicon-o-plus', 'w-4 h-4')
+                    Neuer Vertrag
+                </x-ui-button>
+            </div>
+            
             @if($employee->contracts->count() > 0)
-                <div class="space-y-4">
+                <div class="space-y-6">
                     @foreach($employee->contracts as $contract)
-                        <div class="flex items-center justify-between p-4 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
-                            <div class="flex items-center gap-4">
-                                <div class="w-10 h-10 bg-[var(--ui-primary)] text-[var(--ui-on-primary)] rounded-lg flex items-center justify-center">
-                                    @svg('heroicon-o-document-text', 'w-5 h-5')
-                                </div>
-                                <div>
-                                    <h4 class="font-medium text-[var(--ui-secondary)]">
-                                        Vertrag #{{ $contract->id }}
-                                    </h4>
-                                    <div class="text-sm text-[var(--ui-muted)] space-y-1">
-                                        @if($contract->start_date)
-                                            <div><strong>Start:</strong> {{ \Carbon\Carbon::parse($contract->start_date)->format('d.m.Y') }}</div>
-                                        @endif
-                                        @if($contract->end_date)
-                                            <div><strong>Ende:</strong> {{ \Carbon\Carbon::parse($contract->end_date)->format('d.m.Y') }}</div>
-                                        @endif
-                                        @if($contract->jobTitles->count() > 0)
-                                            <div><strong>Stelle:</strong> {{ $contract->jobTitles->first()->name }}</div>
-                                        @endif
-                                        @if($contract->cost_center)
-                                            <div><strong>Kostenstelle:</strong> {{ $contract->cost_center }}</div>
-                                        @endif
-                                        
-                                        <!-- Tarif-Informationen -->
-                                        <div class="mt-2 pt-2 border-t border-[var(--ui-border)]/20">
-                                            <div class="flex items-center gap-2 mb-2">
-                                                @svg('heroicon-o-currency-euro', 'w-4 h-4 text-blue-600')
-                                                <span class="font-medium text-blue-700">Vergütung</span>
-                                            </div>
-                                            
-                                            <!-- Bezahlungsart -->
-                                            <div class="mb-2">
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium 
-                                                    @if($contract->is_minimum_wage) bg-yellow-100 text-yellow-800
-                                                    @elseif($contract->is_above_tariff) bg-purple-100 text-purple-800
-                                                    @elseif($contract->tariffGroup) bg-blue-100 text-blue-800
-                                                    @else bg-gray-100 text-gray-800 @endif">
-                                                    {{ $contract->getSalaryTypeDescription() }}
+                        @php
+                            $tariffInfo = $contract->tariffGroup && $contract->tariffLevel 
+                                ? $contract->tariffGroup->code . '/' . $contract->tariffLevel->code 
+                                : null;
+                            $isActive = !$contract->end_date || \Carbon\Carbon::parse($contract->end_date)->isFuture();
+                            $isExpired = $contract->end_date && \Carbon\Carbon::parse($contract->end_date)->isPast();
+                        @endphp
+                        <div class="border border-[var(--ui-border)]/60 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                            {{-- Vertrag Header --}}
+                            <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 border-b border-[var(--ui-border)]/60">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-3 mb-2">
+                                            <h3 class="text-xl font-bold text-[var(--ui-secondary)]">
+                                                <a href="{{ route('hcm.contracts.show', $contract) }}" 
+                                                   class="hover:text-indigo-600 transition-colors"
+                                                   wire:navigate>
+                                                    Vertrag #{{ $contract->id }}
+                                                </a>
+                                            </h3>
+                                            @if($isExpired)
+                                                <x-ui-badge variant="danger" size="sm">Beendet</x-ui-badge>
+                                            @elseif($contract->end_date && !$isExpired)
+                                                <x-ui-badge variant="warning" size="sm">Läuft aus</x-ui-badge>
+                                            @else
+                                                <x-ui-badge variant="success" size="sm">Aktiv</x-ui-badge>
+                                            @endif
+                                            @if($contract->is_above_tariff)
+                                                <x-ui-badge variant="warning" size="sm">Übertariflich</x-ui-badge>
+                                            @endif
+                                            @if($contract->is_temp_agency)
+                                                <x-ui-badge variant="info" size="sm">Leiharbeit</x-ui-badge>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-6 text-sm text-[var(--ui-muted)] flex-wrap">
+                                            @if($contract->start_date)
+                                                <span class="flex items-center gap-1">
+                                                    @svg('heroicon-o-calendar-days', 'w-4 h-4')
+                                                    Start: {{ $contract->start_date->format('d.m.Y') }}
                                                 </span>
-                                            </div>
-
-                                            <!-- Tarifliche Zuordnung -->
-                                            @if($contract->tariffGroup || $contract->tariffLevel)
-                                                <div class="space-y-1 mb-2">
-                                                    @if($contract->tariffGroup)
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                                {{ $contract->tariffGroup->code }}
-                                                            </span>
-                                                            <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffGroup->name }}</span>
-                                                        </div>
-                                                    @endif
-                                                    @if($contract->tariffLevel)
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                                                Stufe {{ $contract->tariffLevel->code }}
-                                                            </span>
-                                                            <span class="text-xs text-[var(--ui-muted)]">{{ $contract->tariffLevel->name }}</span>
-                                                        </div>
-                                                    @endif
-                                                </div>
                                             @endif
-
-                                            <!-- Übertarifliche Bezahlung -->
-                                            @if($contract->is_above_tariff && $contract->above_tariff_amount)
-                                                <div class="mb-2 p-2 bg-purple-50 rounded border border-purple-200">
-                                                    <div class="text-xs font-medium text-purple-700 mb-1">Übertariflich</div>
-                                                    <div class="text-sm font-medium text-purple-600">
-                                                        +{{ number_format((float)$contract->above_tariff_amount, 2, ',', '.') }} €
-                                                    </div>
-                                                    @if($contract->above_tariff_reason)
-                                                        <div class="text-xs text-purple-600 mt-1">{{ $contract->above_tariff_reason }}</div>
-                                                    @endif
-                                                </div>
+                                            @if($contract->end_date)
+                                                <span class="flex items-center gap-1">
+                                                    @svg('heroicon-o-calendar-days', 'w-4 h-4')
+                                                    Ende: {{ $contract->end_date->format('d.m.Y') }}
+                                                </span>
+                                            @else
+                                                <span class="flex items-center gap-1 text-green-600 font-medium">
+                                                    @svg('heroicon-o-check-circle', 'w-4 h-4')
+                                                    Unbefristet
+                                                </span>
                                             @endif
-
-                                            <!-- Mindestlohn -->
-                                            @if($contract->is_minimum_wage)
-                                                <div class="mb-2 p-2 bg-yellow-50 rounded border border-yellow-200">
-                                                    <div class="text-xs font-medium text-yellow-700 mb-1">Mindestlohn</div>
-                                                    <div class="text-sm font-medium text-yellow-600">
-                                                        {{ number_format((float)$contract->minimum_wage_hourly_rate, 2, ',', '.') }} €/h
-                                                    </div>
-                                                    <div class="text-xs text-yellow-600">
-                                                        {{ $contract->minimum_wage_monthly_hours }}h/Monat
-                                                    </div>
-                                                </div>
+                                            @if($contract->hours_per_month)
+                                                <span class="flex items-center gap-1">
+                                                    @svg('heroicon-o-clock', 'w-4 h-4')
+                                                    {{ $contract->hours_per_month }}h/Monat
+                                                </span>
                                             @endif
-
-                                            <!-- Aktueller Tarifsatz -->
-                                            @if($contract->getCurrentTariffRate())
-                                                <div class="mb-2">
-                                                    <div class="text-sm font-medium text-green-600">
-                                                        {{ number_format((float)$contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
-                                                    </div>
-                                                    <div class="text-xs text-[var(--ui-muted)]">Tarifsatz</div>
-                                                </div>
-                                            @endif
-
-                                            <!-- Effektives Monatsgehalt -->
-                                            <div class="mb-2 p-2 bg-green-50 rounded border border-green-200">
-                                                <div class="text-xs font-medium text-green-700 mb-1">Gesamtgehalt</div>
-                                                <div class="text-lg font-bold text-green-600">
-                                                    {{ number_format((float)$contract->getEffectiveMonthlySalary(), 2, ',', '.') }} €
-                                                </div>
-                                                <div class="text-xs text-green-600">effektiv/Monat</div>
-                                            </div>
-
-                                            <!-- Progression -->
-                                            @if($contract->next_tariff_level_date)
-                                                <div class="mt-2">
-                                                    <div class="text-xs text-[var(--ui-muted)]">
-                                                        Nächste Progression: {{ \Carbon\Carbon::parse($contract->next_tariff_level_date)->format('d.m.Y') }}
-                                                    </div>
-                                                </div>
+                                            @if($tariffInfo)
+                                                <span class="flex items-center gap-1 text-blue-600 font-medium">
+                                                    @svg('heroicon-o-currency-euro', 'w-4 h-4')
+                                                    Tarif: {{ $tariffInfo }}
+                                                </span>
                                             @endif
                                         </div>
                                     </div>
+                                    <div class="flex items-center gap-2">
+                                        <x-ui-button 
+                                            size="sm" 
+                                            variant="primary-outline" 
+                                            :href="route('hcm.contracts.show', $contract)"
+                                            wire:navigate
+                                        >
+                                            @svg('heroicon-o-arrow-right', 'w-4 h-4')
+                                            Details
+                                        </x-ui-button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                @if($contract->end_date && \Carbon\Carbon::parse($contract->end_date)->isPast())
-                                    <x-ui-badge variant="danger" size="sm">Beendet</x-ui-badge>
-                                @elseif($contract->end_date && \Carbon\Carbon::parse($contract->end_date)->isFuture())
-                                    <x-ui-badge variant="warning" size="sm">Läuft aus</x-ui-badge>
-                                @else
-                                    <x-ui-badge variant="success" size="sm">Aktiv</x-ui-badge>
-                                @endif
-                                <x-ui-button 
-                                    size="sm" 
-                                    variant="secondary-outline" 
-                                    :href="route('hcm.contracts.show', $contract)"
-                                    wire:navigate
-                                >
-                                    @svg('heroicon-o-eye', 'w-4 h-4')
-                                </x-ui-button>
-                                <x-ui-button 
-                                    size="sm" 
-                                    variant="secondary-outline" 
-                                    wire:click="editContract({{ $contract->id }})"
-                                >
-                                    @svg('heroicon-o-pencil', 'w-4 h-4')
-                                </x-ui-button>
+                            
+                            {{-- Vertrag Details --}}
+                            <div class="p-6 space-y-4">
+                                {{-- Stellen & Tätigkeiten --}}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    @if($contract->jobTitles->count() > 0)
+                                        <div>
+                                            <div class="text-xs font-semibold text-[var(--ui-muted)] uppercase mb-2">Stellenbezeichnungen</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($contract->jobTitles as $title)
+                                                    <x-ui-badge variant="secondary" size="sm">{{ $title->name }}</x-ui-badge>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                    @if($contract->jobActivities->count() > 0)
+                                        <div>
+                                            <div class="text-xs font-semibold text-[var(--ui-muted)] uppercase mb-2">Tätigkeiten</div>
+                                            <div class="flex flex-wrap gap-2">
+                                                @foreach($contract->jobActivities as $activity)
+                                                    <x-ui-badge variant="info" size="sm">
+                                                        {{ $activity->code ?? '' }} {{ $activity->name }}
+                                                    </x-ui-badge>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                                
+                                {{-- Vergütungs-Übersicht --}}
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[var(--ui-border)]/60">
+                                    {{-- Gesamtgehalt --}}
+                                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                        <div class="text-xs font-medium text-green-700 mb-1">Gesamtgehalt</div>
+                                        <div class="text-2xl font-bold text-green-600">
+                                            {{ number_format($contract->getEffectiveMonthlySalary(), 2, ',', '.') }} €
+                                        </div>
+                                        <div class="text-xs text-green-600">effektiv/Monat</div>
+                                    </div>
+                                    
+                                    {{-- Tarifsatz --}}
+                                    @if($contract->getCurrentTariffRate())
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <div class="text-xs font-medium text-blue-700 mb-1">Tarifsatz</div>
+                                            <div class="text-xl font-bold text-blue-600">
+                                                {{ number_format((float)$contract->getCurrentTariffRate()->amount, 2, ',', '.') }} €
+                                            </div>
+                                            <div class="text-xs text-blue-600">Grundgehalt</div>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Übertariflich --}}
+                                    @if($contract->is_above_tariff && $contract->above_tariff_amount)
+                                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                            <div class="text-xs font-medium text-purple-700 mb-1">Übertariflich</div>
+                                            <div class="text-xl font-bold text-purple-600">
+                                                +{{ number_format((float)$contract->above_tariff_amount, 2, ',', '.') }} €
+                                            </div>
+                                            <div class="text-xs text-purple-600">Zulage</div>
+                                        </div>
+                                    @endif
+                                    
+                                    {{-- Urlaub --}}
+                                    @if($contract->vacation_entitlement !== null)
+                                        <div class="bg-teal-50 border border-teal-200 rounded-lg p-4">
+                                            <div class="text-xs font-medium text-teal-700 mb-1">Urlaub</div>
+                                            <div class="text-xl font-bold text-teal-600">
+                                                {{ $contract->vacation_entitlement }} Tage
+                                            </div>
+                                            @if($contract->vacation_taken !== null)
+                                                <div class="text-xs text-teal-600">
+                                                    {{ $contract->vacation_taken }} genommen
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
+                                
+                                {{-- Zusatzinfos --}}
+                                <div class="flex flex-wrap gap-2 pt-2 text-xs">
+                                    @if($contract->probation_end_date)
+                                        <span class="px-2 py-1 bg-purple-50 text-purple-700 rounded">Probezeit bis {{ $contract->probation_end_date->format('d.m.Y') }}</span>
+                                    @endif
+                                    @if($contract->company_car_enabled)
+                                        <span class="px-2 py-1 bg-blue-50 text-blue-700 rounded flex items-center gap-1">
+                                            @svg('heroicon-o-truck', 'w-3 h-3') Dienstwagen
+                                        </span>
+                                    @endif
+                                    @if($contract->cost_center_id)
+                                        <span class="px-2 py-1 bg-gray-50 text-gray-700 rounded">Kostenstelle: {{ optional($contract->costCenter)->name ?? $contract->cost_center }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
-                        
-                        @if($contract->jobActivities->count() > 0)
-                            <div class="ml-14">
-                                <h5 class="text-sm font-medium text-[var(--ui-secondary)] mb-2">Tätigkeiten:</h5>
-                                <div class="flex flex-wrap gap-2">
-                                    @foreach($contract->jobActivities as $activity)
-                                        <x-ui-badge variant="secondary" size="sm">{{ $activity->name }}</x-ui-badge>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
                     @endforeach
                 </div>
             @else
-                <div class="text-center py-8">
-                    @svg('heroicon-o-document-text', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
-                    <h4 class="text-lg font-medium text-[var(--ui-secondary)] mb-2">Keine Verträge vorhanden</h4>
-                    <p class="text-[var(--ui-muted)] mb-4">Dieser Mitarbeiter hat noch keine Arbeitsverträge.</p>
-                    <x-ui-button variant="secondary" wire:click="addContract">
-                        @svg('heroicon-o-plus', 'w-4 h-4')
-                        Neuen Vertrag erstellen
-                    </x-ui-button>
+                <div class="text-center py-12">
+                    <div class="flex flex-col items-center justify-center">
+                        @svg('heroicon-o-document-text', 'w-16 h-16 text-[var(--ui-muted)] mb-4')
+                        <div class="text-lg font-medium text-[var(--ui-secondary)] mb-1">Keine Verträge vorhanden</div>
+                        <div class="text-sm text-[var(--ui-muted)] mb-4">Dieser Mitarbeiter hat noch keine Arbeitsverträge.</div>
+                        <x-ui-button variant="primary" wire:click="addContract">
+                            @svg('heroicon-o-plus', 'w-4 h-4')
+                            Neuen Vertrag erstellen
+                        </x-ui-button>
+                    </div>
                 </div>
             @endif
-        </x-ui-panel>
+        </div>
 
         <!-- Arbeitgeber-Informationen -->
         <x-ui-panel title="Arbeitgeber" subtitle="Zugewiesener Arbeitgeber und Vertragshinweise">
