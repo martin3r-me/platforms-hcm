@@ -269,25 +269,40 @@
                 {{-- Tätigkeitsschlüssel Komplettansicht --}}
                 @php
                     $activityKeyParts = [];
-                    if ($contract->primaryJobActivity) {
-                        $activityKeyParts[0] = $contract->primaryJobActivity->code;
+                    $fullActivityKey = '';
+                    
+                    // Stellen 1-5: Tätigkeit (muss 5-stellig sein)
+                    $activityCode = '';
+                    if ($contract->primaryJobActivity && $contract->primaryJobActivity->code) {
+                        $activityCode = str_pad((string)$contract->primaryJobActivity->code, 5, '0', STR_PAD_LEFT);
+                    } elseif ($contract->jobActivities->first() && $contract->jobActivities->first()->code) {
+                        // Fallback: erste verknüpfte Tätigkeit
+                        $activityCode = str_pad((string)$contract->jobActivities->first()->code, 5, '0', STR_PAD_LEFT);
                     }
-                    if ($contract->schooling_level) {
-                        $activityKeyParts[1] = $contract->schooling_level;
+                    
+                    // Stelle 6: Schulabschluss
+                    $schoolingLevel = $contract->schooling_level ? (string)$contract->schooling_level : '0';
+                    
+                    // Stelle 7: Berufsausbildung
+                    $vocationalLevel = $contract->vocational_training_level ? (string)$contract->vocational_training_level : '0';
+                    
+                    // Stelle 8: Leiharbeit (0 oder 1)
+                    $tempAgency = $contract->is_temp_agency ? '1' : '0';
+                    
+                    // Stelle 9: Vertragsform
+                    $contractForm = $contract->contract_form ? (string)$contract->contract_form : '0';
+                    
+                    // Zusammensetzen: nur wenn alle Teile vorhanden sind
+                    if ($activityCode !== '' || $schoolingLevel !== '0' || $vocationalLevel !== '0' || $tempAgency !== '0' || $contractForm !== '0') {
+                        // Stelle sicher, dass activityCode 5-stellig ist
+                        if ($activityCode === '') {
+                            $activityCode = '00000';
+                        }
+                        $fullActivityKey = $activityCode . $schoolingLevel . $vocationalLevel . $tempAgency . $contractForm;
                     }
-                    if ($contract->vocational_training_level) {
-                        $activityKeyParts[2] = $contract->vocational_training_level;
-                    }
-                    if ($contract->is_temp_agency) {
-                        $activityKeyParts[3] = '1';
-                    }
-                    if ($contract->contract_form) {
-                        $activityKeyParts[4] = $contract->contract_form;
-                    }
-                    $fullActivityKey = implode('', $activityKeyParts);
                 @endphp
                 
-                @if(count($activityKeyParts) > 0)
+                @if($fullActivityKey !== '' && strlen($fullActivityKey) >= 9)
                     <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <div class="flex items-center gap-2 mb-2">
                             @svg('heroicon-o-key', 'w-5 h-5 text-blue-600')
@@ -298,37 +313,64 @@
                             <div class="text-xs text-blue-600">(9-stellig)</div>
                         </div>
                         <div class="mt-3 grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
-                            @if($contract->primaryJobActivity)
+                            @php
+                                $primaryActivity = $contract->primaryJobActivity ?: $contract->jobActivities->first();
+                            @endphp
+                            @if($primaryActivity)
                                 <div class="bg-white rounded p-2">
                                     <div class="font-semibold text-blue-700">Stellen 1-5</div>
-                                    <div class="text-blue-600">{{ $contract->primaryJobActivity->code }}</div>
-                                    <div class="text-[var(--ui-muted)] mt-1">{{ $contract->primaryJobActivity->name }}</div>
+                                    <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 0, 5) }}</div>
+                                    <div class="text-[var(--ui-muted)] mt-1">{{ $primaryActivity->name }}</div>
+                                </div>
+                            @else
+                                <div class="bg-white rounded p-2">
+                                    <div class="font-semibold text-blue-700">Stellen 1-5</div>
+                                    <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 0, 5) }}</div>
+                                    <div class="text-[var(--ui-muted)] mt-1">Tätigkeit nicht gefunden</div>
                                 </div>
                             @endif
                             @if($contract->schooling_level)
                                 <div class="bg-white rounded p-2">
                                     <div class="font-semibold text-blue-700">Stelle 6</div>
-                                    <div class="text-blue-600">{{ $contract->schooling_level }}</div>
+                                    <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 5, 1) }}</div>
                                     <div class="text-[var(--ui-muted)] mt-1">{{ $this->schoolingLevelOptions[$contract->schooling_level] ?? '—' }}</div>
+                                </div>
+                            @else
+                                <div class="bg-white rounded p-2">
+                                    <div class="font-semibold text-blue-700">Stelle 6</div>
+                                    <div class="text-blue-600 font-mono">0</div>
+                                    <div class="text-[var(--ui-muted)] mt-1">—</div>
                                 </div>
                             @endif
                             @if($contract->vocational_training_level)
                                 <div class="bg-white rounded p-2">
                                     <div class="font-semibold text-blue-700">Stelle 7</div>
-                                    <div class="text-blue-600">{{ $contract->vocational_training_level }}</div>
+                                    <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 6, 1) }}</div>
                                     <div class="text-[var(--ui-muted)] mt-1">{{ $this->vocationalTrainingLevelOptions[$contract->vocational_training_level] ?? '—' }}</div>
+                                </div>
+                            @else
+                                <div class="bg-white rounded p-2">
+                                    <div class="font-semibold text-blue-700">Stelle 7</div>
+                                    <div class="text-blue-600 font-mono">0</div>
+                                    <div class="text-[var(--ui-muted)] mt-1">—</div>
                                 </div>
                             @endif
                             <div class="bg-white rounded p-2">
                                 <div class="font-semibold text-blue-700">Stelle 8</div>
-                                <div class="text-blue-600">{{ $contract->is_temp_agency ? '1' : '0' }}</div>
+                                <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 7, 1) }}</div>
                                 <div class="text-[var(--ui-muted)] mt-1">{{ $contract->is_temp_agency ? 'Leiharbeit' : 'Normal' }}</div>
                             </div>
                             @if($contract->contract_form)
                                 <div class="bg-white rounded p-2">
                                     <div class="font-semibold text-blue-700">Stelle 9</div>
-                                    <div class="text-blue-600">{{ $contract->contract_form }}</div>
+                                    <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 8, 1) }}</div>
                                     <div class="text-[var(--ui-muted)] mt-1">{{ $this->contractFormOptions[$contract->contract_form] ?? '—' }}</div>
+                                </div>
+                            @else
+                                <div class="bg-white rounded p-2">
+                                    <div class="font-semibold text-blue-700">Stelle 9</div>
+                                    <div class="text-blue-600 font-mono">0</div>
+                                    <div class="text-[var(--ui-muted)] mt-1">—</div>
                                 </div>
                             @endif
                         </div>
@@ -397,6 +439,20 @@
                             {{ optional($contract->personGroup)->name ?? '—' }}
                             @if($contract->personGroup && $contract->personGroup->code)
                                 <span class="text-xs">({{ $contract->personGroup->code }})</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Kinder</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            @php
+                                $primaryContact = $contract->employee->crmContactLinks->first()?->contact;
+                                $childrenCount = $contract->employee->children_count ?? ($primaryContact?->attributes['children_count'] ?? null);
+                            @endphp
+                            @if($childrenCount !== null && $childrenCount > 0)
+                                {{ $childrenCount }} {{ $childrenCount === 1 ? 'Kind' : 'Kinder' }}
+                            @else
+                                —
                             @endif
                         </div>
                     </div>
@@ -565,6 +621,12 @@
                             <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
                                 <span class="text-sm font-medium text-indigo-700">Tage/Woche</span>
                                 <span class="text-lg font-bold text-indigo-600">{{ $contract->work_days_per_week }}</span>
+                            </div>
+                        @endif
+                        @if($contract->calendar_work_days)
+                            <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                                <span class="text-sm font-medium text-indigo-700">Kalendarische Tage</span>
+                                <span class="text-sm font-medium text-indigo-600">{{ $contract->calendar_work_days }}</span>
                             </div>
                         @endif
                         @if($contract->wage_base_type)

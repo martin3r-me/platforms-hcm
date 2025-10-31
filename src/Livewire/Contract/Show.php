@@ -42,6 +42,7 @@ class Show extends Component
     {
         $this->contract = $contract->load([
             'employee',
+            'employee.crmContactLinks.contact',
             'tariffGroup',
             'tariffLevel',
             'tariffProgressions.fromTariffLevel',

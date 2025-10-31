@@ -272,6 +272,7 @@ class UnifiedImportService
 
                     $hoursPerMonth = $this->toFloat($row['Wochenstunden'] ?? null) ? $this->toFloat($row['Wochenstunden']) * 4.333 : null;
                     $workDaysPerWeek = $this->toFloat($row['ArbeitstageWoche'] ?? null);
+                    $calendarWorkDays = trim((string) ($row['KalendarischeArbeitstage'] ?? ''));
 
                     $contractData = [
                         'start_date' => $start,
@@ -282,6 +283,7 @@ class UnifiedImportService
                         'is_active' => $isActive,
                         'cost_center_id' => isset($cc) && $cc ? $cc->id : null,
                         'work_days_per_week' => $workDaysPerWeek,
+                        'calendar_work_days' => $calendarWorkDays ?: null,
                         // SV-Nummer
                         'social_security_number' => $row['VersicherungsNr'] ?? null,
                         'wage_base_type' => $row['Lohngrundart'] ?? null,
@@ -365,15 +367,97 @@ class UnifiedImportService
                         if (strlen($activityKey) >= 9) {
                             echo " (Tätigkeitsschlüssel: $activityKey)";
                             
-                            // Stellen 1-5: Tätigkeit (Code) - verknüpfe mit HcmJobActivity
+                            // Stellen 1-5: Tätigkeit (Code) - verknüpfe mit HcmJobActivity und setze als primary
                             $activityCode = substr($activityKey, 0, 5);
                             $activity = HcmJobActivity::where('team_id', $teamId)->where('code', $activityCode)->first();
+                            
+                            // Name aus Taetigkeitsbez verwenden
+                            $activityName = trim((string) ($row['Taetigkeitsbez'] ?? ''));
+                            if ($activityName === '') {
+                                $activityName = 'Tätigkeit ' . $activityCode; // Fallback
+                            }
+                            
+                            // Wenn Tätigkeit nicht per Code gefunden: Suche in bestehenden Aliasen
+                            if (!$activity && $activityCode !== '' && $activityCode !== '00000') {
+                                // Suche zuerst nach bereits vorhandenen Aliasen mit diesem Code
+                                $alias = HcmJobActivityAlias::where('team_id', $teamId)
+                                    ->where('alias', $activityCode)
+                                    ->first();
+                                
+                                if ($alias) {
+                                    $activity = HcmJobActivity::find($alias->job_activity_id);
+                                    echo " [Tätigkeit via Alias gefunden: $activityCode -> {$activity->code} ({$activity->name})]";
+                                }
+                            }
+                            
+                            // Wenn immer noch nicht gefunden: Suche nach Name in Aliasen
+                            if (!$activity && $activityName !== '' && $activityCode !== '00000') {
+                                $alias = HcmJobActivityAlias::where('team_id', $teamId)
+                                    ->whereRaw('LOWER(alias) = ?', [mb_strtolower($activityName)])
+                                    ->first();
+                                
+                                if ($alias) {
+                                    $activity = HcmJobActivity::find($alias->job_activity_id);
+                                    echo " [Tätigkeit via Name-Alias gefunden: $activityName -> {$activity->code} ({$activity->name})]";
+                                }
+                            }
+                            
+                            // Wenn nicht gefunden, erstelle sie automatisch mit richtigem Namen
+                            if (!$activity && $activityCode !== '' && $activityCode !== '00000') {
+                                $activity = HcmJobActivity::create([
+                                    'team_id' => $teamId,
+                                    'code' => $activityCode,
+                                    'name' => $activityName,
+                                    'is_active' => true,
+                                    'created_by_user_id' => $employer->created_by_user_id,
+                                ]);
+                                $stats['lookups_created']++;
+                                echo " [Tätigkeit erstellt: $activityCode ($activityName)]";
+                            } elseif ($activity && $activityName !== '' && mb_strtolower($activity->name) !== mb_strtolower($activityName)) {
+                                // Wenn Tätigkeit existiert, aber Name anders: Alias hinzufügen (wenn noch nicht vorhanden)
+                                $existingAlias = HcmJobActivityAlias::where('team_id', $teamId)
+                                    ->where('job_activity_id', $activity->id)
+                                    ->whereRaw('LOWER(alias) = ?', [mb_strtolower($activityName)])
+                                    ->first();
+                                
+                                if (!$existingAlias) {
+                                    HcmJobActivityAlias::create([
+                                        'team_id' => $teamId,
+                                        'job_activity_id' => $activity->id,
+                                        'alias' => $activityName,
+                                        'created_by_user_id' => $employer->created_by_user_id,
+                                    ]);
+                                    $stats['lookups_created']++;
+                                    echo " [Alias hinzugefügt: $activityName für {$activity->code}]";
+                                }
+                                
+                                // Auch Code als Alias hinzufügen, falls Code != Aktivitätscode
+                                if ($activityCode !== $activity->code) {
+                                    $codeAlias = HcmJobActivityAlias::where('team_id', $teamId)
+                                        ->where('job_activity_id', $activity->id)
+                                        ->where('alias', $activityCode)
+                                        ->first();
+                                    
+                                    if (!$codeAlias) {
+                                        HcmJobActivityAlias::create([
+                                            'team_id' => $teamId,
+                                            'job_activity_id' => $activity->id,
+                                            'alias' => $activityCode,
+                                            'created_by_user_id' => $employer->created_by_user_id,
+                                        ]);
+                                        $stats['lookups_created']++;
+                                        echo " [Code als Alias hinzugefügt: $activityCode für {$activity->code}]";
+                                    }
+                                }
+                            }
+                            
                             if ($activity) {
                                 $contract->jobActivities()->syncWithoutDetaching([$activity->id]);
+                                $contract->primary_job_activity_id = $activity->id;
                                 $stats['activities_linked']++;
-                                echo " [Tätigkeit: $activityCode]";
+                                echo " [Tätigkeit: {$activity->code} ({$activity->name})]";
                             } else {
-                                echo " [Tätigkeit $activityCode nicht gefunden]";
+                                echo " [Tätigkeit $activityCode konnte nicht zugeordnet werden]";
                             }
                             
                             // Stelle 6: Schulabschluss (auf Employee und Contract)
@@ -758,6 +842,7 @@ class UnifiedImportService
                                     ]);
                                     $level->save();
                                     $level->refresh();
+                                    $stats['lookups_created']++;
                                     echo " ✓ (ID: {$level->id}, Code: {$level->code})";
                                 } else {
                                     echo " gefunden (ID: {$level->id}, Code: {$level->code})";
@@ -1197,6 +1282,7 @@ class UnifiedImportService
         if (in_array($s, ['nein','no','false','0'], true)) return false;
         return null;
     }
+
 
     private function mapTrainingsFromRow(HcmEmployee $employee, ?HcmEmployeeContract $contract, array $row, int $teamId, ?int $createdByUserId): void
     {

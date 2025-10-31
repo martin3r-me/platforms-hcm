@@ -52,6 +52,12 @@
                                 <span class="text-xs">({{ \Carbon\Carbon::parse($birthDate)->age }} Jahre)</span>
                             </span>
                         @endif
+                        @if($employee->children_count && $employee->children_count > 0)
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-user-group', 'w-4 h-4')
+                                {{ $employee->children_count }} {{ $employee->children_count === 1 ? 'Kind' : 'Kinder' }}
+                            </span>
+                        @endif
                         @if($primaryEmail)
                             <span class="flex items-center gap-2">
                                 @svg('heroicon-o-envelope', 'w-4 h-4')

@@ -25,6 +25,7 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'employment_status',
         'hours_per_month',
         'work_days_per_week',
+        'calendar_work_days',
         'annual_vacation_days',
         'working_time_model',
         'insurance_status_id',
