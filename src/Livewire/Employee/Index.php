@@ -8,10 +8,6 @@ use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployer;
 use Platform\Crm\Models\CrmContact;
-use Platform\Hcm\Models\HcmJobTitle;
-use Platform\Hcm\Models\HcmJobActivity;
-use Platform\Hcm\Models\HcmEmployeeContract;
-use Illuminate\Support\Str;
 
 class Index extends Component
 {
@@ -29,10 +25,6 @@ class Index extends Component
     public $employee_number = '';
     public $contact_id = null;
 
-    // Inline-Edit Bindings
-    public array $titleByContract = [];
-    public array $activitiesByContract = [];
-
     // Wizard State
     public $createStep = 1;
 
@@ -47,7 +39,7 @@ class Index extends Component
             'employer', 
             'crmContactLinks.contact',
             'contracts' => function ($q) {
-                $q->orderBy('start_date', 'desc')->limit(1);
+                $q->orderBy('start_date', 'desc');
             },
             'contracts.jobTitles',
             'contracts.jobActivities'
@@ -60,31 +52,7 @@ class Index extends Component
             $query->orderBy($this->sortField, $this->sortDirection);
         }
 
-        $employees = $query->get();
-
-        // Initial selektierte Werte für Inline-Selects setzen
-        foreach ($employees as $employee) {
-            $latest = $employee->contracts->first();
-            if ($latest) {
-                if (!array_key_exists($latest->id, $this->titleByContract)) {
-                    $this->titleByContract[$latest->id] = $latest->jobTitles->first()?->id;
-                }
-                if (!array_key_exists($latest->id, $this->activitiesByContract)) {
-                    $this->activitiesByContract[$latest->id] = $latest->jobActivities->pluck('id')->all();
-                }
-            }
-            // Für Unterzeilen (alle Verträge)
-            foreach ($employee->contracts as $c) {
-                if (!array_key_exists($c->id, $this->titleByContract)) {
-                    $this->titleByContract[$c->id] = $c->jobTitles->first()?->id;
-                }
-                if (!array_key_exists($c->id, $this->activitiesByContract)) {
-                    $this->activitiesByContract[$c->id] = $c->jobActivities->pluck('id')->all();
-                }
-            }
-        }
-
-        return $employees;
+        return $query->get();
     }
 
     #[Computed]
@@ -125,23 +93,6 @@ class Index extends Component
             ->get();
     }
 
-    #[Computed]
-    public function availableJobTitles()
-    {
-        return HcmJobTitle::query()
-            ->where('team_id', auth()->user()->currentTeam->id)
-            ->orderBy('name')
-            ->get(['id','name']);
-    }
-
-    #[Computed]
-    public function availableJobActivities()
-    {
-        return HcmJobActivity::query()
-            ->where('team_id', auth()->user()->currentTeam->id)
-            ->orderBy('name')
-            ->get(['id','name']);
-    }
 
     public function sortBy($field)
     {
@@ -159,44 +110,6 @@ class Index extends Component
             ->layout('platform::layouts.app');
     }
 
-    public function updateContractTitle(int $contractId, ?int $jobTitleId): void
-    {
-        $contract = HcmEmployeeContract::find($contractId);
-        if (!$contract) { return; }
-        if ($jobTitleId) {
-            $contract->jobTitles()->sync([$jobTitleId]);
-        } else {
-            $contract->jobTitles()->sync([]);
-        }
-        $this->dispatch('toast', ['type' => 'success', 'message' => 'Stelle aktualisiert']);
-    }
-
-    public function updateContractActivities(int $contractId, array $activityIds): void
-    {
-        $contract = HcmEmployeeContract::find($contractId);
-        if (!$contract) { return; }
-        $ids = array_values(array_filter($activityIds, fn($v) => !empty($v)));
-        $contract->jobActivities()->sync($ids);
-        $this->dispatch('toast', ['type' => 'success', 'message' => 'Tätigkeiten aktualisiert']);
-    }
-
-    public function updated($name, $value): void
-    {
-        // titleByContract.<id>
-        if (Str::startsWith($name, 'titleByContract.')) {
-            $id = (int) Str::after($name, 'titleByContract.');
-            $this->updateContractTitle($id, $value ? (int) $value : null);
-            return;
-        }
-
-        // activitiesByContract.<id>
-        if (Str::startsWith($name, 'activitiesByContract.')) {
-            $id = (int) Str::after($name, 'activitiesByContract.');
-            $ids = is_array($value) ? array_map('intval', $value) : [];
-            $this->updateContractActivities($id, $ids);
-            return;
-        }
-    }
 
     public function createEmployee()
     {

@@ -243,6 +243,7 @@
                     />
 
                     <x-ui-input-checkbox 
+                        model="is_temp_agency"
                         name="is_temp_agency" 
                         label="Arbeitnehmerüberlassung (Stelle 8)"
                         wire:model="is_temp_agency"
@@ -335,6 +336,7 @@
                 @if($editMode)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <x-ui-input-checkbox 
+                            model="is_above_tariff"
                             name="is_above_tariff" 
                             label="Übertariflich bezahlen"
                             wire:model="is_above_tariff"
@@ -395,6 +397,7 @@
                 @if($editMode)
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <x-ui-input-checkbox 
+                            model="is_minimum_wage"
                             name="is_minimum_wage" 
                             label="Mindestlohn bezahlen"
                             wire:model="is_minimum_wage"

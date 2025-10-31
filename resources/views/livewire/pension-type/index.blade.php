@@ -48,7 +48,7 @@
                 <x-ui-input-textarea name="description" label="Beschreibung" wire:model.defer="description" />
             </div>
             <div class="mt-3">
-                <x-ui-input-checkbox name="is_active" wire:model.defer="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+                <x-ui-input-checkbox model="is_active" name="is_active" wire:model.defer="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
             </div>
         </x-slot:content>
         <x-slot:footer>
@@ -68,7 +68,7 @@
                 <x-ui-input-textarea name="description" label="Beschreibung" wire:model.defer="description" />
             </div>
             <div class="mt-3">
-                <x-ui-input-checkbox name="is_active" wire:model.defer="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+                <x-ui-input-checkbox model="is_active" name="is_active" wire:model.defer="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
             </div>
         </x-slot:content>
         <x-slot:footer>
