@@ -100,6 +100,7 @@ class UnifiedImportService
                     }
 
                     // Ensure cost center
+                    echo "\n      [1/12] Kostenstelle prüfen...";
                     $costCenterCode = trim((string) ($row['KostenstellenBezeichner'] ?? ''));
                     if ($costCenterCode !== '') {
                         $cc = OrganizationCostCenter::where('team_id', $teamId)->where('code', $costCenterCode)->first();
@@ -112,18 +113,27 @@ class UnifiedImportService
                                 'description' => 'Importiert aus unified CSV',
                                 'is_active' => true,
                             ]);
+                            echo " erstellt";
                             $stats['cost_centers_created']++;
+                        } else {
+                            echo " vorhanden";
                         }
+                    } else {
+                        echo " leer, überspringen";
                     }
 
                     // Upsert employee
+                    echo "\n      [2/12] Mitarbeiter suchen...";
                     $employee = HcmEmployee::where('team_id', $teamId)
                         ->where('employee_number', $personalNr)
                         ->where('employer_id', $employer->id)
                         ->first();
+                    echo $employee ? " gefunden" : " nicht gefunden";
 
                     $isActive = (mb_strtolower((string) ($row['Aktiv'] ?? '')) === 'aktiv');
                     $birth = $this->parseDate($row['GeburtsDatum'] ?? null);
+                    
+                    echo "\n      [3/12] Mitarbeiter-Daten vorbereiten...";
 
                     $empCore = [
                         'is_active' => $isActive,
@@ -189,7 +199,7 @@ class UnifiedImportService
                     ];
 
                     if (!$employee) {
-                        echo sprintf("\n    ✓ Neuer Mitarbeiter: %s (PersonalNr: %s)", $employeeName ?: 'unbekannt', $personalNr);
+                        echo sprintf("\n      [4/12] Neuer Mitarbeiter erstellen: %s (PersonalNr: %s)...", $employeeName ?: 'unbekannt', $personalNr);
                         $employee = HcmEmployee::create(array_merge([
                             'team_id' => $teamId,
                             'employer_id' => $employer->id,
@@ -197,20 +207,33 @@ class UnifiedImportService
                             'created_by_user_id' => $employer->created_by_user_id,
                             'attributes' => $empAttributes,
                         ], $empCore));
+                        echo " ✓";
                         $stats['employees_created']++;
                     } else {
+                        echo "\n      [4/12] Mitarbeiter aktualisieren...";
                         $employee->fill($empCore);
                         $employee->attributes = array_replace_recursive($employee->attributes ?? [], $empAttributes);
                         $employee->save();
+                        echo " ✓";
                         $stats['employees_updated']++;
                     }
 
                     // CRM contact
+                    echo "\n      [5/12] CRM-Kontakt erstellen/aktualisieren...";
                     $contact = $this->upsertContact($employee, $row);
-                    if ($contact['created']) { $stats['contacts_created']++; }
-                    elseif ($contact['updated']) { $stats['contacts_updated']++; }
+                    if ($contact['created']) { 
+                        echo " erstellt ✓";
+                        $stats['contacts_created']++; 
+                    }
+                    elseif ($contact['updated']) { 
+                        echo " aktualisiert ✓";
+                        $stats['contacts_updated']++; 
+                    } else {
+                        echo " vorhanden ✓";
+                    }
 
                     // Payout method (lookup) from Auszahlungsart
+                    echo "\n      [6/12] Auszahlungsart prüfen...";
                     $payoutExternal = $this->toInt($row['Auszahlungsart'] ?? null);
                     if ($payoutExternal) {
                         // Minimal Regel: 5 => Überweisung
@@ -229,12 +252,19 @@ class UnifiedImportService
                             $employee->payout_method_id = $method->id;
                             $employee->save();
                         }
+                        echo " zugewiesen ✓";
+                    } else {
+                        echo " leer, überspringen";
                     }
 
                     // Contract
+                    echo "\n      [7/12] Vertrag suchen...";
                     $contract = HcmEmployeeContract::where('employee_id', $employee->id)->first();
+                    echo $contract ? " gefunden" : " nicht gefunden";
+                    
                     $start = $this->parseDate($row['BeginnTaetigkeit'] ?? null);
                     $end = $this->parseDate($row['EndeTaetigkeit'] ?? null);
+                    echo "\n      [8/12] Vertrag-Daten vorbereiten...";
 
                     $hoursPerMonth = $this->toFloat($row['Wochenstunden'] ?? null) ? $this->toFloat($row['Wochenstunden']) * 4.333 : null;
                     $workDaysPerWeek = $this->toFloat($row['ArbeitstageWoche'] ?? null);
@@ -288,18 +318,25 @@ class UnifiedImportService
                     ];
 
                     if (!$contract && $start) {
+                        echo "\n      [9/12] Vertrag erstellen...";
                         $contract = HcmEmployeeContract::create(array_merge(
                             ['employee_id' => $employee->id],
                             $contractData
                         ));
+                        echo " ✓";
                         $stats['contracts_created']++;
                     } elseif ($contract) {
+                        echo "\n      [9/12] Vertrag aktualisieren...";
                         $contract->fill($contractData);
                         $contract->save();
+                        echo " ✓";
                         $stats['contracts_updated']++;
+                    } else {
+                        echo "\n      [9/12] Kein Startdatum, Vertrag überspringen";
                     }
 
                     if ($contract) {
+                        echo "\n      [10/12] Stellenbezeichnung & Tätigkeiten verknüpfen...";
                         // Title
                         $titleName = trim((string) ($row['Stellenbezeichnung'] ?? ''));
                         if ($titleName !== '') {
@@ -339,8 +376,10 @@ class UnifiedImportService
                             $contract->jobActivities()->syncWithoutDetaching($actIds);
                             $stats['activities_linked'] += count($actIds);
                         }
+                        echo " ✓";
 
                         // Health insurance by IK
+                        echo "\n      [11/12] Krankenkasse verknüpfen...";
                         $ik = trim((string) ($row['KrankenkasseBetriebsnummer'] ?? ''));
                         if ($ik !== '') {
                             // Suche zuerst per ik_number, dann per code (für Seeder-Daten, die code = IK setzen)
@@ -367,9 +406,13 @@ class UnifiedImportService
                                 $employee->health_insurance_company_id = $kasse->id;
                                 $employee->save();
                             }
+                            echo " ✓";
+                        } else {
+                            echo " leer, überspringen";
                         }
 
                         // Tariff mapping
+                        echo "\n      [12/12] Tarif-Mapping...";
                         try {
                             $tariffName = trim((string) ($row['Tarif'] ?? ''));
                             $tariffGroup = trim((string) ($row['Tarifgruppe'] ?? ''));
@@ -422,15 +465,27 @@ class UnifiedImportService
                                     $contract->save();
                                     $stats['lookups_created']++;
                                 }
+                                echo " ✓";
+                            } else {
+                                echo " leer, überspringen";
                             }
                         } catch (\Throwable $e) {
+                            echo " FEHLER: " . $e->getMessage();
                             $stats['errors'][] = 'tariff: ' . $e->getMessage();
                         }
 
                         // Equipment-Ausgaben aus CSV anlegen
-                        $this->mapIssuesFromRow($employee, $contract, $row, $teamId, (int) $employer->created_by_user_id);
+                        echo "\n      [13/12] Equipment-Ausgaben...";
+                        try {
+                            $this->mapIssuesFromRow($employee, $contract, $row, $teamId, (int) $employer->created_by_user_id);
+                            echo " ✓";
+                        } catch (\Throwable $e) {
+                            echo " FEHLER: " . $e->getMessage();
+                            $stats['errors'][] = 'issues: ' . $e->getMessage();
+                        }
 
                         // Historisierung: Lohn-Ereignis initial
+                        echo "\n      [14/12] Lohn-Ereignis...";
                         try {
                             $effective = $effectiveDate ?: ($start?->toDateString() ?: now()->toDateString());
                             $hasComp = \Platform\Hcm\Models\HcmContractCompensationEvent::where('employee_contract_id', $contract->id)
@@ -448,12 +503,17 @@ class UnifiedImportService
                                     'reason' => 'import_initial',
                                     'created_by_user_id' => $employer->created_by_user_id,
                                 ]);
+                                echo " erstellt ✓";
+                            } else {
+                                echo " vorhanden/überspringen";
                             }
                         } catch (\Throwable $e) {
+                            echo " FEHLER: " . $e->getMessage();
                             $stats['errors'][] = 'comp_event: ' . $e->getMessage();
                         }
 
                         // Historisierung: Urlaub-Ereignis initial
+                        echo "\n      [15/12] Urlaub-Ereignis...";
                         try {
                             $effective = $effectiveDate ?: ($start?->toDateString() ?: now()->toDateString());
                             $hasVac = \Platform\Hcm\Models\HcmContractVacationEvent::where('employee_contract_id', $contract->id)
@@ -471,25 +531,37 @@ class UnifiedImportService
                                     'reason' => 'import_initial',
                                     'created_by_user_id' => $employer->created_by_user_id,
                                 ]);
+                                echo " erstellt ✓";
+                            } else {
+                                echo " vorhanden/überspringen";
                             }
                         } catch (\Throwable $e) {
+                            echo " FEHLER: " . $e->getMessage();
                             $stats['errors'][] = 'vac_event: ' . $e->getMessage();
                         }
 
                         // Benefits: BAV, VWL, BKV, JobRad
+                        echo "\n      [16/12] Benefits...";
                         try {
                             $this->mapBenefitsFromRow($employee, $contract, $row, $teamId, (int) $employer->created_by_user_id, $effectiveDate ?: $start);
+                            echo " ✓";
                             $stats['lookups_created']++;
                         } catch (\Throwable $e) {
+                            echo " FEHLER: " . $e->getMessage();
                             $stats['errors'][] = 'benefits: ' . $e->getMessage();
                         }
 
                         // Trainings: Hygieneschulung, etc.
+                        echo "\n      [17/12] Trainings...";
                         try {
                             $this->mapTrainingsFromRow($employee, $contract, $row, $teamId, (int) $employer->created_by_user_id);
+                            echo " ✓";
                         } catch (\Throwable $e) {
+                            echo " FEHLER: " . $e->getMessage();
                             $stats['errors'][] = 'trainings: ' . $e->getMessage();
                         }
+                        
+                        echo "\n      ✓ Mitarbeiter komplett verarbeitet";
                     }
 
                     if ($stats['rows'] <= 3) {
