@@ -10,6 +10,8 @@ use Platform\Hcm\Models\HcmJobActivity;
 use Platform\Hcm\Models\HcmEmployer;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Crm\Models\CrmContact;
+use Platform\Crm\Models\CrmSalutation;
+use Platform\Crm\Models\CrmGender;
 use Platform\Crm\Models\CrmEmailAddress;
 use Platform\Crm\Models\CrmPhoneNumber;
 use Platform\Crm\Models\CrmPostalAddress;
@@ -478,7 +480,7 @@ class BhgImportService
                 }
             }
 
-            // Tätigkeit (1–5) als primary_job_activity_id verknüpfen; nutzt Aliasse
+            // Tätigkeit als Contract-Aktivität verknüpfen (Pivot-Tabelle), keine Primary-Flag nötig
             if (!empty($row['tätigkeit'])) {
                 $activityName = trim($row['tätigkeit']);
                 $needle = mb_strtolower($activityName);
@@ -494,7 +496,18 @@ class BhgImportService
                     }
                 }
                 if ($jobActivity) {
-                    $contract->update(['primary_job_activity_id' => $jobActivity->id]);
+                    // Link in Pivot-Tabelle (unique Index schützt vor Duplikaten)
+                    DB::table('hcm_employee_contract_activity_links')->updateOrInsert(
+                        [
+                            'contract_id' => $contract->id,
+                            'job_activity_id' => $jobActivity->id,
+                        ],
+                        [
+                            'updated_at' => now(),
+                            'created_at' => now(),
+                        ]
+                    );
+                    $this->stats['contract_activity_links_created']++;
                 }
             }
 
@@ -559,7 +572,12 @@ class BhgImportService
                     if (!empty($additional['birthdate'])) {
                         $updateData['birth_date'] = $this->parseDateValue($additional['birthdate']);
                     }
-                    // Add other fields as needed
+                    if (!empty($additional['salutation'])) {
+                        $updateData['salutation_id'] = $this->resolveSalutationId($additional['salutation']);
+                    }
+                    if (!empty($additional['gender'])) {
+                        $updateData['gender_id'] = $this->resolveGenderId($additional['gender']);
+                    }
                 }
                 
                 $contact->update($updateData);
@@ -589,7 +607,12 @@ class BhgImportService
                     if (!empty($additional['birthdate'])) {
                         $contactData['birth_date'] = $this->parseDateValue($additional['birthdate']);
                     }
-                    // Add other fields as needed
+                    if (!empty($additional['salutation'])) {
+                        $contactData['salutation_id'] = $this->resolveSalutationId($additional['salutation']);
+                    }
+                    if (!empty($additional['gender'])) {
+                        $contactData['gender_id'] = $this->resolveGenderId($additional['gender']);
+                    }
                 }
                 
                 $contact = CrmContact::create($contactData);
@@ -777,6 +800,43 @@ class BhgImportService
         
         // Update Adressen
         $this->updateAddresses($contact, $row);
+    }
+
+    private function resolveSalutationId(string $value): ?int
+    {
+        $v = mb_strtolower(trim($value));
+        // Normalisieren
+        if (in_array($v, ['herr','hr','mr'])) { $v = 'herr'; }
+        elseif (in_array($v, ['frau','fr','mrs','ms'])) { $v = 'frau'; }
+        elseif (in_array($v, ['divers','diverse','other'])) { $v = 'divers'; }
+        elseif (in_array($v, ['firma'])) { $v = 'firma'; }
+
+        $byName = CrmSalutation::whereRaw('LOWER(name) = ?', [$v])->first();
+        if ($byName) { return $byName->id; }
+        $byCode = CrmSalutation::whereRaw('LOWER(code) = ?', [mb_strtoupper($v)])->first();
+        return $byCode?->id;
+    }
+
+    private function resolveGenderId(string $value): ?int
+    {
+        $v = mb_strtolower(trim($value));
+        // Kürzel aus CSV (m/w/d) und Worte abbilden
+        if (in_array($v, ['m','male','männlich','herr'])) { $code = 'MALE'; }
+        elseif (in_array($v, ['w','f','female','weiblich','frau'])) { $code = 'FEMALE'; }
+        elseif (in_array($v, ['d','divers','diverse'])) { $code = 'DIVERSE'; }
+        else { $code = 'NOT_SPECIFIED'; }
+
+        $byCode = CrmGender::where('code', $code)->first();
+        if ($byCode) { return $byCode->id; }
+        // Fallback nach Name
+        $name = match ($code) {
+            'MALE' => 'Männlich',
+            'FEMALE' => 'Weiblich',
+            'DIVERSE' => 'Divers',
+            default => 'Nicht angegeben',
+        };
+        $byName = CrmGender::where('name', $name)->first();
+        return $byName?->id;
     }
 
     private function updateEmailAddresses($contact, $row)
