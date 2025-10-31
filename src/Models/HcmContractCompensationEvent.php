@@ -4,9 +4,12 @@ namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Platform\Core\Traits\Encryptable;
 
 class HcmContractCompensationEvent extends Model
 {
+    use Encryptable;
+    
     protected $table = 'hcm_contract_compensation_events';
 
     protected $fillable = [
@@ -24,8 +27,12 @@ class HcmContractCompensationEvent extends Model
 
     protected $casts = [
         'effective_date' => 'date',
-        'hourly_wage' => 'decimal:2',
-        'base_salary' => 'decimal:2',
+        // hourly_wage und base_salary sind verschlüsselt (TEXT), kein Cast
+    ];
+
+    protected array $encryptable = [
+        'hourly_wage' => 'string',
+        'base_salary' => 'string',
     ];
 
     public function employee(): BelongsTo

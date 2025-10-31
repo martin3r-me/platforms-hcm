@@ -539,8 +539,9 @@ class UnifiedImportService
                                     'employee_contract_id' => $contract->id,
                                     'effective_date' => $effective,
                                     'wage_base_type' => $contract->wage_base_type,
-                                    'hourly_wage' => $contract->hourly_wage,
-                                    'base_salary' => $contract->base_salary,
+                                    // hourly_wage und base_salary werden verschlüsselt (als String)
+                                    'hourly_wage' => $contract->hourly_wage ? (string) $contract->hourly_wage : null,
+                                    'base_salary' => $contract->base_salary ? (string) $contract->base_salary : null,
                                     'reason' => 'import_initial',
                                     'created_by_user_id' => $employer->created_by_user_id,
                                 ]);
@@ -756,23 +757,42 @@ class UnifiedImportService
         $benefits = [];
 
         // BAV - Betriebliche Altersvorsorge
+        // BAV kann Text sein ("Ja"/"Nein") oder später monetäre Werte enthalten
+        // Aktuell nur als Text/Beschreibung speichern
+        // Wenn später monetäre Werte verfügbar sind:
+        // - monthly_contribution_employee (verschlüsselt) - AN-Anteil
+        // - monthly_contribution_employer (verschlüsselt) - AG-Anteil
+        // - contract_number - Vertragsnummer
+        // - insurance_company - Versicherungsgesellschaft/Anbieter
         $bav = trim((string) ($row['BetrieblicheAltersvorsorge'] ?? ''));
         if ($bav !== '' && $bav !== '[leer]') {
-            $benefits[] = [
+            $benefitData = [
                 'benefit_type' => 'bav',
                 'name' => 'Betriebliche Altersvorsorge',
-                'description' => $bav,
+                'description' => $bav, // Aktuell: "Ja"/"Nein", später evtl. Betrag als String
                 'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
             ];
+            
+            // TODO: Wenn CSV-Felder für BAV-Beträge vorhanden:
+            // $bavAn = $this->toFloat($row['BAV_AN_Anteil'] ?? null);
+            // $bavAg = $this->toFloat($row['BAV_AG_Anteil'] ?? null);
+            // if ($bavAn !== null) {
+            //     $benefitData['monthly_contribution_employee'] = (string) $bavAn; // Verschlüsselt
+            // }
+            // if ($bavAg !== null) {
+            //     $benefitData['monthly_contribution_employer'] = (string) $bavAg; // Verschlüsselt
+            // }
+            
+            $benefits[] = $benefitData;
         }
 
-        // VWL - Vermögenswirksame Leistungen
+        // VWL - Vermögenswirksame Leistungen (monetärer Wert)
         $vwl = $this->toFloat($row['VermoegenswirksameLeistungen'] ?? null);
         if ($vwl !== null && $vwl > 0) {
             $benefits[] = [
                 'benefit_type' => 'vwl',
                 'name' => 'Vermögenswirksame Leistungen',
-                'monthly_contribution_employee' => (string) $vwl,
+                'monthly_contribution_employee' => (string) $vwl, // Verschlüsselt
                 'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
             ];
         }
