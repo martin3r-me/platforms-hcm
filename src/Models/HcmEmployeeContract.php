@@ -279,6 +279,11 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         return $this->hasMany(HcmEmployeeBenefit::class, 'employee_contract_id');
     }
 
+    public function trainings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmEmployeeTraining::class, 'contract_id');
+    }
+
     /**
      * Get current tariff rate for this contract
      */

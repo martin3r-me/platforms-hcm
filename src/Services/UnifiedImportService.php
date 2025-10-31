@@ -461,6 +461,13 @@ class UnifiedImportService
                         } catch (\Throwable $e) {
                             $stats['errors'][] = 'benefits: ' . $e->getMessage();
                         }
+
+                        // Trainings: Hygieneschulung, etc.
+                        try {
+                            $this->mapTrainingsFromRow($employee, $contract, $row, $teamId, (int) $employer->created_by_user_id);
+                        } catch (\Throwable $e) {
+                            $stats['errors'][] = 'trainings: ' . $e->getMessage();
+                        }
                     }
 
                     if ($stats['rows'] <= 3) {
@@ -700,6 +707,54 @@ class UnifiedImportService
         if (in_array($s, ['ja','yes','true','1'], true)) return true;
         if (in_array($s, ['nein','no','false','0'], true)) return false;
         return null;
+    }
+
+    private function mapTrainingsFromRow(HcmEmployee $employee, ?HcmEmployeeContract $contract, array $row, int $teamId, ?int $createdByUserId): void
+    {
+        // Hygieneschulung
+        $hygieneDate = $this->parseDate($row['Hygieneschulung'] ?? null);
+        if ($hygieneDate) {
+            $type = \Platform\Hcm\Models\HcmEmployeeTrainingType::firstOrCreate(
+                ['code' => 'HYGIENE'],
+                [
+                    'team_id' => $teamId,
+                    'name' => 'Hygieneschulung',
+                    'category' => 'Hygiene',
+                    'requires_certification' => true,
+                    'validity_months' => 36, // 3 Jahre Standard
+                    'is_mandatory' => true,
+                    'is_active' => true,
+                ]
+            );
+
+            // Prüfe ob bereits vorhanden (gleiche Schulung, nicht abgelaufen)
+            $exists = \Platform\Hcm\Models\HcmEmployeeTraining::where('employee_id', $employee->id)
+                ->where('training_type_id', $type->id)
+                ->where('status', 'completed')
+                ->where(function ($q) use ($hygieneDate) {
+                    $q->whereNull('valid_until')
+                      ->orWhere('valid_until', '>=', $hygieneDate->toDateString());
+                })
+                ->exists();
+
+            if (!$exists) {
+                $training = \Platform\Hcm\Models\HcmEmployeeTraining::create([
+                    'team_id' => $teamId,
+                    'employee_id' => $employee->id,
+                    'contract_id' => $contract?->id,
+                    'training_type_id' => $type->id,
+                    'title' => 'Hygieneschulung ' . $hygieneDate->year,
+                    'completed_date' => $hygieneDate,
+                    'valid_from' => $hygieneDate,
+                    'valid_until' => $type->validity_months ? $hygieneDate->copy()->addMonths($type->validity_months) : null,
+                    'status' => 'completed',
+                    'created_by_user_id' => $createdByUserId,
+                ]);
+            }
+        }
+
+        // Weitere Trainings können hier ergänzt werden
+        // z.B. Führerschein, Ersthelfer, etc.
     }
 
     private function mapIssuesFromRow(HcmEmployee $employee, ?HcmEmployeeContract $contract, array $row, int $teamId, ?int $createdByUserId): void

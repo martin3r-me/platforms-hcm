@@ -278,6 +278,11 @@ class HcmEmployee extends Model implements EmployeeInterface
         return $this->hasMany(HcmEmployeeBenefit::class, 'employee_id');
     }
 
+    public function trainings(): HasMany
+    {
+        return $this->hasMany(HcmEmployeeTraining::class, 'employee_id');
+    }
+
     public function supervisor()
     {
         return $this->belongsTo(HcmEmployee::class, 'supervisor_id');

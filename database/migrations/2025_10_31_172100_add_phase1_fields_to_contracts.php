@@ -18,7 +18,7 @@ return new class extends Migration
             $table->date('fixed_term_end_date')->nullable()->after('is_fixed_term');
             $table->date('probation_end_date')->nullable()->after('fixed_term_end_date'); // Probezeit
             $table->string('employment_relationship_type')->nullable()->after('probation_end_date'); // Beschäftigungsverhältnis
-            $table->string('contract_form')->nullable()->after('employment_relationship_type'); // Vertragsform
+            // contract_form existiert bereits als char(1) aus früherer Migration, nicht erneut hinzufügen
             
             // Behinderung Urlaub
             $table->unsignedSmallInteger('additional_vacation_disability')->nullable()->after('probation_end_date'); // Zusatzurlaub Schwerbehinderung
@@ -62,7 +62,7 @@ return new class extends Migration
                 'fixed_term_end_date',
                 'probation_end_date',
                 'employment_relationship_type',
-                'contract_form',
+                // contract_form wird nicht gelöscht (existiert bereits)
                 'additional_vacation_disability',
                 'work_location_name',
                 'work_location_address',
