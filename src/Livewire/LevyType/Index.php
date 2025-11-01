@@ -3,12 +3,10 @@
 namespace Platform\Hcm\Livewire\LevyType;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use Platform\Hcm\Models\HcmLevyType;
 
 class Index extends Component
 {
-    use WithPagination;
 
     public $showCreateModal = false;
     public $showEditModal = false;
@@ -28,9 +26,9 @@ class Index extends Component
 
     public function render()
     {
-        $items = HcmLevyType::where('team_id', auth()->user()->current_team_id)
+        $items = HcmLevyType::where('team_id', auth()->user()->currentTeam->id)
             ->orderBy('code')
-            ->paginate(15);
+            ->get();
 
         return view('hcm::livewire.levy-type.index', [
             'items' => $items,
@@ -63,7 +61,7 @@ class Index extends Component
             'name' => $this->name,
             'description' => $this->description,
             'is_active' => $this->is_active,
-            'team_id' => auth()->user()->current_team_id,
+            'team_id' => auth()->user()->currentTeam->id,
             'created_by_user_id' => auth()->id(),
         ];
 

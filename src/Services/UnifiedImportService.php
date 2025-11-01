@@ -1337,13 +1337,38 @@ class UnifiedImportService
         // - contract_number - Vertragsnummer
         // - insurance_company - Versicherungsgesellschaft/Anbieter
         $bav = trim((string) ($row['BetrieblicheAltersvorsorge'] ?? ''));
+        
+        // Prüfe ob BAV aktiv ist: Nur bei positiven Werten (Ja, 1, true, oder monetärer Wert > 0)
+        $isBavActive = false;
         if ($bav !== '' && $bav !== '[leer]') {
+            $bavLower = strtolower($bav);
+            // Positive Indikatoren
+            if (in_array($bavLower, ['ja', 'yes', '1', 'true', 'aktiv', 'active', 'ja, aktiv'])) {
+                $isBavActive = true;
+            }
+            // Negativ-Indikatoren ignorieren
+            elseif (!in_array($bavLower, ['nein', 'no', '0', 'false', 'inaktiv', 'inactive', 'nein, inaktiv'])) {
+                // Falls es ein monetärer Wert ist, prüfe ob > 0
+                $bavValue = $this->toFloat($bav);
+                if ($bavValue !== null && $bavValue > 0) {
+                    $isBavActive = true;
+                }
+            }
+        }
+        
+        if ($isBavActive) {
             $benefitData = [
                 'benefit_type' => 'bav',
                 'name' => 'Betriebliche Altersvorsorge',
-                'description' => $bav, // Aktuell: "Ja"/"Nein", später evtl. Betrag als String
+                'description' => $bav, // Beschreibung/Status
                 'start_date' => $startDate?->toDateString() ?: $contract->start_date?->toDateString(),
             ];
+            
+            // Wenn es ein monetärer Wert ist, speichere ihn
+            $bavValue = $this->toFloat($bav);
+            if ($bavValue !== null && $bavValue > 0) {
+                $benefitData['monthly_contribution_employer'] = (string) $bavValue; // Verschlüsselt
+            }
             
             // TODO: Wenn CSV-Felder für BAV-Beträge vorhanden:
             // $bavAn = $this->toFloat($row['BAV_AN_Anteil'] ?? null);

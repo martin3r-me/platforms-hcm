@@ -50,9 +50,6 @@
                 </table>
             </div>
 
-            <div class="mt-4">
-                {{ $taxClasses->links() }}
-            </div>
         </x-ui-panel>
     </x-ui-page-container>
 

@@ -3,14 +3,12 @@
 namespace Platform\Hcm\Livewire\Employee;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeIssue;
 
 class IssuesIndex extends Component
 {
-    use WithPagination;
 
     public HcmEmployee $employee;
     public $search = '';
@@ -39,7 +37,7 @@ class IssuesIndex extends Component
             ->when($this->filterType, fn($q) => $q->where('issue_type_id', $this->filterType))
             ->with(['type', 'contract'])
             ->orderBy('issued_at', 'desc')
-            ->paginate(20);
+            ->get();
     }
 
     #[Computed]

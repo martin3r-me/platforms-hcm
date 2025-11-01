@@ -107,6 +107,14 @@
             @svg('heroicon-o-archive-box', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Ausgaben</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.trainings.index')">
+            @svg('heroicon-o-academic-cap', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Schulungen</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.training-types.index')">
+            @svg('heroicon-o-book-open', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Schulungsarten</span>
+        </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
     {{-- Collapsed: Icons-only --}}

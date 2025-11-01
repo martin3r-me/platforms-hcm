@@ -92,9 +92,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="px-4 py-3 border-t border-[var(--ui-border)]/60">
-                {{ $this->issues->links() }}
-            </div>
         </div>
         </div>
     </x-ui-page-container>

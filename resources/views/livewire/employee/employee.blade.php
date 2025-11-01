@@ -657,6 +657,12 @@
                                 Ausgaben
                             </span>
                         </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.trainings.index', $employee)" wire:navigate class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-academic-cap', 'w-4 h-4')
+                                Schulungen
+                            </span>
+                        </x-ui-button>
                     </div>
                 </div>
             </div>

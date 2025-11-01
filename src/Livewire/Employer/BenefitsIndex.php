@@ -3,14 +3,12 @@
 namespace Platform\Hcm\Livewire\Employer;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmEmployer;
 use Platform\Hcm\Models\HcmEmployeeBenefit;
 
 class BenefitsIndex extends Component
 {
-    use WithPagination;
 
     public HcmEmployer $employer;
     public $search = '';
@@ -42,7 +40,7 @@ class BenefitsIndex extends Component
             ->when($this->filterActive === 'inactive', fn($q) => $q->where('is_active', false))
             ->with(['employee', 'contract'])
             ->orderBy('created_at', 'desc')
-            ->paginate(20);
+            ->get();
     }
 
     #[Computed]

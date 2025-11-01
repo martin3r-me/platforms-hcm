@@ -3,14 +3,12 @@
 namespace Platform\Hcm\Livewire\Issues;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmEmployeeIssue;
 use Platform\Hcm\Models\HcmEmployer;
 
 class Index extends Component
 {
-    use WithPagination;
 
     public $search = '';
     public $filterStatus = 'all';
@@ -37,7 +35,7 @@ class Index extends Component
             ->when($this->filterEmployer, fn($q) => $q->whereHas('employee', fn($q2) => $q2->where('employer_id', $this->filterEmployer)))
             ->with(['type', 'contract', 'employee'])
             ->orderBy('issued_at', 'desc')
-            ->paginate(20);
+            ->get();
     }
 
     #[Computed]
@@ -53,8 +51,10 @@ class Index extends Component
     {
         return HcmEmployer::where('team_id', auth()->user()->currentTeam->id)
             ->where('is_active', true)
-            ->orderBy('display_name')
-            ->get();
+            ->orderBy('employer_number')
+            ->get()
+            ->sortBy('display_name')
+            ->values();
     }
 
     public function render()

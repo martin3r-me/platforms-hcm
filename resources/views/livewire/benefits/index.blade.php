@@ -93,9 +93,6 @@
                     </tbody>
                 </table>
             </div>
-                <div class="mt-4">
-                    {{ $this->benefits->links() }}
-                </div>
             </x-ui-panel>
         </div>
     </x-ui-page-container>
@@ -122,7 +119,7 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
                             <span class="text-sm text-[var(--ui-muted)]">Gesamt</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $this->benefits->total() }}</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $this->benefits->count() }}</span>
                         </div>
                     </div>
                 </div>

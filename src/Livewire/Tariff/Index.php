@@ -3,12 +3,10 @@
 namespace Platform\Hcm\Livewire\Tariff;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use Platform\Hcm\Models\HcmTaxClass;
 
 class Index extends Component
 {
-    use WithPagination;
 
     public $modalShow = false;
 
@@ -78,7 +76,7 @@ class Index extends Component
             })
             ->orderBy($this->sortField, $this->sortDirection);
 
-        $taxClasses = $query->paginate(12);
+        $taxClasses = $query->get();
 
         return view('hcm::livewire.tariff.index', [
             'taxClasses' => $taxClasses,

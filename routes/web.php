@@ -29,6 +29,7 @@ Route::get('/employees', EmployeeIndex::class)->name('hcm.employees.index');
 Route::get('/employees/{employee}', EmployeeShow::class)->name('hcm.employees.show');
 Route::get('/employees/{employee}/benefits', \Platform\Hcm\Livewire\Employee\BenefitsIndex::class)->name('hcm.employees.benefits.index');
 Route::get('/employees/{employee}/issues', \Platform\Hcm\Livewire\Employee\IssuesIndex::class)->name('hcm.employees.issues.index');
+Route::get('/employees/{employee}/trainings', \Platform\Hcm\Livewire\Employee\TrainingsIndex::class)->name('hcm.employees.trainings.index');
 
 // Verträge
 Route::get('/contracts/{contract}', \Platform\Hcm\Livewire\Contract\Show::class)->name('hcm.contracts.show');
@@ -90,3 +91,5 @@ Route::get('/employers/{employer}/employees/{employee}', EmployeeShow::class)->n
 // Benefits & Ausgaben (global)
 Route::get('/benefits', \Platform\Hcm\Livewire\Benefits\Index::class)->name('hcm.benefits.index');
 Route::get('/issues', \Platform\Hcm\Livewire\Issues\Index::class)->name('hcm.issues.index');
+Route::get('/trainings', \Platform\Hcm\Livewire\Trainings\Index::class)->name('hcm.trainings.index');
+Route::get('/training-types', \Platform\Hcm\Livewire\TrainingTypes\Index::class)->name('hcm.training-types.index');
