@@ -173,7 +173,13 @@
                                                 <div class="flex flex-wrap items-center gap-1 text-xs">
                                                     <span class="text-[var(--ui-muted)] font-medium">Tätigkeiten:</span>
                                                     @foreach($c->jobActivities as $activity)
-                                                        <x-ui-badge variant="info" size="xs">{{ $activity->code ?? $activity->name }}</x-ui-badge>
+                                                        <x-ui-badge variant="info" size="xs">
+                                                            @if($activity->id === $c->primary_job_activity_id)
+                                                                {{ $activity->code ?? '' }} {{ $c->primary_job_activity_display_name ?? $activity->name }}
+                                                            @else
+                                                                {{ $activity->code ?? $activity->name }}
+                                                            @endif
+                                                        </x-ui-badge>
                                                     @endforeach
                                                 </div>
                                             @endif

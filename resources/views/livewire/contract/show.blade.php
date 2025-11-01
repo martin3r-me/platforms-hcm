@@ -320,7 +320,7 @@
                                 <div class="bg-white rounded p-2">
                                     <div class="font-semibold text-blue-700">Stellen 1-5</div>
                                     <div class="text-blue-600 font-mono">{{ substr($fullActivityKey, 0, 5) }}</div>
-                                    <div class="text-[var(--ui-muted)] mt-1">{{ $primaryActivity->name }}</div>
+                                    <div class="text-[var(--ui-muted)] mt-1">{{ $contract->primary_job_activity_display_name ?? $primaryActivity->name }}</div>
                                 </div>
                             @else
                                 <div class="bg-white rounded p-2">
@@ -397,7 +397,12 @@
                                     <div class="flex flex-wrap gap-2">
                                         @foreach($contract->jobActivities as $activity)
                                             <x-ui-badge variant="info" size="sm">
-                                                {{ $activity->code ?? '' }} {{ $activity->name }}
+                                                {{ $activity->code ?? '' }} 
+                                                @if($activity->id === $contract->primary_job_activity_id)
+                                                    {{ $contract->primary_job_activity_display_name ?? $activity->name }}
+                                                @else
+                                                    {{ $activity->name }}
+                                                @endif
                                             </x-ui-badge>
                                         @endforeach
                                     </div>

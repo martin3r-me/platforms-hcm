@@ -45,7 +45,8 @@ class Index extends Component
             'contracts.jobTitles',
             'contracts.jobActivities',
             'contracts.tariffGroup',
-            'contracts.tariffLevel'
+            'contracts.tariffLevel',
+            'contracts.jobActivityAlias'
         ])
             ->forTeam(auth()->user()->currentTeam->id);
 

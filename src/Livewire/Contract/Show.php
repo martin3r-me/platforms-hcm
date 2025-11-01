@@ -50,6 +50,7 @@ class Show extends Component
             'jobTitles',
             'jobActivities',
             'primaryJobActivity',
+            'jobActivityAlias',
             'levyTypes',
             'insuranceStatus',
             'pensionType',

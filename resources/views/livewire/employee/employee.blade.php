@@ -288,7 +288,12 @@
                                             <div class="flex flex-wrap gap-2">
                                                 @foreach($contract->jobActivities as $activity)
                                                     <x-ui-badge variant="info" size="sm">
-                                                        {{ $activity->code ?? '' }} {{ $activity->name }}
+                                                        {{ $activity->code ?? '' }} 
+                                                        @if($activity->id === $contract->primary_job_activity_id)
+                                                            {{ $contract->primary_job_activity_display_name ?? $activity->name }}
+                                                        @else
+                                                            {{ $activity->name }}
+                                                        @endif
                                                     </x-ui-badge>
                                                 @endforeach
                                             </div>

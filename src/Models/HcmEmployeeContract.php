@@ -9,6 +9,7 @@ use Platform\Organization\Traits\HasCostCenterLinksTrait;
 use Platform\Organization\Contracts\CostCenterLinkableInterface;
 use Symfony\Component\Uid\UuidV7;
 use Platform\Core\Traits\Encryptable;
+use Platform\Hcm\Models\HcmJobActivityAlias;
 
 class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
 {
@@ -33,6 +34,7 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         'employment_relationship_id',
         'person_group_id',
         'primary_job_activity_id',
+        'job_activity_alias_id',
         'schooling_level',
         'vocational_training_level',
         'is_temp_agency',
@@ -168,6 +170,44 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     public function primaryJobActivity()
     {
         return $this->belongsTo(HcmJobActivity::class, 'primary_job_activity_id');
+    }
+
+    public function jobActivityAlias()
+    {
+        return $this->belongsTo(HcmJobActivityAlias::class, 'job_activity_alias_id');
+    }
+
+    /**
+     * Gibt den Anzeigenamen der primären Tätigkeit zurück.
+     * Priorität: Alias (wenn vorhanden) > Primärer Name
+     */
+    public function getPrimaryJobActivityDisplayNameAttribute(): ?string
+    {
+        // Wenn Alias vorhanden ist, verwende diesen
+        if ($this->jobActivityAlias) {
+            return $this->jobActivityAlias->alias;
+        }
+        
+        // Fallback: Primärer Name
+        if ($this->primaryJobActivity) {
+            return $this->primaryJobActivity->name;
+        }
+        
+        return null;
+    }
+
+    /**
+     * Gibt den Anzeige-Code der primären Tätigkeit zurück.
+     * Priorität: Alias (wenn vorhanden, falls Code) > Primärer Code
+     */
+    public function getPrimaryJobActivityDisplayCodeAttribute(): ?string
+    {
+        // Code kommt immer von der Tätigkeit selbst, nicht vom Alias
+        if ($this->primaryJobActivity) {
+            return $this->primaryJobActivity->code;
+        }
+        
+        return null;
     }
 
     public function levyTypes(): BelongsToMany
