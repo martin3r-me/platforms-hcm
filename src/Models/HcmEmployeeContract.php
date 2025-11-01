@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Platform\Organization\Traits\HasCostCenterLinksTrait;
 use Platform\Organization\Contracts\CostCenterLinkableInterface;
+use Platform\Organization\Models\OrganizationCostCenter;
 use Symfony\Component\Uid\UuidV7;
 use Platform\Core\Traits\Encryptable;
 use Platform\Hcm\Models\HcmJobActivityAlias;
@@ -451,6 +452,97 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         }
         
         return 'Nicht zugeordnet';
+    }
+
+    /**
+     * Löst eine Cost Center auf (entity-spezifisch wenn Employer Entity hat, sonst global)
+     * 
+     * @param string $code Cost Center Code
+     * @return OrganizationCostCenter|null
+     */
+    public function resolveCostCenter(string $code): ?OrganizationCostCenter
+    {
+        $employer = $this->employee->employer ?? null;
+        
+        // 1. Suche entity-spezifische Cost Center (wenn Employer Entity hat)
+        if ($employer && $employer->organization_entity_id) {
+            $cc = OrganizationCostCenter::where('team_id', $this->team_id)
+                ->where('code', $code)
+                ->where('root_entity_id', $employer->organization_entity_id)
+                ->where('is_active', true)
+                ->first();
+            
+            if ($cc) {
+                return $cc;
+            }
+        }
+        
+        // 2. Fallback: Globale Cost Center
+        return OrganizationCostCenter::where('team_id', $this->team_id)
+            ->where('code', $code)
+            ->whereNull('root_entity_id')
+            ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Gibt alle verfügbaren Cost Centers für diesen Contract zurück
+     * (entity-spezifische + globale)
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getAvailableCostCenters()
+    {
+        $employer = $this->employee->employer ?? null;
+        $query = OrganizationCostCenter::where('team_id', $this->team_id)
+            ->where('is_active', true);
+        
+        // Wenn Employer Entity hat: entity-spezifische + globale
+        if ($employer && $employer->organization_entity_id) {
+            $query->where(function ($q) use ($employer) {
+                $q->whereNull('root_entity_id') // Globale
+                  ->orWhere('root_entity_id', $employer->organization_entity_id); // Entity-spezifische
+            });
+        } else {
+            // Nur globale
+            $query->whereNull('root_entity_id');
+        }
+        
+        return $query->orderBy('name')->get();
+    }
+
+    /**
+     * Gibt das verlinkte Cost Center für diesen Contract zurück
+     * (aus organization_cost_center_links oder aus resolveCostCenter wenn als Code gespeichert)
+     * 
+     * @return OrganizationCostCenter|null
+     */
+    public function getCostCenter(): ?OrganizationCostCenter
+    {
+        // 1. Prüfe ob über Link verknüpft
+        $link = $this->costCenterLinks()
+            ->where('is_primary', true)
+            ->where(function ($q) {
+                $q->whereNull('start_date')
+                  ->orWhere('start_date', '<=', now()->toDateString());
+            })
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                  ->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->with('costCenter')
+            ->first();
+        
+        if ($link && $link->costCenter) {
+            return $link->costCenter;
+        }
+        
+        // 2. Fallback: Auflösung über Code (wenn als String gespeichert)
+        if ($this->cost_center) {
+            return $this->resolveCostCenter($this->cost_center);
+        }
+        
+        return null;
     }
 }
 
