@@ -26,6 +26,8 @@ Route::get('/employers/{employer}', EmployerShow::class)->name('hcm.employers.sh
 // Mitarbeiter-Verwaltung
 Route::get('/employees', EmployeeIndex::class)->name('hcm.employees.index');
 Route::get('/employees/{employee}', EmployeeShow::class)->name('hcm.employees.show');
+Route::get('/employees/{employee}/benefits', \Platform\Hcm\Livewire\Employee\BenefitsIndex::class)->name('hcm.employees.benefits.index');
+Route::get('/employees/{employee}/issues', \Platform\Hcm\Livewire\Employee\IssuesIndex::class)->name('hcm.employees.issues.index');
 
 // Verträge
 Route::get('/contracts/{contract}', \Platform\Hcm\Livewire\Contract\Show::class)->name('hcm.contracts.show');

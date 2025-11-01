@@ -80,9 +80,15 @@ class ImportVwlBenefits extends Command
             while (($row = fgetcsv($handle, 0, ';')) !== false) {
                 $rowNum++;
                 
-                // Zeile normalisieren
+                // Zeile normalisieren (versuche verschiedene Encodings)
                 $row = array_map(function($r) {
-                    return trim(mb_convert_encoding($r, 'UTF-8', 'Windows-1252'));
+                    // Versuche Windows-1252 zu UTF-8
+                    $converted = @mb_convert_encoding($r, 'UTF-8', 'Windows-1252');
+                    // Falls das fehlschlägt, versuche ISO-8859-1
+                    if ($converted === false || $converted === $r) {
+                        $converted = @mb_convert_encoding($r, 'UTF-8', 'ISO-8859-1');
+                    }
+                    return trim($converted ?: $r);
                 }, $row);
 
                 // Leere Zeilen überspringen
@@ -259,7 +265,10 @@ class ImportVwlBenefits extends Command
         // Trim und normalisiere
         $cleaned = trim($value);
         
-        // Entferne Euro-Symbol (Unicode-Variante)
+        // Entferne Euro-Symbol (alle Varianten: €, Unicode, falsch kodiert "â‚¬")
+        // Zuerst normalisieren: falsch kodiertes "â‚¬" entfernen
+        $cleaned = str_replace('â‚¬', '', $cleaned);
+        // Dann normale Euro-Symbole entfernen
         $cleaned = preg_replace('/[€\x{20AC}]/u', '', $cleaned);
         
         // Entferne alle Leerzeichen

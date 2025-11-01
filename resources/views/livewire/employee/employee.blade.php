@@ -622,21 +622,42 @@
     </x-ui-page-container>
 
     <x-slot name="sidebar">
-        <x-ui-page-sidebar title="Aktionen" width="w-80" :defaultOpen="true">
-            <div class="p-6 space-y-3">
-                <x-ui-button variant="secondary" size="sm" wire:click="linkContact" class="w-full justify-start">
-                    @svg('heroicon-o-link', 'w-4 h-4')
-                    <span class="ml-2">Kontakt verknüpfen</span>
-                </x-ui-button>
-                <x-ui-button variant="secondary" size="sm" wire:click="addContact" class="w-full justify-start">
-                    @svg('heroicon-o-user-plus', 'w-4 h-4')
-                    <span class="ml-2">Kontakt erstellen</span>
-                </x-ui-button>
-                <div class="border-t border-[var(--ui-border)] my-3"></div>
-                <x-ui-button variant="primary" size="sm" wire:click="addContract" class="w-full justify-start">
-                    @svg('heroicon-o-document-plus', 'w-4 h-4')
-                    <span class="ml-2">Vertrag erstellen</span>
-                </x-ui-button>
+        <x-ui-page-sidebar title="Navigation" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-4">
+                <div>
+                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Übersichten</h3>
+                    <div class="space-y-1">
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.benefits.index', $employee)" wire:navigate class="w-full justify-start">
+                            @svg('heroicon-o-gift', 'w-4 h-4')
+                            <span class="ml-2">Benefits</span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.issues.index', $employee)" wire:navigate class="w-full justify-start">
+                            @svg('heroicon-o-archive-box', 'w-4 h-4')
+                            <span class="ml-2">Ausgaben</span>
+                        </x-ui-button>
+                    </div>
+                </div>
+                
+                <div class="border-t border-[var(--ui-border)]"></div>
+                
+                <div>
+                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Aktionen</h3>
+                    <div class="space-y-1">
+                        <x-ui-button variant="secondary" size="sm" wire:click="linkContact" class="w-full justify-start">
+                            @svg('heroicon-o-link', 'w-4 h-4')
+                            <span class="ml-2">Kontakt verknüpfen</span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary" size="sm" wire:click="addContact" class="w-full justify-start">
+                            @svg('heroicon-o-user-plus', 'w-4 h-4')
+                            <span class="ml-2">Kontakt erstellen</span>
+                        </x-ui-button>
+                        <div class="border-t border-[var(--ui-border)] my-2"></div>
+                        <x-ui-button variant="primary" size="sm" wire:click="addContract" class="w-full justify-start">
+                            @svg('heroicon-o-document-plus', 'w-4 h-4')
+                            <span class="ml-2">Vertrag erstellen</span>
+                        </x-ui-button>
+                    </div>
+                </div>
             </div>
         </x-ui-page-sidebar>
     </x-slot>
