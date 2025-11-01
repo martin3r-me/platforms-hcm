@@ -98,6 +98,51 @@
             </div>
         </div>
 
+        {{-- Bankverbindung & Auszahlung --}}
+        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
+            <div class="flex items-center gap-2 mb-6">
+                @svg('heroicon-o-credit-card', 'w-6 h-6 text-green-600')
+                <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Bankverbindung & Auszahlung</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <x-ui-input-select
+                    name="employee.payout_method_id"
+                    label="Auszahlungsart"
+                    :options="$this->payoutMethods"
+                    wire:model.live="employee.payout_method_id"
+                    placeholder="Auszahlungsart wählen..."
+                />
+
+                <x-ui-input-text 
+                    name="employee.payout_type"
+                    label="Auszahlungstyp"
+                    wire:model.live.debounce.500ms="employee.payout_type"
+                    placeholder="z.B. Überweisung, Bar, etc."
+                />
+
+                <x-ui-input-text 
+                    name="employee.bank_account_holder"
+                    label="Kontoinhaber"
+                    wire:model.live.debounce.500ms="employee.bank_account_holder"
+                    placeholder="Name des Kontoinhabers"
+                />
+
+                <x-ui-input-text 
+                    name="employee.bank_iban"
+                    label="IBAN"
+                    wire:model.live.debounce.500ms="employee.bank_iban"
+                    placeholder="DE89 3704 0044 0532 0130 00"
+                />
+
+                <x-ui-input-text 
+                    name="employee.bank_swift"
+                    label="SWIFT/BIC"
+                    wire:model.live.debounce.500ms="employee.bank_swift"
+                    placeholder="COBADEFFXXX"
+                />
+            </div>
+        </div>
+
         <!-- Verknüpfte Kontakte -->
         <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Mitarbeiter verknüpft sind">
             @if($employee->crmContactLinks->count() > 0)

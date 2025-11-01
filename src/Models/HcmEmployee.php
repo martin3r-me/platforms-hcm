@@ -251,6 +251,11 @@ class HcmEmployee extends Model implements EmployeeInterface
         return $this->belongsTo(HcmHealthInsuranceCompany::class, 'health_insurance_company_id');
     }
 
+    public function payoutMethod()
+    {
+        return $this->belongsTo(HcmPayoutMethod::class, 'payout_method_id');
+    }
+
     public function activeContract(): ?HcmEmployeeContract
     {
         $today = now()->toDateString();

@@ -48,7 +48,8 @@ class Employee extends Component
         $this->employee = $employee->load([
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
-            'employer', 
+            'employer',
+            'payoutMethod',
             'activities',
             'contracts' => function($q) {
                 $q->orderBy('start_date', 'desc');
@@ -252,6 +253,16 @@ class Employee extends Component
     {
         // TODO: Implement contract editing modal
         session()->flash('message', 'Vertragsbearbeitung wird implementiert.');
+    }
+
+    #[Computed]
+    public function payoutMethods()
+    {
+        return \Platform\Hcm\Models\HcmPayoutMethod::where('team_id', auth()->user()->currentTeam->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->mapWithKeys(fn($item) => [$item->id => $item->name]);
     }
 
     public function render()
