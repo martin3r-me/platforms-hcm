@@ -56,6 +56,7 @@ class Show extends Component
             'pensionType',
             'employmentRelationship',
             'personGroup',
+            'costCenterLinks.costCenter',
         ]);
         
         $this->loadFormData();

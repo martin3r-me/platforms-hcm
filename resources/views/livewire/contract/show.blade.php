@@ -38,7 +38,15 @@
                                 Ende: {{ $contract->end_date->format('d.m.Y') }}
                             </span>
                         @endif
-                        @if($contract->cost_center)
+                        @php
+                            $costCenter = $contract->getCostCenter();
+                        @endphp
+                        @if($costCenter)
+                            <span class="flex items-center gap-2">
+                                @svg('heroicon-o-building-office', 'w-4 h-4')
+                                {{ $costCenter->code }} – {{ $costCenter->name }}
+                            </span>
+                        @elseif($contract->cost_center)
                             <span class="flex items-center gap-2">
                                 @svg('heroicon-o-building-office', 'w-4 h-4')
                                 {{ $contract->cost_center }}
@@ -286,8 +294,9 @@
                     // Stelle 7: Berufsausbildung
                     $vocationalLevel = $contract->vocational_training_level ? (string)$contract->vocational_training_level : '0';
                     
-                    // Stelle 8: Leiharbeit (0 oder 1)
-                    $tempAgency = $contract->is_temp_agency ? '1' : '0';
+                    // Stelle 8: Leiharbeit (nur 1 oder 2)
+                    // 1 = normal angestellt, 2 = Überlassung
+                    $tempAgency = $contract->is_temp_agency ? '2' : '1';
                     
                     // Stelle 9: Vertragsform
                     $contractForm = $contract->contract_form ? (string)$contract->contract_form : '0';

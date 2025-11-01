@@ -259,8 +259,8 @@ class ImportVwlBenefits extends Command
         // Trim und normalisiere
         $cleaned = trim($value);
         
-        // Entferne Euro-Symbol (auch Unicode-Varianten)
-        $cleaned = preg_replace('/[€\x{20AC}\u20AC]/u', '', $cleaned);
+        // Entferne Euro-Symbol (Unicode-Variante)
+        $cleaned = preg_replace('/[€\x{20AC}]/u', '', $cleaned);
         
         // Entferne alle Leerzeichen
         $cleaned = preg_replace('/\s+/', '', $cleaned);
