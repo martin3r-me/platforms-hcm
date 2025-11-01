@@ -1,13 +1,12 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Tätigkeiten" icon="heroicon-o-clipboard-document">
-            <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" />
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="Tätigkeiten" icon="heroicon-o-clipboard-document" />
     </x-slot>
 
     <x-ui-page-container>
         <x-ui-panel title="Übersicht" subtitle="Tätigkeiten pflegen">
-            <div class="flex justify-end mb-4">
+            <div class="flex justify-between items-center mb-4">
+                <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" class="max-w-xs" />
                 <x-ui-button variant="primary" size="sm" wire:click="openCreateModal">
                     @svg('heroicon-o-plus', 'w-4 h-4') Neu
                 </x-ui-button>

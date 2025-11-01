@@ -1,13 +1,12 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Lohnarten" icon="heroicon-o-currency-euro">
-            <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" />
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="Lohnarten" icon="heroicon-o-currency-euro" />
     </x-slot>
 
     <x-ui-page-container>
         <x-ui-panel title="Übersicht" subtitle="Lohnarten verwalten">
             <div class="flex justify-between items-center mb-4">
+                <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" class="max-w-xs" />
                 <div class="flex gap-2">
                     <a href="{{ route('hcm.payroll-types.export-csv') }}" 
                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">

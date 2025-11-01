@@ -3,13 +3,11 @@
 namespace Platform\Hcm\Livewire\HealthInsuranceCompany;
 
 use Livewire\Component;
-use Livewire\WithPagination;
 use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmHealthInsuranceCompany;
 
 class Index extends Component
 {
-    use WithPagination;
 
     public $search = '';
     public $showCreateModal = false;
@@ -47,10 +45,6 @@ class Index extends Component
         $this->resetForm();
     }
 
-    public function updatedSearch()
-    {
-        $this->resetPage();
-    }
 
     public function openCreateModal()
     {
@@ -176,7 +170,7 @@ class Index extends Component
             })
             ->withCount('employees')
             ->orderBy('name')
-            ->paginate(20);
+            ->get();
     }
 
     public function render()
