@@ -134,15 +134,18 @@ class ImportVwlBenefits extends Command
                         continue;
                     }
 
-                    // VWL-Daten parsen
-                    $gesamtbetrag = $this->parseEuro($data['Gesamtbetrag'] ?? '');
-                    $agAnteil = $this->parseEuro($data['AG-Anteil'] ?? '');
+                    // VWL-Daten parsen (verschiedene Varianten des Headernamens prüfen)
+                    $gesamtbetragRaw = $data['Gesamtbetrag'] ?? $data['ï»¿Gesamtbetrag'] ?? '';
+                    $agAnteilRaw = $data['AG-Anteil'] ?? '';
                     $anbieter = trim($data['Anbieter'] ?? '');
                     $kontonummer = trim($data['Kontonummer'] ?? '');
                     $vertragsnummer = trim($data['Vertragsnummer'] ?? '');
+                    
+                    $gesamtbetrag = $this->parseEuro($gesamtbetragRaw);
+                    $agAnteil = $this->parseEuro($agAnteilRaw);
 
                     if ($gesamtbetrag === null || $gesamtbetrag <= 0) {
-                        $this->warn("  → Personalnummer {$personalNr}: Ungültiger Gesamtbetrag");
+                        $this->warn("  → Personalnummer {$personalNr}: Ungültiger Gesamtbetrag (Rohwert: '{$gesamtbetragRaw}', verfügbare Felder: " . implode(', ', array_keys($data)) . ")");
                         continue;
                     }
 
@@ -253,10 +256,19 @@ class ImportVwlBenefits extends Command
             return null;
         }
 
-        // Entferne "€", Leerzeichen, Tausender-Trennzeichen
-        $cleaned = preg_replace('/[€\s\.]/', '', trim($value));
+        // Trim und normalisiere
+        $cleaned = trim($value);
         
-        // Ersetze Komma durch Punkt
+        // Entferne Euro-Symbol (auch Unicode-Varianten)
+        $cleaned = preg_replace('/[€\x{20AC}\u20AC]/u', '', $cleaned);
+        
+        // Entferne alle Leerzeichen
+        $cleaned = preg_replace('/\s+/', '', $cleaned);
+        
+        // Entferne Tausender-Trennzeichen (Punkte)
+        $cleaned = str_replace('.', '', $cleaned);
+        
+        // Ersetze Komma durch Punkt (Deutsches Format: 40,00 -> 40.00)
         $cleaned = str_replace(',', '.', $cleaned);
         
         $float = filter_var($cleaned, FILTER_VALIDATE_FLOAT);

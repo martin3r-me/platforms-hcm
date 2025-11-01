@@ -643,18 +643,19 @@ class UnifiedImportService
                             }
                             
                             // Stelle 8: Leiharbeit (auf Contract)
-                            // 1 = nein (keine Arbeitnehmerüberlassung)
-                            // 2 = ja (Arbeitnehmerüberlassung)
-                            $tempAgency = (int) substr($activityKey, 7, 1);
-                            if ($tempAgency === 2) {
-                                $contract->is_temp_agency = true;
-                                echo " [Leiharbeit: ja (Schlüssel 2)]";
-                            } else {
-                                // 1 oder andere = keine Leiharbeit
-                                $contract->is_temp_agency = false;
+                            // 1 = normal angestellt (keine Arbeitnehmerüberlassung)
+                            // 2 = Überlassung (Arbeitnehmerüberlassung / Leiharbeit)
+                            // Nur 1 oder 2 sind möglich im Tätigkeitsschlüssel
+                            if (strlen($activityKey) >= 8) {
+                                $tempAgency = (int) substr($activityKey, 7, 1);
                                 if ($tempAgency === 1) {
-                                    echo " [Leiharbeit: nein (Schlüssel 1)]";
+                                    $contract->is_temp_agency = false;
+                                    echo " [Leiharbeit: nein (normal angestellt, Schlüssel 1)]";
+                                } elseif ($tempAgency === 2) {
+                                    $contract->is_temp_agency = true;
+                                    echo " [Leiharbeit: ja (Überlassung, Schlüssel 2)]";
                                 }
+                                // Falls unerwarteter Wert: Loggen aber nicht setzen
                             }
                             
                             // Stelle 9: Vertragsform (auf Contract) - hat Vorrang vor VertragsformID
