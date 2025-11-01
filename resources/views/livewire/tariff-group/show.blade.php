@@ -32,13 +32,22 @@
                         size="sm"
                     />
                     
-                    <x-ui-dashboard-tile
-                        title="Status"
-                        :count="(string) ($tariffGroup->tariffAgreement->is_active ? 'Aktiv' : 'Inaktiv')"
-                        icon="check-circle"
-                        variant="info"
-                        size="sm"
-                    />
+                    <div class="p-3 rounded-lg border border-[var(--ui-border)]/60 bg-[var(--ui-muted-5)]">
+                        <div class="text-xs text-[var(--ui-muted)] mb-1">Status</div>
+                        <div class="flex items-center gap-2">
+                            @if($tariffGroup->tariffAgreement->is_active)
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    @svg('heroicon-o-check-circle', 'w-4 h-4 mr-1')
+                                    Aktiv
+                                </span>
+                            @else
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    @svg('heroicon-o-x-circle', 'w-4 h-4 mr-1')
+                                    Inaktiv
+                                </span>
+                            @endif
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Tariff Levels -->

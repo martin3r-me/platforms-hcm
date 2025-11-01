@@ -57,8 +57,10 @@ class Index extends Component
     {
         return HcmEmployer::where('team_id', auth()->user()->currentTeam->id)
             ->where('is_active', true)
-            ->orderBy('display_name')
-            ->get();
+            ->orderBy('employer_number')
+            ->get()
+            ->sortBy('display_name')
+            ->values();
     }
 
     public function render()

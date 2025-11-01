@@ -45,6 +45,14 @@ trait HasEmployeeContact
     }
     
     /**
+     * Gibt den primären verknüpften Kontakt zurück
+     */
+    public function getContact(): ?ContactInterface
+    {
+        return $this->crmContactLinks->first()?->contact;
+    }
+    
+    /**
      * Delegierte Accessors für Kontaktdaten
      */
     public function getFirstNameAttribute(): ?string
