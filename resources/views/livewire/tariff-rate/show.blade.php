@@ -1,13 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar 
-            title="Tarifsatz: {{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €" 
-            icon="heroicon-o-banknotes"
-            :breadcrumbs="[
-                ['title' => 'Tarifsätze', 'route' => 'hcm.tariff-rates.index'],
-                ['title' => number_format((float)$tariffRate->amount, 2, ',', '.') . ' €']
-            ]"
-        />
+        <x-ui-page-navbar title="Tarifsatz: {{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €" icon="heroicon-o-banknotes" />
     </x-slot>
 
     <x-ui-page-container>

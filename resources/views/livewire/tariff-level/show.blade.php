@@ -1,13 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar 
-            title="{{ $tariffLevel->name }}" 
-            icon="heroicon-o-bars-3"
-            :breadcrumbs="[
-                ['title' => 'Tarifstufen', 'route' => 'hcm.tariff-levels.index'],
-                ['title' => $tariffLevel->name]
-            ]"
-        />
+        <x-ui-page-navbar title="{{ $tariffLevel->name }}" icon="heroicon-o-bars-3" />
     </x-slot>
 
     <x-ui-page-container>

@@ -1,49 +1,54 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar :title="'Ausgaben: ' . ($employee->getContact()?->full_name ?? $employee->employee_number)" icon="heroicon-o-archive-box" />
+        <x-ui-page-navbar title="Ausgaben" icon="heroicon-o-archive-box" />
     </x-slot>
 
     <x-ui-page-container>
         <div class="px-4 sm:px-6 lg:px-8">
-            <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-6 mb-6">
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Ausgaben & Ausstattung</h2>
-                    <p class="text-sm text-[var(--ui-muted)] mt-1">Übersicht aller ausgegebenen Gegenstände für {{ $employee->getContact()?->full_name ?? $employee->employee_number }}</p>
-                </div>
-
+            <x-ui-panel title="Übersicht" subtitle="Alle Ausgaben & Ausstattung">
                 <div class="flex gap-2 mb-4">
-                <select wire:model.live="filterType" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
-                    <option value="">Alle Typen</option>
-                    @foreach($this->issueTypes as $type)
-                        <option value="{{ $type->id }}">{{ $type->name }}</option>
-                    @endforeach
-                </select>
-                <select wire:model.live="filterStatus" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
-                    <option value="all">Alle</option>
-                    <option value="issued">Ausgegeben</option>
-                    <option value="returned">Zurückgegeben</option>
-                    <option value="pending">Ausstehend</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 overflow-hidden">
+                    <select wire:model.live="filterEmployer" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                        <option value="">Alle Arbeitgeber</option>
+                        @foreach($this->employers as $employer)
+                            <option value="{{ $employer->id }}">{{ $employer->display_name }}</option>
+                        @endforeach
+                    </select>
+                    <select wire:model.live="filterType" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                        <option value="">Alle Typen</option>
+                        @foreach($this->issueTypes as $type)
+                            <option value="{{ $type->id }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
+                    <select wire:model.live="filterStatus" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                        <option value="all">Alle</option>
+                        <option value="issued">Ausgegeben</option>
+                        <option value="returned">Zurückgegeben</option>
+                        <option value="pending">Ausstehend</option>
+                    </select>
+                    <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" class="flex-1 max-w-xs" />
+                </div>
             <div class="overflow-x-auto">
                 <table class="w-full table-auto border-collapse text-sm">
                     <thead>
                         <tr class="text-left text-[var(--ui-muted)] border-b border-[var(--ui-border)]/60 text-xs uppercase tracking-wide bg-gray-50">
+                            <th class="px-4 py-3">Mitarbeiter</th>
                             <th class="px-4 py-3">Typ</th>
                             <th class="px-4 py-3">Identifikation</th>
                             <th class="px-4 py-3">Ausgegeben</th>
                             <th class="px-4 py-3">Zurückgegeben</th>
                             <th class="px-4 py-3">Status</th>
-                            <th class="px-4 py-3">Notizen</th>
                             <th class="px-4 py-3"></th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[var(--ui-border)]/60">
                         @forelse($this->issues as $issue)
                             <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3">
+                                    <a href="{{ route('hcm.employees.show', $issue->employee) }}" wire:navigate class="text-blue-600 hover:underline">
+                                        {{ $issue->employee->getContact()?->full_name ?? $issue->employee->employee_number }}
+                                    </a>
+                                    <div class="text-xs text-[var(--ui-muted)]">{{ $issue->employee->employee_number }}</div>
+                                </td>
                                 <td class="px-4 py-3">
                                     @if($issue->type)
                                         <x-ui-badge variant="secondary" size="xs">{{ $issue->type->name }}</x-ui-badge>
@@ -75,7 +80,6 @@
                                         <x-ui-badge variant="danger" size="xs">Ausstehend</x-ui-badge>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-xs text-[var(--ui-muted)] max-w-xs truncate">{{ $issue->notes ?? '—' }}</td>
                                 <td class="px-4 py-3">
                                     <x-ui-button variant="secondary-outline" size="xs" wire:click="$dispatch('edit-issue', {id: {{ $issue->id }}})">
                                         Bearbeiten
@@ -92,35 +96,37 @@
                     </tbody>
                 </table>
             </div>
-            <div class="px-4 py-3 border-t border-[var(--ui-border)]/60">
-                {{ $this->issues->links() }}
-            </div>
-        </div>
+                <div class="mt-4">
+                    {{ $this->issues->links() }}
+                </div>
+            </x-ui-panel>
         </div>
     </x-ui-page-container>
 
     <x-slot name="sidebar">
-        <x-ui-page-sidebar title="Navigation" width="w-80" :defaultOpen="true">
-            <div class="p-6 space-y-4">
+        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                {{-- Aktionen --}}
                 <div>
-                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Navigation</h3>
-                    <div class="space-y-1">
-                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.show', $employee)" wire:navigate class="w-full justify-start">
-                            @svg('heroicon-o-arrow-left', 'w-4 h-4')
-                            <span class="ml-2">Zurück zum Mitarbeiter</span>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="primary" size="sm" class="w-full" wire:click="$dispatch('open-create-issue-modal')">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-plus', 'w-4 h-4')
+                                Neue Ausgabe
+                            </span>
                         </x-ui-button>
                     </div>
                 </div>
-                
-                <div class="border-t border-[var(--ui-border)]"></div>
-                
+
+                {{-- Statistiken --}}
                 <div>
-                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Aktionen</h3>
-                    <div class="space-y-1">
-                        <x-ui-button variant="primary" size="sm" wire:click="$dispatch('open-create-issue-modal')" class="w-full justify-start">
-                            @svg('heroicon-o-plus', 'w-4 h-4')
-                            <span class="ml-2">Neue Ausgabe</span>
-                        </x-ui-button>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Gesamt</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $this->issues->total() }}</span>
+                        </div>
                     </div>
                 </div>
             </div>

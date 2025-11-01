@@ -291,4 +291,20 @@
         </x-slot>
     </x-ui-modal>
     </x-ui-page-container>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Navigation" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-4">
+                <div>
+                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Übersichten</h3>
+                    <div class="space-y-1">
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employers.benefits.index', $employer)" wire:navigate class="w-full justify-start">
+                            @svg('heroicon-o-gift', 'w-4 h-4')
+                            <span class="ml-2">Benefits</span>
+                        </x-ui-button>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
 </x-ui-page>

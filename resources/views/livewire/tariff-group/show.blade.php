@@ -1,15 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="{{ $tariffGroup->name }}" icon="heroicon-o-squares-2x2">
-            <div class="flex items-center gap-2">
-                <a href="{{ route('hcm.tariff-groups.index') }}" class="text-sm text-[var(--ui-muted)] hover:text-[var(--ui-secondary)]" wire:navigate>
-                    ← Tarifgruppen
-                </a>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {{ $tariffGroup->code }}
-                </span>
-            </div>
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="{{ $tariffGroup->name }}" icon="heroicon-o-squares-2x2" />
     </x-slot>
 
     <x-ui-page-container>

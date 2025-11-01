@@ -22,6 +22,7 @@ Route::get('/', Platform\Hcm\Livewire\Dashboard::class)->name('hcm.dashboard');
 // Arbeitgeber-Verwaltung
 Route::get('/employers', EmployerIndex::class)->name('hcm.employers.index');
 Route::get('/employers/{employer}', EmployerShow::class)->name('hcm.employers.show');
+Route::get('/employers/{employer}/benefits', \Platform\Hcm\Livewire\Employer\BenefitsIndex::class)->name('hcm.employers.benefits.index');
 
 // Mitarbeiter-Verwaltung
 Route::get('/employees', EmployeeIndex::class)->name('hcm.employees.index');
@@ -85,3 +86,7 @@ Route::get('/levy-types', LevyTypeIndex::class)->name('hcm.levy-types.index');
 // Arbeitgeber-spezifische Mitarbeiter
 Route::get('/employers/{employer}/employees', EmployeeIndex::class)->name('hcm.employers.employees.index');
 Route::get('/employers/{employer}/employees/{employee}', EmployeeShow::class)->name('hcm.employers.employees.show');
+
+// Benefits & Ausgaben (global)
+Route::get('/benefits', \Platform\Hcm\Livewire\Benefits\Index::class)->name('hcm.benefits.index');
+Route::get('/issues', \Platform\Hcm\Livewire\Issues\Index::class)->name('hcm.issues.index');

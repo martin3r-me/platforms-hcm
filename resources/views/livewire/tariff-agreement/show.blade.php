@@ -1,23 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="{{ $tariffAgreement->name }}" icon="heroicon-o-document-text">
-            <div class="flex items-center gap-2">
-                <a href="{{ route('hcm.tariff-agreements.index') }}" class="text-sm text-[var(--ui-muted)] hover:text-[var(--ui-secondary)]" wire:navigate>
-                    ← Tarifverträge
-                </a>
-                @if($tariffAgreement->is_active)
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        @svg('heroicon-o-check-circle', 'w-4 h-4 mr-1')
-                        Aktiv
-                    </span>
-                @else
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        @svg('heroicon-o-x-circle', 'w-4 h-4 mr-1')
-                        Inaktiv
-                    </span>
-                @endif
-            </div>
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="{{ $tariffAgreement->name }}" icon="heroicon-o-document-text" />
     </x-slot>
 
     <x-ui-page-container>

@@ -97,6 +97,18 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
+    {{-- Abschnitt: Benefits & Ausgaben --}}
+    <x-ui-sidebar-list label="Benefits & Ausgaben">
+        <x-ui-sidebar-item :href="route('hcm.benefits.index')">
+            @svg('heroicon-o-gift', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Benefits</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.issues.index')">
+            @svg('heroicon-o-archive-box', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Ausgaben</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
     {{-- Collapsed: Icons-only --}}
     <div x-show="collapsed" class="px-2 py-2 border-b border-[var(--ui-border)]">
         <div class="flex flex-col gap-2">
