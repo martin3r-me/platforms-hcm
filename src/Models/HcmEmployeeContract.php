@@ -483,13 +483,13 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
 
     /**
      * Gibt das verlinkte Cost Center für diesen Contract zurück
-     * (aus organization_cost_center_links oder aus resolveCostCenter wenn als Code gespeichert)
+     * (über Link-Tabelle, mit Fallback auf Code-String)
      * 
      * @return OrganizationCostCenter|null
      */
     public function getCostCenter(): ?OrganizationCostCenter
     {
-        // 1. Prüfe ob über Link verknüpft
+        // 1. Prüfe ob über Link-Tabelle verknüpft (bevorzugt)
         $link = $this->costCenterLinks()
             ->where('is_primary', true)
             ->where(function ($q) {
@@ -507,7 +507,12 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
             return $link->costCenter;
         }
         
-        // 2. Fallback: Auflösung über Code (wenn als String gespeichert)
+        // 2. Fallback: Direkte FK zu cost_center_id (für Rückwärtskompatibilität)
+        if ($this->cost_center_id) {
+            return OrganizationCostCenter::find($this->cost_center_id);
+        }
+        
+        // 3. Fallback: Auflösung über Code (wenn als String gespeichert)
         if ($this->cost_center) {
             return $this->resolveCostCenter($this->cost_center);
         }

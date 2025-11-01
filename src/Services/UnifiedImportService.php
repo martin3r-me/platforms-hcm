@@ -107,6 +107,7 @@ class UnifiedImportService
                     // Ensure cost center - nur globale Cost Centers
                     echo "\n      [1/12] Kostenstelle prüfen...";
                     $costCenterCode = trim((string) ($row['KostenstellenBezeichner'] ?? ''));
+                    $cc = null;
                     if ($costCenterCode !== '') {
                         // Suche nur globale Cost Centers
                         $cc = OrganizationCostCenter::where('team_id', $teamId)
@@ -289,7 +290,7 @@ class UnifiedImportService
                         'hours_per_month' => $hoursPerMonth,
                         'team_id' => $teamId,
                         'is_active' => $isActive,
-                        // cost_center_id wird nicht mehr direkt gesetzt, sondern über attachCostCenter() verlinkt
+                        // cost_center_id wird NICHT direkt gesetzt, sondern über Link-Tabelle
                         'work_days_per_week' => $workDaysPerWeek,
                         'calendar_work_days' => $calendarWorkDays ?: null,
                         // SV-Nummer
@@ -350,60 +351,43 @@ class UnifiedImportService
                         echo "\n      [9/12] Kein Startdatum, Vertrag überspringen";
                     }
 
-                    // Kostenstelle über Organization-Modul verlinken (wie im alten Import)
-                    if ($contract && isset($cc) && $cc) {
+                    // Kostenstelle über Link-Tabelle verknüpfen (für bessere Abfragen von Cost Center aus)
+                    if ($contract && $cc) {
                         echo "\n      [9a/12] Kostenstelle verlinken...";
                         try {
-                            // Verwende das HasCostCenterLinksTrait, falls verfügbar
-                            if (method_exists($contract, 'costCenterLinks')) {
-                                // Prüfe ob bereits verlinkt
-                                $existingLink = $contract->costCenterLinks()
-                                    ->where('cost_center_id', $cc->id)
-                                    ->where(function ($q) use ($start) {
-                                        if ($start) {
-                                            $q->whereNull('start_date')->orWhere('start_date', '<=', $start->toDateString());
-                                        } else {
-                                            $q->whereNull('start_date');
-                                        }
-                                    })
-                                    ->first();
-                                
-                                if (!$existingLink) {
-                                    // Verwende attachCostCenter, aber mit CostCenter statt Entity
-                                    // Da das Trait entity_id erwartet, aber CostCenter direkt verwendet wird,
-                                    // verwenden wir direkt das Model
-                                    \DB::table('organization_cost_center_links')->insert([
-                                        'uuid' => \Symfony\Component\Uid\UuidV7::generate(),
-                                        'cost_center_id' => $cc->id,
-                                        'linkable_type' => \Platform\Hcm\Models\HcmEmployeeContract::class,
-                                        'linkable_id' => $contract->id,
-                                        'start_date' => $start?->toDateString(),
-                                        'end_date' => $end?->toDateString(),
-                                        'is_primary' => true,
-                                        'team_id' => $teamId,
-                                        'created_by_user_id' => $employer->created_by_user_id,
-                                        'created_at' => now(),
-                                        'updated_at' => now(),
-                                    ]);
-                                    echo " ✓";
-                                    $stats['cost_center_links_created']++;
-                                } else {
-                                    echo " bereits verlinkt";
-                                }
+                            // Prüfe ob bereits verlinkt (mit gleichem Startdatum)
+                            $existingLink = \Platform\Organization\Models\OrganizationCostCenterLink::where('linkable_type', \Platform\Hcm\Models\HcmEmployeeContract::class)
+                                ->where('linkable_id', $contract->id)
+                                ->where('cost_center_id', $cc->id)
+                                ->where(function ($q) use ($start) {
+                                    if ($start) {
+                                        $q->whereNull('start_date')->orWhere('start_date', '=', $start->toDateString());
+                                    } else {
+                                        $q->whereNull('start_date');
+                                    }
+                                })
+                                ->first();
+                            
+                            if (!$existingLink) {
+                                // Neue Verknüpfung erstellen
+                                \Platform\Organization\Models\OrganizationCostCenterLink::create([
+                                    'cost_center_id' => $cc->id,
+                                    'linkable_type' => \Platform\Hcm\Models\HcmEmployeeContract::class,
+                                    'linkable_id' => $contract->id,
+                                    'start_date' => $start?->toDateString(),
+                                    'end_date' => $end?->toDateString(),
+                                    'is_primary' => true,
+                                    'team_id' => $teamId,
+                                    'created_by_user_id' => $employer->created_by_user_id,
+                                ]);
+                                echo " ✓ ({$cc->code})";
+                                $stats['cost_center_links_created']++;
                             } else {
-                                // Fallback: Als String speichern (wie im alten Import)
-                                $contract->update(['cost_center' => $cc->code]);
-                                echo " ✓ (als String)";
+                                echo " bereits verlinkt ({$cc->code})";
                             }
                         } catch (\Exception $e) {
                             echo " FEHLER: " . $e->getMessage();
-                            // Fallback: Als String speichern
-                            try {
-                                $contract->update(['cost_center' => $cc->code]);
-                                echo " (Fallback: als String gespeichert)";
-                            } catch (\Exception $e2) {
-                                $stats['errors'][] = "Kostenstellen-Verknüpfung Fehler für {$employee->employee_number}: " . $e->getMessage() . " / " . $e2->getMessage();
-                            }
+                            $stats['errors'][] = "Kostenstellen-Verknüpfung Fehler für {$employee->employee_number}: " . $e->getMessage();
                         }
                     }
 

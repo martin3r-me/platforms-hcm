@@ -62,9 +62,16 @@ class ImportVwlBenefits extends Command
                 throw new \Exception("CSV-Header konnte nicht gelesen werden");
             }
 
-            // Header normalisieren (trim, UTF-8)
+            // Header normalisieren (trim, UTF-8, BOM entfernen)
             $header = array_map(function($h) {
-                return trim(mb_convert_encoding($h, 'UTF-8', 'Windows-1252'));
+                $h = trim(mb_convert_encoding($h, 'UTF-8', 'Windows-1252'));
+                // BOM entfernen (UTF-8 BOM: 0xEF 0xBB 0xBF)
+                if (substr($h, 0, 3) === "\xEF\xBB\xBF") {
+                    $h = substr($h, 3);
+                }
+                // Alternative: Entferne unsichtbare BOM-Zeichen
+                $h = preg_replace('/^\x{FEFF}/u', '', $h);
+                return trim($h);
             }, $header);
 
             $this->info("Header: " . implode(' | ', $header));
@@ -86,13 +93,14 @@ class ImportVwlBenefits extends Command
                 // Daten in assoziatives Array umwandeln
                 $data = array_combine($header, $row);
                 if (!$data) {
-                    $this->warn("Zeile {$rowNum}: Konnte nicht geparst werden");
+                    $this->warn("Zeile {$rowNum}: Konnte nicht geparst werden (Header: " . implode(', ', array_keys($data ?: [])) . ")");
                     continue;
                 }
 
-                $personalNr = trim($data['Personalnummer'] ?? '');
+                // Personalnummer finden (verschiedene Varianten)
+                $personalNr = trim($data['Personalnummer'] ?? $data['ï»¿Personalnummer'] ?? $data[array_keys($data)[0] ?? ''] ?? '');
                 if (empty($personalNr)) {
-                    $this->warn("Zeile {$rowNum}: Keine Personalnummer gefunden");
+                    $this->warn("Zeile {$rowNum}: Keine Personalnummer gefunden (verfügbare Felder: " . implode(', ', array_keys($data)) . ")");
                     continue;
                 }
 
