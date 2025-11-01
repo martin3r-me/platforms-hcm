@@ -184,42 +184,37 @@
                     </div>
                 </div>
 
-                {{-- Statistiken --}}
+                {{-- Statistiken (kompakt) --}}
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifstufen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffGroup->tariffLevels->count() }}</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ $tariffGroup->tariffLevels->count() }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Stufen</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifsätze</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffGroup->tariffRates->count() }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ $tariffGroup->tariffRates->count() }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Sätze</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifvertrag</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffGroup->tariffAgreement->name ?? 'N/A' }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Progression Info --}}
-                <div>
-                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Progression</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Mögliche Progressionen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $this->progressionStats['possible_progressions'] }}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Endstufen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $this->progressionStats['final_levels'] }}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Ø Progression (Monate)</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ number_format((float)$this->progressionStats['avg_progression_months'], 1, ',', '.') }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center col-span-2">
+                            <div class="text-xs text-[var(--ui-muted)]">Tarifvertrag</div>
+                            <div class="text-sm font-medium text-[var(--ui-secondary)] truncate">{{ $tariffGroup->tariffAgreement->name ?? 'N/A' }}</div>
                         </div>
                     </div>
+                    @if(isset($this->progressionStats))
+                        <div class="mt-4 pt-4 border-t border-[var(--ui-border)]">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                                    <div class="text-sm font-semibold text-[var(--ui-secondary)]">{{ $this->progressionStats['possible_progressions'] }}</div>
+                                    <div class="text-xs text-[var(--ui-muted)]">Progressionen</div>
+                                </div>
+                                <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                                    <div class="text-sm font-semibold text-[var(--ui-secondary)]">{{ $this->progressionStats['final_levels'] }}</div>
+                                    <div class="text-xs text-[var(--ui-muted)]">Endstufen</div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </x-ui-page-sidebar>

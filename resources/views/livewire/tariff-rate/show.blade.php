@@ -153,37 +153,30 @@
                     </div>
                 </div>
 
-                {{-- Statistiken --}}
+                {{-- Statistiken (kompakt) --}}
                 <div>
-                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Betrag</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €</span>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Details</h3>
+                    <div class="space-y-2">
+                        <div class="p-3 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-2xl font-bold text-[var(--ui-secondary)]">{{ number_format((float)$tariffRate->amount, 2, ',', '.') }} €</div>
+                            <div class="text-xs text-[var(--ui-muted)] mt-1">Betrag</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifstufe</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffRate->tariffLevel->name ?? 'N/A' }}</span>
-                        </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifgruppe</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffRate->tariffLevel->tariffGroup->name ?? 'N/A' }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Status --}}
-                <div>
-                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Status</h3>
-                    <div class="p-3 rounded-lg {{ $tariffRate->is_current ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200' }}">
-                        <div class="flex items-center gap-2">
+                        <div class="p-2 rounded-lg text-center {{ $tariffRate->is_current ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200' }}">
                             @if($tariffRate->is_current)
-                                @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
-                                <span class="text-sm font-medium text-green-800">Aktuell</span>
+                                @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600 mx-auto')
+                                <div class="text-xs text-green-800 mt-1">Aktuell</div>
                             @else
-                                @svg('heroicon-o-clock', 'w-5 h-5 text-gray-600')
-                                <span class="text-sm font-medium text-gray-800">Historisch</span>
+                                @svg('heroicon-o-clock', 'w-5 h-5 text-gray-600 mx-auto')
+                                <div class="text-xs text-gray-800 mt-1">Historisch</div>
                             @endif
+                        </div>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg">
+                            <div class="text-xs text-[var(--ui-muted)]">Tarifstufe</div>
+                            <div class="text-sm font-medium text-[var(--ui-secondary)] truncate">{{ $tariffRate->tariffLevel->name ?? 'N/A' }}</div>
+                        </div>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg">
+                            <div class="text-xs text-[var(--ui-muted)]">Tarifgruppe</div>
+                            <div class="text-sm font-medium text-[var(--ui-secondary)] truncate">{{ $tariffRate->tariffLevel->tariffGroup->name ?? 'N/A' }}</div>
                         </div>
                     </div>
                 </div>

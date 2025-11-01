@@ -221,34 +221,28 @@
                                 Neuer Tarifvertrag
                             </span>
                         </x-ui-button>
-                        <x-ui-button variant="secondary-outline" size="sm" class="w-full">
-                            <span class="inline-flex items-center gap-2">
-                                @svg('heroicon-o-document-arrow-down', 'w-4 h-4')
-                                Import
-                            </span>
-                        </x-ui-button>
                     </div>
                 </div>
 
-                {{-- Statistiken --}}
+                {{-- Statistiken (kompakt) --}}
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifverträge</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['agreements'] }}</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['agreements'] }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Verträge</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifgruppen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['groups'] }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['groups'] }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Gruppen</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifstufen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['levels'] }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['levels'] }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Stufen</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifsätze</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['rates'] }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ (int)$this->stats['rates'] }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Sätze</div>
                         </div>
                     </div>
                 </div>

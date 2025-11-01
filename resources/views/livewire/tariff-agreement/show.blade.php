@@ -136,36 +136,29 @@
                     </div>
                 </div>
 
-                {{-- Statistiken --}}
+                {{-- Statistiken (kompakt) --}}
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifgruppen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffAgreement->tariffGroups->count() }}</span>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ $tariffAgreement->tariffGroups->count() }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Gruppen</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifstufen</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffLevels->count(); }) }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ $tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffLevels->count(); }) }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Stufen</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifsätze</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffRates->count(); }) }}</span>
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ $tariffAgreement->tariffGroups->sum(function($group) { return $group->tariffRates->count(); }) }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Sätze</div>
                         </div>
-                    </div>
-                </div>
-
-                {{-- Status --}}
-                <div>
-                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Status</h3>
-                    <div class="p-3 rounded-lg {{ $tariffAgreement->is_active ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200' }}">
-                        <div class="flex items-center gap-2">
+                        <div class="p-2 rounded-lg text-center {{ $tariffAgreement->is_active ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200' }}">
                             @if($tariffAgreement->is_active)
-                                @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
-                                <span class="text-sm font-medium text-green-800">Aktiv</span>
+                                @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600 mx-auto')
+                                <div class="text-xs text-green-800 mt-1">Aktiv</div>
                             @else
-                                @svg('heroicon-o-x-circle', 'w-5 h-5 text-red-600')
-                                <span class="text-sm font-medium text-red-800">Inaktiv</span>
+                                @svg('heroicon-o-x-circle', 'w-5 h-5 text-red-600 mx-auto')
+                                <div class="text-xs text-red-800 mt-1">Inaktiv</div>
                             @endif
                         </div>
                     </div>

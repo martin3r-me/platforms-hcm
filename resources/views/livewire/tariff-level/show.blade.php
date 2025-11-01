@@ -136,36 +136,27 @@
                     </div>
                 </div>
 
-                {{-- Statistiken --}}
+                {{-- Statistiken (kompakt) --}}
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
-                    <div class="space-y-3">
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifsätze</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->tariffRates->count() }}</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center">
+                            <div class="text-lg font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->tariffRates->count() }}</div>
+                            <div class="text-xs text-[var(--ui-muted)]">Sätze</div>
                         </div>
-                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                            <span class="text-sm text-[var(--ui-muted)]">Tarifgruppe</span>
-                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->tariffGroup->name ?? 'N/A' }}</span>
+                        <div class="p-2 rounded-lg text-center {{ ($tariffLevel->progression_months && $tariffLevel->progression_months != 999) ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50 border border-gray-200' }}">
+                            @if($tariffLevel->progression_months && $tariffLevel->progression_months != 999)
+                                <div class="text-lg font-semibold text-blue-800">{{ $tariffLevel->progression_months }}</div>
+                                <div class="text-xs text-blue-600">Monate</div>
+                            @else
+                                <div class="text-lg font-semibold text-gray-800">Endstufe</div>
+                                <div class="text-xs text-gray-600">Keine Progression</div>
+                            @endif
                         </div>
-                    </div>
-                </div>
-
-                {{-- Progression Info --}}
-                <div>
-                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Progression</h3>
-                    <div class="space-y-3">
-                        @if($tariffLevel->progression_months && $tariffLevel->progression_months != 999)
-                            <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                                <span class="text-sm text-[var(--ui-muted)]">Progression (Monate)</span>
-                                <span class="font-semibold text-[var(--ui-secondary)]">{{ $tariffLevel->progression_months }}</span>
-                            </div>
-                        @else
-                            <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
-                                <span class="text-sm text-[var(--ui-muted)]">Status</span>
-                                <span class="font-semibold text-[var(--ui-secondary)]">Endstufe</span>
-                            </div>
-                        @endif
+                        <div class="p-2 bg-[var(--ui-muted-5)] rounded-lg text-center col-span-2">
+                            <div class="text-xs text-[var(--ui-muted)]">Tarifgruppe</div>
+                            <div class="text-sm font-medium text-[var(--ui-secondary)] truncate">{{ $tariffLevel->tariffGroup->name ?? 'N/A' }}</div>
+                        </div>
                     </div>
                 </div>
             </div>

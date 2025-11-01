@@ -1,22 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="{{ $employee->employee_number }}" icon="heroicon-o-user">
-            <div class="flex items-center gap-2">
-                <a href="{{ route('hcm.employees.index') }}" class="text-sm text-[var(--ui-muted)] hover:text-[var(--ui-secondary)]" wire:navigate>
-                    ← Mitarbeiter
-                </a>
-                @if($this->isDirty)
-                    <x-ui-button 
-                        variant="primary" 
-                        size="sm"
-                        wire:click="save"
-                    >
-                        @svg('heroicon-o-check', 'w-4 h-4')
-                        Speichern
-                    </x-ui-button>
-                @endif
-            </div>
-        </x-ui-page-navbar>
+        <x-ui-page-navbar :title="($employee->getContact()?->full_name ?? 'Mitarbeiter #' . $employee->employee_number)" icon="heroicon-o-user" />
     </x-slot>
 
     <x-ui-page-container spacing="space-y-8">
@@ -622,39 +606,56 @@
     </x-ui-page-container>
 
     <x-slot name="sidebar">
-        <x-ui-page-sidebar title="Navigation" width="w-80" :defaultOpen="true">
-            <div class="p-6 space-y-4">
+        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                {{-- Aktionen --}}
                 <div>
-                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Übersichten</h3>
-                    <div class="space-y-1">
-                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.benefits.index', $employee)" wire:navigate class="w-full justify-start">
-                            @svg('heroicon-o-gift', 'w-4 h-4')
-                            <span class="ml-2">Benefits</span>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        @if($this->isDirty)
+                            <x-ui-button variant="primary" size="sm" wire:click="save" class="w-full">
+                                <span class="inline-flex items-center gap-2">
+                                    @svg('heroicon-o-check', 'w-4 h-4')
+                                    Änderungen speichern
+                                </span>
+                            </x-ui-button>
+                        @endif
+                        <x-ui-button variant="primary" size="sm" wire:click="addContract" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-document-plus', 'w-4 h-4')
+                                Neuer Vertrag
+                            </span>
                         </x-ui-button>
-                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.issues.index', $employee)" wire:navigate class="w-full justify-start">
-                            @svg('heroicon-o-archive-box', 'w-4 h-4')
-                            <span class="ml-2">Ausgaben</span>
+                        <x-ui-button variant="secondary" size="sm" wire:click="linkContact" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-link', 'w-4 h-4')
+                                Kontakt verknüpfen
+                            </span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary" size="sm" wire:click="addContact" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-user-plus', 'w-4 h-4')
+                                Kontakt erstellen
+                            </span>
                         </x-ui-button>
                     </div>
                 </div>
-                
-                <div class="border-t border-[var(--ui-border)]"></div>
-                
+
+                {{-- Übersichten --}}
                 <div>
-                    <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Aktionen</h3>
-                    <div class="space-y-1">
-                        <x-ui-button variant="secondary" size="sm" wire:click="linkContact" class="w-full justify-start">
-                            @svg('heroicon-o-link', 'w-4 h-4')
-                            <span class="ml-2">Kontakt verknüpfen</span>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Übersichten</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.benefits.index', $employee)" wire:navigate class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-gift', 'w-4 h-4')
+                                Benefits
+                            </span>
                         </x-ui-button>
-                        <x-ui-button variant="secondary" size="sm" wire:click="addContact" class="w-full justify-start">
-                            @svg('heroicon-o-user-plus', 'w-4 h-4')
-                            <span class="ml-2">Kontakt erstellen</span>
-                        </x-ui-button>
-                        <div class="border-t border-[var(--ui-border)] my-2"></div>
-                        <x-ui-button variant="primary" size="sm" wire:click="addContract" class="w-full justify-start">
-                            @svg('heroicon-o-document-plus', 'w-4 h-4')
-                            <span class="ml-2">Vertrag erstellen</span>
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.issues.index', $employee)" wire:navigate class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-archive-box', 'w-4 h-4')
+                                Ausgaben
+                            </span>
                         </x-ui-button>
                     </div>
                 </div>

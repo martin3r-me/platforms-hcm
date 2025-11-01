@@ -102,10 +102,10 @@
     <x-ui-modal wire:model="showCreateModal">
         <x-slot name="header">Neue Rentenart anlegen</x-slot>
         <div class="space-y-4">
-            <x-ui-input-text name="code" label="Code" wire:model.live="code" required />
-            <x-ui-input-text name="name" label="Name" wire:model.live="name" required />
-            <x-ui-input-textarea name="description" label="Beschreibung" wire:model.live="description" />
-            <x-ui-input-checkbox model="is_active" name="is_active" wire:model.live="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+            <x-ui-input-text name="code" label="Code" wire:model="code" required />
+            <x-ui-input-text name="name" label="Name" wire:model="name" required />
+            <x-ui-input-textarea name="description" label="Beschreibung" wire:model="description" />
+            <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
         </div>
         <x-slot name="footer">
             <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
@@ -116,10 +116,10 @@
     <x-ui-modal wire:model="showEditModal">
         <x-slot name="header">Rentenart bearbeiten</x-slot>
         <div class="space-y-4">
-            <x-ui-input-text name="code" label="Code" wire:model.live="code" required />
-            <x-ui-input-text name="name" label="Name" wire:model.live="name" required />
-            <x-ui-input-textarea name="description" label="Beschreibung" wire:model.live="description" />
-            <x-ui-input-checkbox model="is_active" name="is_active" wire:model.live="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+            <x-ui-input-text name="code" label="Code" wire:model="code" required />
+            <x-ui-input-text name="name" label="Name" wire:model="name" required />
+            <x-ui-input-textarea name="description" label="Beschreibung" wire:model="description" />
+            <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
         </div>
         <x-slot name="footer">
             <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
