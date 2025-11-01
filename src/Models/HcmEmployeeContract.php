@@ -455,60 +455,30 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     }
 
     /**
-     * Löst eine Cost Center auf (entity-spezifisch wenn Employer Entity hat, sonst global)
+     * Löst eine Cost Center auf (nur globale)
      * 
      * @param string $code Cost Center Code
      * @return OrganizationCostCenter|null
      */
     public function resolveCostCenter(string $code): ?OrganizationCostCenter
     {
-        $employer = $this->employee->employer ?? null;
-        
-        // 1. Suche entity-spezifische Cost Center (wenn Employer Entity hat)
-        if ($employer && $employer->organization_entity_id) {
-            $cc = OrganizationCostCenter::where('team_id', $this->team_id)
-                ->where('code', $code)
-                ->where('root_entity_id', $employer->organization_entity_id)
-                ->where('is_active', true)
-                ->first();
-            
-            if ($cc) {
-                return $cc;
-            }
-        }
-        
-        // 2. Fallback: Globale Cost Center
         return OrganizationCostCenter::where('team_id', $this->team_id)
             ->where('code', $code)
-            ->whereNull('root_entity_id')
             ->where('is_active', true)
             ->first();
     }
 
     /**
-     * Gibt alle verfügbaren Cost Centers für diesen Contract zurück
-     * (entity-spezifische + globale)
+     * Gibt alle verfügbaren Cost Centers für diesen Contract zurück (nur globale)
      * 
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getAvailableCostCenters()
     {
-        $employer = $this->employee->employer ?? null;
-        $query = OrganizationCostCenter::where('team_id', $this->team_id)
-            ->where('is_active', true);
-        
-        // Wenn Employer Entity hat: entity-spezifische + globale
-        if ($employer && $employer->organization_entity_id) {
-            $query->where(function ($q) use ($employer) {
-                $q->whereNull('root_entity_id') // Globale
-                  ->orWhere('root_entity_id', $employer->organization_entity_id); // Entity-spezifische
-            });
-        } else {
-            // Nur globale
-            $query->whereNull('root_entity_id');
-        }
-        
-        return $query->orderBy('name')->get();
+        return OrganizationCostCenter::where('team_id', $this->team_id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
     }
 
     /**

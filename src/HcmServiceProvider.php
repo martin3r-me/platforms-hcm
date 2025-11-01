@@ -84,6 +84,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\ImportHealthInsuranceCompanies::class,
                 \Platform\Hcm\Console\Commands\ImportPayrollTypeMappings::class,
                 \Platform\Hcm\Console\Commands\ImportUnifiedHcmData::class,
+                \Platform\Hcm\Console\Commands\ImportVwlBenefits::class,
                 \Platform\Hcm\Console\Commands\UpdatePayrollTypesSuccessors::class,
             ]);
         }

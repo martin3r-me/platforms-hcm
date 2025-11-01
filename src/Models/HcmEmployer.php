@@ -24,7 +24,6 @@ class HcmEmployer extends Model implements CompanyLinkableInterface
         'created_by_user_id',
         'owned_by_user_id',
         'team_id',
-        'organization_entity_id', // Optional: Verknüpfung zur OrganizationEntity für Cost Centers
         'is_active'
     ];
     
@@ -119,14 +118,6 @@ class HcmEmployer extends Model implements CompanyLinkableInterface
     public function team()
     {
         return $this->belongsTo(\Platform\Core\Models\Team::class, 'team_id');
-    }
-    
-    /**
-     * Beziehung zur OrganizationEntity (für Cost Center Auflösung)
-     */
-    public function organizationEntity()
-    {
-        return $this->belongsTo(\Platform\Organization\Models\OrganizationEntity::class, 'organization_entity_id');
     }
     
     /**

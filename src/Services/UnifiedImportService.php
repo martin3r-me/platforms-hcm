@@ -104,51 +104,30 @@ class UnifiedImportService
                         echo sprintf("\n  → Zeile %d: %s (PersonalNr: %s)", $processed, $employeeName ?: 'unbekannt', $personalNr);
                     }
 
-                    // Ensure cost center - Suche direkt nach Code (global + entity-spezifisch wenn Employer Entity hat)
+                    // Ensure cost center - nur globale Cost Centers
                     echo "\n      [1/12] Kostenstelle prüfen...";
                     $costCenterCode = trim((string) ($row['KostenstellenBezeichner'] ?? ''));
                     if ($costCenterCode !== '') {
-                        // Suche: Erst entity-spezifisch (wenn Employer Entity hat), dann global
-                        $cc = null;
+                        // Suche nur globale Cost Centers
+                        $cc = OrganizationCostCenter::where('team_id', $teamId)
+                            ->where('code', $costCenterCode)
+                            ->where('is_active', true)
+                            ->first();
                         
-                        if ($employer->organization_entity_id) {
-                            // 1. Entity-spezifische Cost Center
-                            $cc = OrganizationCostCenter::where('team_id', $teamId)
-                                ->where('code', $costCenterCode)
-                                ->where('root_entity_id', $employer->organization_entity_id)
-                                ->where('is_active', true)
-                                ->first();
-                            
-                            if ($cc) {
-                                echo " gefunden (entity-spezifisch)";
-                            }
-                        }
-                        
-                        // 2. Fallback: Globale Cost Center
-                        if (!$cc) {
-                            $cc = OrganizationCostCenter::where('team_id', $teamId)
-                                ->where('code', $costCenterCode)
-                                ->whereNull('root_entity_id')
-                                ->where('is_active', true)
-                                ->first();
-                            
-                            if ($cc) {
-                                echo " gefunden (global)";
-                            }
-                        }
-                        
-                        // 3. Erstellen wenn nicht gefunden (als global - Cost Centers sind nicht entity-gebunden beim Import)
-                        if (!$cc) {
+                        if ($cc) {
+                            echo " gefunden";
+                        } else {
+                            // Erstellen wenn nicht gefunden (immer global)
                             $cc = OrganizationCostCenter::create([
                                 'code' => $costCenterCode,
                                 'name' => $costCenterCode,
                                 'team_id' => $teamId,
                                 'user_id' => $employer->created_by_user_id,
-                                'root_entity_id' => null, // Immer global - entity-spezifische Zuordnung manuell
+                                'root_entity_id' => null, // Immer global
                                 'description' => 'Importiert aus unified CSV',
                                 'is_active' => true,
                             ]);
-                            echo " erstellt (global)";
+                            echo " erstellt";
                             $stats['cost_centers_created']++;
                         }
                     } else {
