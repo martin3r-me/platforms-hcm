@@ -4,203 +4,134 @@
         </x-ui-page-navbar>
     </x-slot>
 
-    <x-ui-page-container spacing="space-y-8">
-        {{-- Statistiken --}}
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <x-ui-dashboard-tile 
-                title="Gesamt" 
-                :count="$this->statistics['total']" 
-                icon="document-text" 
-                variant="primary" 
-                size="sm" 
-            />
-            <x-ui-dashboard-tile 
-                title="Abgeschlossen" 
-                :count="$this->statistics['completed']" 
-                icon="check-circle" 
-                variant="success" 
-                size="sm" 
-            />
-            <x-ui-dashboard-tile 
-                title="Wartend" 
-                :count="$this->statistics['pending']" 
-                icon="clock" 
-                variant="warning" 
-                size="sm" 
-            />
-            <x-ui-dashboard-tile 
-                title="In Bearbeitung" 
-                :count="$this->statistics['processing']" 
-                icon="arrow-path" 
-                variant="info" 
-                size="sm" 
-            />
-            <x-ui-dashboard-tile 
-                title="Fehlgeschlagen" 
-                :count="$this->statistics['failed']" 
-                icon="x-circle" 
-                variant="danger" 
-                size="sm" 
-            />
-        </div>
+    <x-ui-page-container>
+        <div class="px-4 sm:px-6 lg:px-8">
+            <x-ui-panel title="Export-Historie" subtitle="Übersicht aller durchgeführten Exports">
+                {{-- Filter & Suche --}}
+                <div class="flex gap-2 mb-4">
+                    <x-ui-input-text 
+                        name="search"
+                        placeholder="Suchen…" 
+                        wire:model.live.debounce.300ms="search" 
+                        class="flex-1 max-w-xs" 
+                    />
 
-        {{-- Filter & Suche --}}
-        <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-6">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <x-ui-input-text 
-                    name="search"
-                    label="Suche"
-                    wire:model.live.debounce.300ms="search"
-                    placeholder="Export-Name oder Typ suchen..."
-                />
+                    <select wire:model.live="filterType" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                        <option value="">Alle Typen</option>
+                        @foreach($this->exportTypes as $key => $label)
+                            <option value="{{ $key }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
 
-                <x-ui-input-select
-                    name="filterType"
-                    label="Typ"
-                    wire:model.live="filterType"
-                    :options="['' => 'Alle'] + $this->exportTypes"
-                />
-
-                <x-ui-input-select
-                    name="filterStatus"
-                    label="Status"
-                    wire:model.live="filterStatus"
-                    :options="[
-                        '' => 'Alle',
-                        'pending' => 'Wartend',
-                        'processing' => 'In Bearbeitung',
-                        'completed' => 'Abgeschlossen',
-                        'failed' => 'Fehlgeschlagen',
-                    ]"
-                />
-
-                <div class="flex items-end">
-                    <x-ui-button variant="primary" wire:click="triggerExport('infoniqa')" class="w-full">
-                        @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
-                        Neuer Export
-                    </x-ui-button>
+                    <select wire:model.live="filterStatus" class="text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                        <option value="">Alle Status</option>
+                        <option value="pending">Wartend</option>
+                        <option value="processing">In Bearbeitung</option>
+                        <option value="completed">Abgeschlossen</option>
+                        <option value="failed">Fehlgeschlagen</option>
+                    </select>
                 </div>
-            </div>
-        </div>
 
-        {{-- Export-Tabelle --}}
-        <x-ui-panel title="Export-Historie" subtitle="Übersicht aller durchgeführten Exports">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-[var(--ui-border)]/60">
-                    <thead class="bg-[var(--ui-muted-5)]">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Name
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Typ
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Format
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Status
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Datensätze
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Größe
-                            </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Erstellt am
-                            </th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-[var(--ui-secondary)] uppercase tracking-wider">
-                                Aktionen
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-[var(--ui-border)]/60">
-                        @forelse($this->exports as $export)
-                            <tr class="hover:bg-[var(--ui-muted-5)] transition-colors">
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <div class="font-medium text-[var(--ui-secondary)]">{{ $export->name }}</div>
-                                    @if($export->template)
-                                        <div class="text-xs text-[var(--ui-muted)]">{{ $export->template->name }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <x-ui-badge variant="secondary" size="sm">{{ $export->type }}</x-ui-badge>
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-[var(--ui-muted)]">
-                                    {{ strtoupper($export->format) }}
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @if($export->status === 'completed')
-                                        <x-ui-badge variant="success" size="sm">Abgeschlossen</x-ui-badge>
-                                    @elseif($export->status === 'processing')
-                                        <x-ui-badge variant="info" size="sm">In Bearbeitung</x-ui-badge>
-                                    @elseif($export->status === 'pending')
-                                        <x-ui-badge variant="warning" size="sm">Wartend</x-ui-badge>
-                                    @elseif($export->status === 'failed')
-                                        <x-ui-badge variant="danger" size="sm">Fehlgeschlagen</x-ui-badge>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-[var(--ui-muted)]">
-                                    {{ $export->record_count ?? '—' }}
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-[var(--ui-muted)]">
-                                    @if($export->file_size)
-                                        {{ number_format($export->file_size / 1024, 2) }} KB
-                                    @else
-                                        —
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-[var(--ui-muted)]">
-                                    {{ $export->created_at->format('d.m.Y H:i') }}
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                                    <div class="flex items-center justify-end gap-2">
-                                        @if($export->isCompleted() && $export->file_path)
-                                            <a 
-                                                href="{{ route('hcm.exports.download', $export) }}"
-                                                class="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md bg-[var(--ui-primary)] text-[var(--ui-on-primary)] hover:opacity-90 transition-opacity"
-                                            >
-                                                @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
-                                                Download
-                                            </a>
-                                        @endif
-                                        
-                                        @if($export->error_message)
-                                            <x-ui-button 
-                                                variant="danger" 
-                                                size="sm"
-                                                title="{{ $export->error_message }}"
-                                            >
-                                                @svg('heroicon-o-exclamation-triangle', 'w-4 h-4')
-                                            </x-ui-button>
-                                        @endif
-                                        
-                                        @if($export->isCompleted() || $export->isFailed())
-                                            <x-ui-button 
-                                                variant="danger-outline" 
-                                                size="sm"
-                                                wire:click="deleteExport({{ $export->id }})"
-                                                wire:confirm="Möchten Sie diesen Export wirklich löschen?"
-                                            >
-                                                @svg('heroicon-o-trash', 'w-4 h-4')
-                                            </x-ui-button>
-                                        @endif
-                                    </div>
-                                </td>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto border-collapse text-sm">
+                        <thead>
+                            <tr class="text-left text-[var(--ui-muted)] border-b border-[var(--ui-border)]/60 text-xs uppercase tracking-wide bg-gray-50">
+                                <th class="px-4 py-3">Name</th>
+                                <th class="px-4 py-3">Typ</th>
+                                <th class="px-4 py-3">Format</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Datensätze</th>
+                                <th class="px-4 py-3">Größe</th>
+                                <th class="px-4 py-3">Erstellt am</th>
+                                <th class="px-4 py-3"></th>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="px-4 py-8 text-center text-sm text-[var(--ui-muted)]">
-                                    @svg('heroicon-o-document-text', 'w-12 h-12 mx-auto mb-4 text-[var(--ui-muted)]')
-                                    <div>Noch keine Exports vorhanden</div>
-                                </td>
-                            </tr>
-                        @endforelse
+                        </thead>
+                        <tbody class="divide-y divide-[var(--ui-border)]/60">
+                            @forelse($this->exports as $export)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">
+                                        <div class="font-medium text-[var(--ui-secondary)]">{{ $export->name }}</div>
+                                        @if($export->template)
+                                            <div class="text-xs text-[var(--ui-muted)]">{{ $export->template->name }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <x-ui-badge variant="secondary" size="xs">{{ $export->type }}</x-ui-badge>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="text-[var(--ui-muted)]">{{ strtoupper($export->format) }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @if($export->status === 'completed')
+                                            <x-ui-badge variant="success" size="xs">Abgeschlossen</x-ui-badge>
+                                        @elseif($export->status === 'processing')
+                                            <x-ui-badge variant="info" size="xs">In Bearbeitung</x-ui-badge>
+                                        @elseif($export->status === 'pending')
+                                            <x-ui-badge variant="warning" size="xs">Wartend</x-ui-badge>
+                                        @elseif($export->status === 'failed')
+                                            <x-ui-badge variant="danger" size="xs">Fehlgeschlagen</x-ui-badge>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="text-[var(--ui-muted)]">{{ $export->record_count ?? '—' }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @if($export->file_size)
+                                            <span class="text-[var(--ui-muted)]">{{ number_format($export->file_size / 1024, 2) }} KB</span>
+                                        @else
+                                            <span class="text-[var(--ui-muted)]">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="text-[var(--ui-muted)]">{{ $export->created_at->format('d.m.Y H:i') }}</span>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <div class="flex gap-2">
+                                            @if($export->isCompleted() && $export->file_path)
+                                                <a 
+                                                    href="{{ route('hcm.exports.download', $export) }}"
+                                                    class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-[var(--ui-primary)] text-[var(--ui-on-primary)] hover:opacity-90 transition-opacity"
+                                                >
+                                                    @svg('heroicon-o-arrow-down-tray', 'w-3 h-3')
+                                                    Download
+                                                </a>
+                                            @endif
+                                            
+                                            @if($export->error_message)
+                                                <x-ui-button 
+                                                    variant="danger-outline" 
+                                                    size="xs"
+                                                    title="{{ $export->error_message }}"
+                                                >
+                                                    @svg('heroicon-o-exclamation-triangle', 'w-3 h-3')
+                                                </x-ui-button>
+                                            @endif
+                                            
+                                            @if($export->isCompleted() || $export->isFailed())
+                                                <x-ui-button 
+                                                    variant="danger-outline" 
+                                                    size="xs"
+                                                    wire:click="deleteExport({{ $export->id }})"
+                                                    wire:confirm="Möchten Sie diesen Export wirklich löschen?"
+                                                >
+                                                    @svg('heroicon-o-trash', 'w-3 h-3')
+                                                </x-ui-button>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="px-4 py-8 text-center text-[var(--ui-muted)]">
+                                        Keine Exports gefunden
+                                    </td>
+                                </tr>
+                            @endforelse
                     </tbody>
                 </table>
             </div>
         </x-ui-panel>
+        </div>
 
         {{-- Export-Modal --}}
         <x-ui-modal wire:model="showExportModal" title="Neuen Export erstellen">
@@ -270,49 +201,77 @@
         </x-ui-modal>
     </x-ui-page-container>
 
-    <x-slot name="left">
-        <x-ui-sidebar>
-            <x-ui-sidebar-list label="Aktionen">
-                <x-ui-sidebar-item wire:click="triggerExport('infoniqa')">
-                    @svg('heroicon-o-arrow-down-tray', 'w-4 h-4 text-[var(--ui-secondary)]')
-                    <span class="ml-2 text-sm">Neuer Export</span>
-                </x-ui-sidebar-item>
-            </x-ui-sidebar-list>
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true">
+            <div class="p-6 space-y-6">
+                {{-- Aktionen --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="primary" size="sm" wire:click="triggerExport('infoniqa')" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-plus', 'w-4 h-4')
+                                Neuer Export
+                            </span>
+                        </x-ui-button>
+                    </div>
+                </div>
 
-            <x-ui-sidebar-list label="Schnell-Exports">
-                <x-ui-sidebar-item wire:click="triggerExport('infoniqa')">
-                    @svg('heroicon-o-document-text', 'w-4 h-4 text-[var(--ui-secondary)]')
-                    <span class="ml-2 text-sm">INFONIQA</span>
-                </x-ui-sidebar-item>
-                <x-ui-sidebar-item wire:click="triggerExport('payroll')">
-                    @svg('heroicon-o-currency-euro', 'w-4 h-4 text-[var(--ui-secondary)]')
-                    <span class="ml-2 text-sm">Lohnarten</span>
-                </x-ui-sidebar-item>
-                <x-ui-sidebar-item wire:click="triggerExport('employees')">
-                    @svg('heroicon-o-user-group', 'w-4 h-4 text-[var(--ui-secondary)]')
-                    <span class="ml-2 text-sm">Mitarbeiter</span>
-                </x-ui-sidebar-item>
-            </x-ui-sidebar-list>
-        </x-ui-sidebar>
+                {{-- Schnell-Exports --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Schnell-Exports</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa')" class="w-full justify-start">
+                            @svg('heroicon-o-document-text', 'w-4 h-4')
+                            <span class="ml-2">INFONIQA</span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('payroll')" class="w-full justify-start">
+                            @svg('heroicon-o-currency-euro', 'w-4 h-4')
+                            <span class="ml-2">Lohnarten</span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('employees')" class="w-full justify-start">
+                            @svg('heroicon-o-user-group', 'w-4 h-4')
+                            <span class="ml-2">Mitarbeiter</span>
+                        </x-ui-button>
+                    </div>
+                </div>
+
+                {{-- Statistiken --}}
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Statistiken</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Gesamt</span>
+                            <span class="font-semibold text-[var(--ui-secondary)]">{{ $this->statistics['total'] }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Abgeschlossen</span>
+                            <span class="font-semibold text-green-600">{{ $this->statistics['completed'] }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Wartend</span>
+                            <span class="font-semibold text-yellow-600">{{ $this->statistics['pending'] }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">In Bearbeitung</span>
+                            <span class="font-semibold text-blue-600">{{ $this->statistics['processing'] }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 bg-[var(--ui-muted-5)] rounded-lg">
+                            <span class="text-sm text-[var(--ui-muted)]">Fehlgeschlagen</span>
+                            <span class="font-semibold text-red-600">{{ $this->statistics['failed'] }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
     </x-slot>
 
-    <x-slot name="right">
-        <x-ui-sidebar>
-            <x-ui-sidebar-list label="Statistiken">
-                <div class="px-4 py-2 text-sm">
-                    <div class="text-[var(--ui-muted)]">Gesamt Exporte</div>
-                    <div class="text-lg font-bold text-[var(--ui-secondary)]">{{ $this->statistics['total'] }}</div>
-                </div>
-                <div class="px-4 py-2 text-sm">
-                    <div class="text-[var(--ui-muted)]">Erfolgreich</div>
-                    <div class="text-lg font-bold text-green-600">{{ $this->statistics['completed'] }}</div>
-                </div>
-                <div class="px-4 py-2 text-sm">
-                    <div class="text-[var(--ui-muted)]">Fehlgeschlagen</div>
-                    <div class="text-lg font-bold text-red-600">{{ $this->statistics['failed'] }}</div>
-                </div>
-            </x-ui-sidebar-list>
-        </x-ui-sidebar>
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-6">
+                <p class="text-sm text-[var(--ui-muted)]">Aktivitäten werden hier angezeigt</p>
+            </div>
+        </x-ui-page-sidebar>
     </x-slot>
 </x-ui-page>
 
