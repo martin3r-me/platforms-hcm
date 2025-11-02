@@ -249,6 +249,9 @@ class UnifiedImportService
 
                     // CRM contact
                     echo "\n      [5/12] CRM-Kontakt erstellen/aktualisieren...";
+                    if ($genderId) echo " [gender_id:$genderId]";
+                    if ($academicTitleId) echo " [academic_title_id:$academicTitleId]";
+                    if ($salutationId) echo " [salutation_id:$salutationId]";
                     $contact = $this->upsertContact($employee, $row, $genderId, $academicTitleId, $salutationId);
                     if ($contact['created']) { 
                         echo " erstellt ✓";
@@ -1633,12 +1636,13 @@ class UnifiedImportService
         $genderLower = mb_strtolower($genderText);
         
         // Mapping von numerischen Codes (aus altem System) zu Codes
-        // -1 oder 0 = nicht angegeben/kein Geschlecht
-        // 1 = männlich
-        // 2 = weiblich
+        // -1 = männlich (Mann)
+        // 0 = weiblich (Frau)
+        // 1 = männlich (alternativ)
+        // 2 = weiblich (alternativ)
         $numericToCode = [
-            '-1' => null,
-            '0' => null,
+            '-1' => 'MALE',   // Mann
+            '0' => 'FEMALE',  // Frau
             '1' => 'MALE',
             '2' => 'FEMALE',
         ];
