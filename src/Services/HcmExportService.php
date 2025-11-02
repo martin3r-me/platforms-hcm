@@ -357,15 +357,9 @@ class HcmExportService
         $row[45] = 'Ja'; // Umlagepflicht Insolvenz
         
         // 47. Staatsangehörigkeitsschlüssel (Index 46)
-        // Aus importierten Daten, normalisiert: Immer auf 3 Stellen auffüllen mit führenden Nullen
+        // Mappt Text-Werte (wie "Deutschland") zu 3-stelligen Codes oder normalisiert numerische Codes
         $nationality = trim((string)($employee->nationality ?? ''));
-        // "0" und leere Strings immer zu "000" normalisieren
-        if ($nationality === '' || $nationality === '0' || $nationality === '00') {
-            $row[46] = '000';
-        } else {
-            // Auf 3 Stellen mit führenden Nullen auffüllen (z.B. "1" → "001", "134" → "134")
-            $row[46] = str_pad($nationality, 3, '0', STR_PAD_LEFT);
-        }
+        $row[46] = $this->mapNationalityToCode($nationality);
         
         // 48. Rentenbeginn (Index 47) - direkt nach Staatsangehörigkeit, keine leere Spalte dazwischen
         // (leer - wird später befüllt wenn vorhanden)
@@ -376,7 +370,9 @@ class HcmExportService
         $row[48] = '';
         
         // 50. Beschäftigungsverhältnis (Index 49)
-        $row[49] = $contract?->employmentRelationship?->code ?? '';
+        // Mapping von internen Codes zu INFONIQA-Werten
+        $employmentCode = $contract?->employmentRelationship?->code ?? '';
+        $row[49] = $this->mapEmploymentRelationshipToInfoniqa($employmentCode);
         
         // 51. Mehrfachbeschäftigt (Index 50)
         $row[50] = $contract?->has_additional_employment ? 'Ja' : 'Nein';
@@ -414,29 +410,73 @@ class HcmExportService
         // 59. Geburtsort (Index 58)
         $row[58] = $employee->birth_place ?? $contact?->birth_place ?? '';
         
-        // 64. Geburtsland (Index 63)
-        $row[63] = $employee->birth_country ?? '';
+        // 60. Namenszusatz Geburtsname (Index 59)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[59] = '';
         
-        // 65. Krankenkasse (tats.) (Index 64)
-        $row[64] = $employee->healthInsuranceCompany?->name ?? '';
+        // 61. Namensvorsatz Geburtsname (Index 60)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[60] = '';
         
-        // 66. PGR 109/110:Versicherungsstatus (Index 65)
-        $row[65] = $contract?->insuranceStatus?->code ?? '';
+        // 62. Geburtsland (Index 61)
+        $row[61] = $employee->birth_country ?? '';
         
-        // 67. steuerpflichtig EStG § 1 (Index 66)
-        $row[66] = 'unbeschränkt';
+        // 63. Krankenkasse (tats.) (Index 62)
+        $row[62] = $employee->healthInsuranceCompany?->name ?? '';
         
-        // 68. Art der Besteuerung (Index 67)
-        $row[67] = 'individuell';
+        // 64. PGR 109/110:Versicherungsstatus (Index 63)
+        $row[63] = $contract?->insuranceStatus?->code ?? '';
         
-        // 70. Identifikationsnummer (Index 69)
-        $row[69] = $employee->tax_id_number ?? '';
+        // 65. steuerpflichtig EStG § 1 (Index 64)
+        $row[64] = 'unbeschränkt';
         
-        // 74. Steuerklasse (Index 73)
-        $row[73] = $contract?->taxClass?->code ?? '';
+        // 66. Art der Besteuerung (Index 65)
+        $row[65] = 'individuell';
         
-        // 76. Kinderfreibetrag (Index 75)
-        $row[75] = (string)($employee->child_allowance ?? 0);
+        // 67. wer trägt die Steuer (Index 66)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[66] = '';
+        
+        // 68. Identifikationsnummer (Index 67)
+        $row[67] = $employee->tax_id_number ?? '';
+        
+        // 69. abw. Geburtsdatum lt. Pass (Index 68)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[68] = '';
+        
+        // 70. Haupt AG (Steuer) (Index 69)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[69] = '';
+        
+        // 71. Herkunft LSt.-Merkmale gem. EStG (Index 70)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[70] = '';
+        
+        // 72. Steuerklasse (Index 71)
+        $row[71] = $contract?->taxClass?->code ?? '';
+        
+        // 73. Faktor nach § 39f EStG (Index 72)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[72] = '';
+        
+        // 74. Kinderfreibetrag (Index 73)
+        $row[73] = (string)($employee->child_allowance ?? 0);
+        
+        // 75. Freibetrag Monat (Index 74)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[74] = '';
+        
+        // 76. Freibetrag Jahr (Index 75)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[75] = '';
+        
+        // 77. Hinzurechnung Monat (Index 76)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[76] = '';
+        
+        // 78. Hinzurechnung Jahr (Index 77)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[77] = '';
         
         // 81. Konfession (Index 80)
         $row[80] = $employee->church_tax ?? '';
@@ -581,6 +621,87 @@ class HcmExportService
         // Hier würde die Template-basierte Logik implementiert werden
         
         throw new \RuntimeException('Custom Export noch nicht implementiert');
+    }
+
+    /**
+     * Mappt Staatsangehörigkeit zu INFONIQA-3-stelligem Code
+     */
+    private function mapNationalityToCode(?string $nationality): string
+    {
+        if (!$nationality || trim($nationality) === '') {
+            return '000';
+        }
+        
+        $nationality = trim($nationality);
+        
+        // Wenn bereits numerisch (Code), normalisieren
+        if (is_numeric($nationality)) {
+            if ($nationality === '0' || $nationality === '00') {
+                return '000';
+            }
+            return str_pad($nationality, 3, '0', STR_PAD_LEFT);
+        }
+        
+        // Mapping von Ländertexten zu 3-stelligen Codes
+        $countryMapping = [
+            'deutschland' => '000',
+            'germany' => '000',
+            'de' => '000',
+            // Weitere Länder können hier ergänzt werden
+            // z.B.:
+            // 'polen' => '125',
+            // 'poland' => '125',
+            // 'türkei' => '163',
+            // 'turkey' => '163',
+        ];
+        
+        $nationalityLower = mb_strtolower($nationality);
+        
+        // Direktes Mapping prüfen
+        if (isset($countryMapping[$nationalityLower])) {
+            return $countryMapping[$nationalityLower];
+        }
+        
+        // Fallback: Wenn es ein Text ist, den wir nicht kennen, auf "000" setzen
+        // (INFONIQA erwartet 3-stellige Codes)
+        return '000';
+    }
+
+    /**
+     * Mappt internes Beschäftigungsverhältnis zu INFONIQA-Format
+     */
+    private function mapEmploymentRelationshipToInfoniqa(?string $code): string
+    {
+        if (!$code) {
+            return 'Haupt SV-pflichtig'; // Default für leere Werte
+        }
+        
+        $mapping = [
+            // Hauptbeschäftigungen (SV-pflichtig)
+            'FT' => 'Haupt SV-pflichtig',           // Vollzeit
+            'PT' => 'Haupt SV-pflichtig',           // Teilzeit
+            'FTB' => 'Haupt SV-pflichtig',          // Vollzeit befristet
+            'PTB' => 'Haupt SV-pflichtig',          // Teilzeit befristet
+            'AUSB' => 'Haupt SV-pflichtig',         // Ausbildung
+            'PRAK' => 'Haupt SV-pflichtig',         // Praktikum
+            'WERK' => 'Haupt SV-pflichtig',         // Werkstudent
+            'LEIHE' => 'Haupt SV-pflichtig',        // Leiharbeitnehmer
+            
+            // Nebentätigkeiten
+            'MINI' => 'erste Nebentätigkeit GfB',   // Geringfügig entlohnt (Minijob)
+            'KURZ' => 'erste Nebentätigkeit GfB',   // Kurzfristige Beschäftigung
+            
+            // Homeoffice (wird als Hauptbeschäftigung behandelt)
+            'HOME' => 'Haupt SV-pflichtig',
+        ];
+        
+        // Direktes Mapping
+        if (isset($mapping[$code])) {
+            return $mapping[$code];
+        }
+        
+        // Fallback: Standardmäßig als Haupt SV-pflichtig behandeln
+        return 'Haupt SV-pflichtig';
     }
 
     /**
