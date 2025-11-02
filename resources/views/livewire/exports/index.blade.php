@@ -241,19 +241,21 @@
         </x-ui-modal>
 
         {{-- Error-Details-Modal --}}
-        <x-ui-modal wire:model="showErrorModal" title="Fehlerdetails" size="lg">
-            <div class="space-y-4">
-                <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <h3 class="text-sm font-semibold text-red-800 mb-2">Export fehlgeschlagen</h3>
-                    <pre class="text-xs text-red-700 whitespace-pre-wrap overflow-auto max-h-96 font-mono">{{ $errorDetails }}</pre>
+        @if($showErrorModal && $errorDetails)
+            <x-ui-modal wire:model="showErrorModal" title="Fehlerdetails" size="lg">
+                <div class="space-y-4">
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <h3 class="text-sm font-semibold text-red-800 mb-2">Export fehlgeschlagen</h3>
+                        <pre class="text-xs text-red-700 whitespace-pre-wrap overflow-auto max-h-96 font-mono">{{ $errorDetails }}</pre>
+                    </div>
                 </div>
-            </div>
-            <x-slot name="footer">
-                <x-ui-button variant="secondary" wire:click="closeErrorModal">
-                    Schließen
-                </x-ui-button>
-            </x-slot>
-        </x-ui-modal>
+                <x-slot name="footer">
+                    <x-ui-button variant="secondary" wire:click="closeErrorModal">
+                        Schließen
+                    </x-ui-button>
+                </x-slot>
+            </x-ui-modal>
+        @endif
     </x-ui-page-container>
 
     <x-slot name="sidebar">

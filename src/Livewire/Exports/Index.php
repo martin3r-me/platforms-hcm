@@ -23,6 +23,13 @@ class Index extends Component
     // Error-Modal
     public $showErrorModal = false;
     public $errorDetails = null;
+    
+    public function boot(): void
+    {
+        // Sicherstellen, dass Error-Modal beim Initialisieren geschlossen ist
+        $this->showErrorModal = false;
+        $this->errorDetails = null;
+    }
 
     public function mount()
     {
@@ -36,6 +43,10 @@ class Index extends Component
         session()->forget(['success', 'error']);
         $this->resetValidation();
         
+        // Sicherstellen, dass Error-Modal geschlossen ist
+        $this->showErrorModal = false;
+        $this->errorDetails = null;
+        
         $this->selectedExportType = $type;
         $this->selectedEmployerId = null;
         $this->modalShow = true;
@@ -43,10 +54,12 @@ class Index extends Component
     
     public function updatedModalShow($value): void
     {
-        // Wenn Modal geschlossen wird, Validierungsfehler zurücksetzen
-        if (!$value) {
-            $this->resetValidation();
+        // Wenn Modal geöffnet wird, sicherstellen dass Error-Modal geschlossen ist
+        if ($value) {
+            $this->showErrorModal = false;
+            $this->errorDetails = null;
             session()->forget(['success', 'error']);
+            $this->resetValidation();
         }
     }
 
@@ -144,8 +157,19 @@ class Index extends Component
     
     public function showErrorDetails(HcmExport $export): void
     {
+        // Export-Modal schließen wenn Error-Modal geöffnet wird
+        $this->modalShow = false;
+        
         $this->errorDetails = $export->error_message;
         $this->showErrorModal = true;
+    }
+    
+    public function updatedShowErrorModal($value): void
+    {
+        // Wenn Error-Modal geschlossen wird, sicherstellen dass Export-Modal auch geschlossen ist
+        if (!$value) {
+            $this->errorDetails = null;
+        }
     }
     
     public function closeErrorModal(): void
