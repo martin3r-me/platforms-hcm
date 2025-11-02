@@ -72,11 +72,25 @@ class HcmExportService
 
             return $filepath;
         } catch (\Throwable $e) {
+            // Detaillierte Fehlermeldung mit Stack-Trace für Debugging
+            $errorMessage = $e->getMessage() . "\n\n" . 
+                          "File: " . $e->getFile() . ":" . $e->getLine() . "\n" .
+                          "Trace:\n" . $e->getTraceAsString();
+            
             $export->update([
                 'status' => 'failed',
-                'error_message' => $e->getMessage(),
+                'error_message' => $errorMessage,
                 'completed_at' => now(),
             ]);
+            
+            // Für Logging
+            \Log::error('Export fehlgeschlagen', [
+                'export_id' => $export->id,
+                'type' => $export->type,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             throw $e;
         }
     }
@@ -105,7 +119,7 @@ class HcmExportService
         // Lade Mitarbeiter mit allen benötigten Relationen
         $employees = \Platform\Hcm\Models\HcmEmployee::with([
             'employer',
-            'crmContactLinks.contact.addresses',
+            'crmContactLinks.contact.postalAddresses',
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
             'contracts' => function($q) {

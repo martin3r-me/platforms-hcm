@@ -19,6 +19,19 @@ class Index extends Component
     public $selectedExportType = '';
     public $selectedEmployerId = null;
     public $modalShow = false;
+    
+    // Error-Modal
+    public $showErrorModal = false;
+    public $errorDetails = null;
+
+    public function mount()
+    {
+        // Ersten Export-Typ vorauswählen
+        $exportTypes = $this->exportTypes;
+        if (!empty($exportTypes)) {
+            $this->selectedExportType = array_key_first($exportTypes);
+        }
+    }
 
     public function triggerExport(string $type): void
     {
@@ -40,13 +53,24 @@ class Index extends Component
         
         $this->validate($rules);
 
+        // Modal sofort schließen
+        $this->modalShow = false;
+        
+        // Werte zwischenspeichern für Export
+        $exportType = $this->selectedExportType;
+        $employerId = $this->selectedEmployerId;
+        
+        // Formular zurücksetzen
+        $this->selectedExportType = !empty($this->exportTypes) ? array_key_first($this->exportTypes) : '';
+        $this->selectedEmployerId = null;
+
         try {
             $teamId = auth()->user()->currentTeam->id;
             $userId = auth()->id();
             
             $service = new HcmExportService($teamId, $userId);
             
-            $name = match($this->selectedExportType) {
+            $name = match($exportType) {
                 'infoniqa' => 'INFONIQA Export',
                 'payroll' => 'Lohnarten Export',
                 'employees' => 'Mitarbeiter Export',
@@ -55,26 +79,23 @@ class Index extends Component
             
             // Parameter für INFONIQA-Export
             $parameters = null;
-            if ($this->selectedExportType === 'infoniqa') {
-                $parameters = ['employer_id' => $this->selectedEmployerId];
+            if ($exportType === 'infoniqa') {
+                $parameters = ['employer_id' => $employerId];
             }
             
             $export = $service->createExport(
                 name: $name,
-                type: $this->selectedExportType,
+                type: $exportType,
                 format: 'csv',
                 parameters: $parameters
             );
             
-            // Export asynchron ausführen (oder synchron je nach Bedarf)
+            // Export synchron ausführen (Fehler werden in DB gespeichert)
             $filepath = $service->executeExport($export);
-            
-            $this->modalShow = false;
-            $this->selectedExportType = '';
-            $this->selectedEmployerId = null;
             
             session()->flash('success', 'Export erfolgreich erstellt!');
         } catch (\Throwable $e) {
+            // Fehler wird bereits im Service in der DB gespeichert
             session()->flash('error', 'Export fehlgeschlagen: ' . $e->getMessage());
         }
     }
@@ -107,6 +128,18 @@ class Index extends Component
         $export->delete();
         
         session()->flash('success', 'Export gelöscht');
+    }
+    
+    public function showErrorDetails(HcmExport $export): void
+    {
+        $this->errorDetails = $export->error_message;
+        $this->showErrorModal = true;
+    }
+    
+    public function closeErrorModal(): void
+    {
+        $this->showErrorModal = false;
+        $this->errorDetails = null;
     }
 
     #[Computed]

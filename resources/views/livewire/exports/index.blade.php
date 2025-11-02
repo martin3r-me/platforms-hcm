@@ -101,7 +101,8 @@
                                                 <x-ui-button 
                                                     variant="danger-outline" 
                                                     size="xs"
-                                                    title="{{ $export->error_message }}"
+                                                    wire:click="showErrorDetails({{ $export->id }})"
+                                                    title="Fehlerdetails anzeigen"
                                                 >
                                                     @svg('heroicon-o-exclamation-triangle', 'w-3 h-3')
                                                 </x-ui-button>
@@ -197,6 +198,21 @@
                         Export starten
                     </x-ui-button>
                 </div>
+            </x-slot>
+        </x-ui-modal>
+
+        {{-- Error-Details-Modal --}}
+        <x-ui-modal wire:model="showErrorModal" title="Fehlerdetails" size="lg">
+            <div class="space-y-4">
+                <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 class="text-sm font-semibold text-red-800 mb-2">Export fehlgeschlagen</h3>
+                    <pre class="text-xs text-red-700 whitespace-pre-wrap overflow-auto max-h-96 font-mono">{{ $errorDetails }}</pre>
+                </div>
+            </div>
+            <x-slot name="footer">
+                <x-ui-button variant="secondary" wire:click="closeErrorModal">
+                    Schließen
+                </x-ui-button>
             </x-slot>
         </x-ui-modal>
     </x-ui-page-container>
