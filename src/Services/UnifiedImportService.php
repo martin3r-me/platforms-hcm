@@ -1325,11 +1325,15 @@ class UnifiedImportService
                 'last_name' => $lastName ?: $contact->last_name,
             ];
             if ($birth && !$contact->birth_date) { $update['birth_date'] = $birth; }
-            if ($genderId && !$contact->gender_id) { $update['gender_id'] = $genderId; }
-            if ($academicTitleId && !$contact->academic_title_id) { $update['academic_title_id'] = $academicTitleId; }
-            if ($salutationId && !$contact->salutation_id) { $update['salutation_id'] = $salutationId; }
-            $contact->update($update);
-            $updated = true;
+            // Setze IDs auch wenn bereits vorhanden (Überschreiben bei erneutem Import)
+            if ($genderId !== null) { $update['gender_id'] = $genderId; }
+            if ($academicTitleId !== null) { $update['academic_title_id'] = $academicTitleId; }
+            if ($salutationId !== null) { $update['salutation_id'] = $salutationId; }
+            
+            if (count($update) > 2) { // Mehr als nur first_name und last_name
+                $contact->update($update);
+                $updated = true;
+            }
         }
 
         // Adressdaten setzen (wenn vorhanden)
@@ -1628,6 +1632,17 @@ class UnifiedImportService
         $genderText = trim($genderText);
         $genderLower = mb_strtolower($genderText);
         
+        // Mapping von numerischen Codes (aus altem System) zu Codes
+        // -1 oder 0 = nicht angegeben/kein Geschlecht
+        // 1 = männlich
+        // 2 = weiblich
+        $numericToCode = [
+            '-1' => null,
+            '0' => null,
+            '1' => 'MALE',
+            '2' => 'FEMALE',
+        ];
+        
         // Mapping von Text zu Code
         $textToCode = [
             'männlich' => 'MALE',
@@ -1645,14 +1660,27 @@ class UnifiedImportService
             'nicht angegeben' => 'NOT_SPECIFIED',
         ];
         
-        $code = $textToCode[$genderLower] ?? null;
+        $code = null;
         
-        if (!$code) {
-            // Fallback: Versuche Code direkt zu verwenden (falls bereits ein Code)
+        // Prüfe zuerst numerische Codes
+        if (isset($numericToCode[$genderText])) {
+            $code = $numericToCode[$genderText];
+        }
+        // Dann Text-Mapping
+        elseif (isset($textToCode[$genderLower])) {
+            $code = $textToCode[$genderLower];
+        }
+        // Fallback: Versuche Code direkt zu verwenden (falls bereits ein Code)
+        else {
             $gender = CrmGender::where('code', strtoupper($genderText))->first();
             if ($gender) {
                 return $gender;
             }
+            return null;
+        }
+        
+        // Wenn kein Code gefunden (z.B. bei "-1" oder "0"), return null
+        if (!$code) {
             return null;
         }
         
