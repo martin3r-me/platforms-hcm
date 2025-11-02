@@ -339,73 +339,82 @@ class HcmExportService
         // 33. KK-Code (Einzugsstelle) (Index 32)
         $row[32] = $employee->healthInsuranceCompany?->ik_number ?? '';
         
-        // 42. Kinder (Index 41)
-        $row[41] = (string)($employee->children_count ?? 0);
+        // 41. Kinder (Index 40)
+        $row[40] = (string)($employee->children_count ?? 0);
         
-        // 43. Kinder unter 25 Jahren für PV-Abschlag (Index 42)
+        // 42. Kinder unter 25 Jahren für PV-Abschlag (Index 41)
+        // TODO: Später aus Daten
+        $row[41] = '';
+        
+        // 43. PV-Beitrag privat (Index 42)
         // TODO: Später aus Daten
         $row[42] = '';
         
-        // 44. PV-Beitrag privat (Index 43)
-        // TODO: Später aus Daten
-        $row[43] = '';
-        
-        // 45-47. Umlagepflicht (U1, U2, Insolvenz) - Indizes 44-46
+        // 44-46. Umlagepflicht (U1, U2, Insolvenz) - Indizes 43-45
         // Immer "Ja" setzen
-        $row[44] = 'Ja'; // Umlagepflicht U1 Lfz
-        $row[45] = 'Ja'; // Umlagepflicht U2
-        $row[46] = 'Ja'; // Umlagepflicht Insolvenz
+        $row[43] = 'Ja'; // Umlagepflicht U1 Lfz
+        $row[44] = 'Ja'; // Umlagepflicht U2
+        $row[45] = 'Ja'; // Umlagepflicht Insolvenz
         
-        // 48. Staatsangehörigkeitsschlüssel (Index 47)
+        // 47. Staatsangehörigkeitsschlüssel (Index 46)
         // Aus importierten Daten, normalisiert: Immer auf 3 Stellen auffüllen mit führenden Nullen
-        $nationality = $employee->nationality ?: '';
+        $nationality = trim((string)($employee->nationality ?? ''));
         if ($nationality === '' || $nationality === '0') {
-            $row[47] = '000';
+            $row[46] = '000';
         } else {
-            // Auf 3 Stellen mit führenden Nullen auffüllen
-            $row[47] = str_pad((string)$nationality, 3, '0', STR_PAD_LEFT);
+            // Auf 3 Stellen mit führenden Nullen auffüllen (z.B. "0" → "000", "1" → "001", "134" → "134")
+            $row[46] = str_pad($nationality, 3, '0', STR_PAD_LEFT);
         }
         
-        // 49. Leere Spalte (Index 48)
+        // 48. Leere Spalte (Index 47)
+        $row[47] = '';
+        
+        // 49. Rentenbeginn (Index 48)
+        // (leer - wird später befüllt wenn vorhanden)
         $row[48] = '';
         
-        // 50. Rentenbeginn (Index 49)
+        // 51. Befreiung von RV-Pflicht (Index 49)
         // (leer - wird später befüllt wenn vorhanden)
+        $row[49] = '';
         
-        // 52. Beschäftigungsverhältnis (Index 51)
-        $row[51] = $contract?->employmentRelationship?->code ?? '';
+        // 52. Beschäftigungsverhältnis (Index 50)
+        $row[50] = $contract?->employmentRelationship?->code ?? '';
         
-        // 53. Mehrfachbeschäftigt (Index 52)
-        $row[52] = $contract?->has_additional_employment ? 'Ja' : 'Nein';
+        // 53. Mehrfachbeschäftigt (Index 51)
+        $row[51] = $contract?->has_additional_employment ? 'Ja' : 'Nein';
         
-        // 54. Rentenart (Index 53)
-        $row[53] = $contract?->pensionType?->code ?? '';
+        // 54. Rentenart (Index 52)
+        $row[52] = $contract?->pensionType?->code ?? '';
         
-        // 56. Saisonarbeitnehmer (Index 55)
-        $row[55] = $employee->is_seasonal_worker ? 'Ja' : 'Nein';
+        // 55. Altersrente beantragt am (Index 53)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[53] = '';
         
-        // 57. Soz.-Versicherungsnr. (Index 56)
-        $row[56] = $contract?->social_security_number ?? '';
+        // 56. Saisonarbeitnehmer (Index 54)
+        $row[54] = $employee->is_seasonal_worker ? 'Ja' : 'Nein';
         
-        // 58. Geschlecht (Index 57)
+        // 57. Soz.-Versicherungsnr. (Index 55)
+        $row[55] = $contract?->social_security_number ?? '';
+        
+        // 58. Geschlecht (Index 56)
         $gender = $employee->gender ?? $contact?->gender ?? null;
         if ($gender === 'male' || $gender === 'männlich' || $gender === 'Männlich') {
-            $row[57] = 'Männlich';
+            $row[56] = 'Männlich';
         } elseif ($gender === 'female' || $gender === 'weiblich' || $gender === 'Weiblich') {
-            $row[57] = 'Weiblich';
+            $row[56] = 'Weiblich';
         }
         
-        // 59. Geburtsdatum (Index 58)
+        // 59. Geburtsdatum (Index 57)
         $birthDate = $employee->birth_date ?? $contact?->birth_date;
         if ($birthDate) {
-            $row[58] = is_string($birthDate) ? date('d.m.Y', strtotime($birthDate)) : $birthDate->format('d.m.Y');
+            $row[57] = is_string($birthDate) ? date('d.m.Y', strtotime($birthDate)) : $birthDate->format('d.m.Y');
         }
         
-        // 60. Geburtsname (Index 59)
-        $row[59] = $employee->birth_surname ?? $contact?->last_name ?? '';
+        // 60. Geburtsname (Index 58)
+        $row[58] = $employee->birth_surname ?? $contact?->last_name ?? '';
         
-        // 61. Geburtsort (Index 60)
-        $row[60] = $employee->birth_place ?? $contact?->birth_place ?? '';
+        // 61. Geburtsort (Index 59)
+        $row[59] = $employee->birth_place ?? $contact?->birth_place ?? '';
         
         // 64. Geburtsland (Index 63)
         $row[63] = $employee->birth_country ?? '';
