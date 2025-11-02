@@ -51,7 +51,7 @@ class HcmExportService
         try {
             // Basierend auf Export-Typ die entsprechende Methode aufrufen
             $filepath = match($export->type) {
-                'infoniqa' => $this->exportInfoniqa($export),
+                'infoniqa-ma' => $this->exportInfoniqa($export),
                 'payroll' => $this->exportPayroll($export),
                 'employees' => $this->exportEmployees($export),
                 'custom' => $this->exportCustom($export),
@@ -100,7 +100,7 @@ class HcmExportService
      */
     private function exportInfoniqa(HcmExport $export): string
     {
-        $filename = 'infoniqa_export_' . date('Y-m-d_H-i-s') . '.csv';
+        $filename = 'infoniqa_ma_export_' . date('Y-m-d_H-i-s') . '.csv';
         $filepath = 'exports/hcm/' . $filename;
 
         // employer_id aus Parameters holen
@@ -108,7 +108,7 @@ class HcmExportService
         $employerId = $parameters['employer_id'] ?? null;
         
         if (!$employerId) {
-            throw new \InvalidArgumentException('INFONIQA-Export benötigt employer_id in den Parametern');
+            throw new \InvalidArgumentException('INFONIQA MA-Export benötigt employer_id in den Parametern');
         }
 
         $employer = HcmEmployer::findOrFail($employerId);

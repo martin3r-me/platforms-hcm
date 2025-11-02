@@ -194,7 +194,7 @@
                     @enderror
                 </div>
 
-                @if($selectedExportType === 'infoniqa')
+                @if($selectedExportType === 'infoniqa-ma')
                     <div>
                         <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
                             Arbeitgeber <span class="text-red-600">*</span>
@@ -231,7 +231,7 @@
                     <x-ui-button 
                         variant="primary" 
                         wire:click="executeExport"
-                        :disabled="!$selectedExportType || ($selectedExportType === 'infoniqa' && !$selectedEmployerId)"
+                        :disabled="!$selectedExportType || ($selectedExportType === 'infoniqa-ma' && !$selectedEmployerId)"
                     >
                         @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
                         Export starten
@@ -265,7 +265,7 @@
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
                     <div class="space-y-2">
-                        <x-ui-button variant="primary" size="sm" wire:click="triggerExport('infoniqa')" class="w-full">
+                        <x-ui-button variant="primary" size="sm" wire:click="triggerExport('infoniqa-ma')" class="w-full">
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-plus', 'w-4 h-4')
                                 Neuer Export
@@ -278,9 +278,9 @@
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Schnell-Exports</h3>
                     <div class="space-y-2">
-                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa')" class="w-full justify-start">
+                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa-ma')" class="w-full justify-start">
                             @svg('heroicon-o-document-text', 'w-4 h-4')
-                            <span class="ml-2">INFONIQA</span>
+                            <span class="ml-2">INFONIQA MA</span>
                         </x-ui-button>
                         <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('payroll')" class="w-full justify-start">
                             @svg('heroicon-o-currency-euro', 'w-4 h-4')

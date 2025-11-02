@@ -66,11 +66,11 @@ class Index extends Component
     public function executeExport(): void
     {
         $rules = [
-            'selectedExportType' => 'required|string|in:infoniqa,payroll,employees',
+            'selectedExportType' => 'required|string|in:infoniqa-ma,payroll,employees',
         ];
         
-        // Für INFONIQA-Export ist employer_id erforderlich
-        if ($this->selectedExportType === 'infoniqa') {
+        // Für INFONIQA MA-Export ist employer_id erforderlich
+        if ($this->selectedExportType === 'infoniqa-ma') {
             $rules['selectedEmployerId'] = 'required|exists:hcm_employers,id';
         }
         
@@ -94,15 +94,15 @@ class Index extends Component
             $service = new HcmExportService($teamId, $userId);
             
             $name = match($exportType) {
-                'infoniqa' => 'INFONIQA Export',
+                'infoniqa-ma' => 'INFONIQA MA Export',
                 'payroll' => 'Lohnarten Export',
                 'employees' => 'Mitarbeiter Export',
                 default => 'Export',
             };
             
-            // Parameter für INFONIQA-Export
+            // Parameter für INFONIQA MA-Export
             $parameters = null;
-            if ($exportType === 'infoniqa') {
+            if ($exportType === 'infoniqa-ma') {
                 $parameters = ['employer_id' => $employerId];
             }
             
@@ -239,7 +239,7 @@ class Index extends Component
     public function exportTypes()
     {
         return [
-            'infoniqa' => 'INFONIQA Export',
+            'infoniqa-ma' => 'INFONIQA MA Export',
             'payroll' => 'Lohnarten Export',
             'employees' => 'Mitarbeiter Export',
         ];
