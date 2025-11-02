@@ -457,6 +457,17 @@
                         </div>
                     </div>
                     <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">SV-Nummer</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            @if($contract->social_security_number)
+                                <span class="font-mono">{{ $contract->social_security_number }}</span>
+                                <span class="text-xs text-green-600 ml-2" title="Verschlüsselt gespeichert">🔒</span>
+                            @else
+                                —
+                            @endif
+                        </div>
+                    </div>
+                    <div>
                         <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Steuerklasse</div>
                         <div class="text-sm text-[var(--ui-muted)]">
                             @if($contract->taxClass)
