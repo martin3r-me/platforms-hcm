@@ -17,19 +17,28 @@ class Index extends Component
     
     // Export-Trigger
     public $selectedExportType = '';
+    public $selectedEmployerId = null;
     public $showExportModal = false;
 
     public function triggerExport(string $type): void
     {
         $this->selectedExportType = $type;
+        $this->selectedEmployerId = null;
         $this->showExportModal = true;
     }
 
     public function executeExport(): void
     {
-        $this->validate([
+        $rules = [
             'selectedExportType' => 'required|string|in:infoniqa,payroll,employees',
-        ]);
+        ];
+        
+        // Für INFONIQA-Export ist employer_id erforderlich
+        if ($this->selectedExportType === 'infoniqa') {
+            $rules['selectedEmployerId'] = 'required|exists:hcm_employers,id';
+        }
+        
+        $this->validate($rules);
 
         try {
             $teamId = auth()->user()->currentTeam->id;
@@ -44,10 +53,17 @@ class Index extends Component
                 default => 'Export',
             };
             
+            // Parameter für INFONIQA-Export
+            $parameters = null;
+            if ($this->selectedExportType === 'infoniqa') {
+                $parameters = ['employer_id' => $this->selectedEmployerId];
+            }
+            
             $export = $service->createExport(
                 name: $name,
                 type: $this->selectedExportType,
-                format: 'csv'
+                format: 'csv',
+                parameters: $parameters
             );
             
             // Export asynchron ausführen (oder synchron je nach Bedarf)
@@ -55,6 +71,7 @@ class Index extends Component
             
             $this->showExportModal = false;
             $this->selectedExportType = '';
+            $this->selectedEmployerId = null;
             
             session()->flash('success', 'Export erfolgreich erstellt!');
         } catch (\Throwable $e) {
@@ -66,6 +83,7 @@ class Index extends Component
     {
         $this->showExportModal = false;
         $this->selectedExportType = '';
+        $this->selectedEmployerId = null;
     }
 
     public function downloadExport(int $exportId)
@@ -137,6 +155,16 @@ class Index extends Component
             'payroll' => 'Lohnarten Export',
             'employees' => 'Mitarbeiter Export',
         ];
+    }
+
+    #[Computed]
+    public function employers()
+    {
+        return \Platform\Hcm\Models\HcmEmployer::where('team_id', auth()->user()->currentTeam->id)
+            ->where('is_active', true)
+            ->orderBy('employer_number')
+            ->get()
+            ->mapWithKeys(fn($employer) => [$employer->id => $employer->display_name]);
     }
 
     public function render()

@@ -210,7 +210,7 @@
                         Export-Typ
                     </label>
                     <select 
-                        wire:model="selectedExportType" 
+                        wire:model.live="selectedExportType" 
                         class="block w-full rounded-md border border-[var(--ui-border)] bg-white px-3 py-2 text-sm"
                     >
                         <option value="">Bitte wählen...</option>
@@ -222,6 +222,26 @@
                         <span class="text-sm text-red-600">{{ $message }}</span>
                     @enderror
                 </div>
+
+                @if($selectedExportType === 'infoniqa')
+                    <div>
+                        <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
+                            Arbeitgeber <span class="text-red-600">*</span>
+                        </label>
+                        <select 
+                            wire:model="selectedEmployerId" 
+                            class="block w-full rounded-md border border-[var(--ui-border)] bg-white px-3 py-2 text-sm"
+                        >
+                            <option value="">Bitte Arbeitgeber wählen...</option>
+                            @foreach($this->employers as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                        @error('selectedEmployerId')
+                            <span class="text-sm text-red-600">{{ $message }}</span>
+                        @enderror
+                    </div>
+                @endif
 
                 @if($selectedExportType)
                     <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -240,7 +260,7 @@
                     <x-ui-button 
                         variant="primary" 
                         wire:click="executeExport"
-                        :disabled="!$selectedExportType"
+                        :disabled="!$selectedExportType || ($selectedExportType === 'infoniqa' && !$selectedEmployerId)"
                     >
                         @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
                         Export starten
