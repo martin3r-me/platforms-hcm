@@ -140,6 +140,10 @@ class HcmExportService
             'contracts.levyTypes',
             'healthInsuranceCompany',
             'payoutMethod',
+            'benefits' => function($q) {
+                $q->where('benefit_type', 'bkv')
+                  ->where('is_active', true);
+            },
         ])
         ->where('team_id', $this->teamId)
         ->where('employer_id', $employerId)
@@ -316,25 +320,48 @@ class HcmExportService
         // 29. Beitragsgruppe (immer "1111")
         $row[28] = '1111';
         
-        // 33. KK-Code (Einzugsstelle)
+        // 30. BYGR KV (Index 29)
+        // TODO: Später aus Tarif-Lookup
+        $row[29] = '';
+        
+        // 31. KV-Kennzeichen (Index 30)
+        // TODO: Später aus Tarif-Lookup
+        $row[30] = '';
+        
+        // 32. KV Vertragsart (Index 31)
+        // "1" wenn privat versichert (BKV vorhanden), sonst leer
+        $hasBkv = $employee->benefits->contains(function($benefit) {
+            return $benefit->benefit_type === 'bkv' && $benefit->is_active;
+        });
+        $row[31] = $hasBkv ? '1' : '';
+        
+        // 33. KK-Code (Einzugsstelle) (Index 32)
         $row[32] = $employee->healthInsuranceCompany?->ik_number ?? '';
         
         // 42. Kinder (Index 41)
         $row[41] = (string)($employee->children_count ?? 0);
         
-        // 44-46. Umlagepflicht (U1, U2, Insolvenz) - Indizes 43-45
-        // Immer "Ja" setzen
-        $row[43] = 'Ja'; // Umlagepflicht U1 Lfz
-        $row[44] = 'Ja'; // Umlagepflicht U2
-        $row[45] = 'Ja'; // Umlagepflicht Insolvenz
+        // 43. Kinder unter 25 Jahren für PV-Abschlag (Index 42)
+        // TODO: Später aus Daten
+        $row[42] = '';
         
-        // 47. Staatsangehörigkeitsschlüssel (Index 46)
+        // 44. PV-Beitrag privat (Index 43)
+        // TODO: Später aus Daten
+        $row[43] = '';
+        
+        // 45-47. Umlagepflicht (U1, U2, Insolvenz) - Indizes 44-46
+        // Immer "Ja" setzen
+        $row[44] = 'Ja'; // Umlagepflicht U1 Lfz
+        $row[45] = 'Ja'; // Umlagepflicht U2
+        $row[46] = 'Ja'; // Umlagepflicht Insolvenz
+        
+        // 48. Staatsangehörigkeitsschlüssel (Index 47)
         // Aus importierten Daten, normalisiert: "0" → "000", leer → "000"
         $nationality = $employee->nationality ?: '';
         if ($nationality === '0' || $nationality === '') {
-            $row[46] = '000';
+            $row[47] = '000';
         } else {
-            $row[46] = $nationality;
+            $row[47] = $nationality;
         }
         
         // 50. Rentenbeginn (Index 49)
