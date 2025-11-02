@@ -1554,6 +1554,7 @@ class UnifiedImportService
 
     /**
      * Findet oder erstellt einen ChurchTaxType basierend auf dem Import-Wert
+     * Unterstützt numerische Codes (0, 1, 2) und Text-Werte
      */
     private function findOrCreateChurchTaxType(?string $churchTax, int $teamId): ?HcmChurchTaxType
     {
@@ -1564,7 +1565,18 @@ class UnifiedImportService
         $churchTax = trim($churchTax);
         $churchTaxLower = mb_strtolower($churchTax);
         
-        // Mapping von Text zu Code (gleiche Logik wie im ExportService)
+        // Mapping von numerischen Codes (aus altem System) zu INFONIQA-Codes
+        // Standard-Mapping in deutschen Lohnsystemen:
+        // 0 = keine/keine Angabe
+        // 1 = römisch-katholisch (RK)
+        // 2 = evangelisch (EV)
+        $numericToCode = [
+            '0' => null, // Keine Konfession
+            '1' => 'RK', // Römisch-Katholisch
+            '2' => 'EV', // Evangelisch
+        ];
+        
+        // Mapping von Text zu Code
         $textToCode = [
             'altkatholisch' => 'AK',
             'alt-katholisch' => 'AK',
@@ -1580,14 +1592,28 @@ class UnifiedImportService
             'neuapostolisch' => 'NA',
         ];
         
+        $code = null;
+        
+        // Prüfe zuerst numerische Codes
+        if (isset($numericToCode[$churchTax])) {
+            $code = $numericToCode[$churchTax];
+        }
         // Prüfe ob bereits ein Code (2 Buchstaben)
-        if (preg_match('/^[A-Z]{2}$/i', $churchTax)) {
+        elseif (preg_match('/^[A-Z]{2}$/i', $churchTax)) {
             $code = strtoupper($churchTax);
-        } elseif (isset($textToCode[$churchTaxLower])) {
+        }
+        // Prüfe Text-Mapping
+        elseif (isset($textToCode[$churchTaxLower])) {
             $code = $textToCode[$churchTaxLower];
-        } else {
-            // Fallback: Versuche Code aus Text zu extrahieren oder verwende ersten Teil
+        }
+        // Fallback: Versuche Code aus Text zu extrahieren
+        else {
             $code = strtoupper(substr($churchTax, 0, 2));
+        }
+        
+        // Wenn kein Code gefunden (z.B. bei "0" = keine Konfession), return null
+        if (!$code) {
+            return null;
         }
         
         // Finde oder erstelle den ChurchTaxType
