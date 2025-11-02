@@ -457,6 +457,21 @@
                         </div>
                     </div>
                     <div>
+                        <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Steuerklasse</div>
+                        <div class="text-sm text-[var(--ui-muted)]">
+                            @if($contract->taxClass)
+                                <div class="flex items-center gap-2">
+                                    <span>{{ $contract->taxClass->code }} – {{ $contract->taxClass->name }}</span>
+                                    @if($contract->taxClass->code === '23')
+                                        <span class="text-xs text-blue-600" title="Kombination aus Steuerklasse II (alleinstehend mit Kind) und III (verheiratet/besser verdienend) - z.B. bei Geschiedenen mit Unterhaltspflicht">ℹ️</span>
+                                    @endif
+                                </div>
+                            @else
+                                —
+                            @endif
+                        </div>
+                    </div>
+                    <div>
                         <div class="text-sm font-medium text-[var(--ui-secondary)] mb-1">Kinder</div>
                         <div class="text-sm text-[var(--ui-muted)]">
                             @php

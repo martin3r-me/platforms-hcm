@@ -155,7 +155,7 @@ class UnifiedImportService
                         'nationality' => $row['Staatsangehoerigkeit'] ?? null,
                         'children_count' => $this->toInt($row['Kinderanzahl'] ?? null),
                         'disability_degree' => $this->toInt($row['Grad der Behinderung'] ?? null),
-                        'tax_class' => $row['Steuerklasse'] ?? null,
+                        // tax_class wird nicht mehr auf Employee gesetzt, sondern auf Contract (tax_class_id)
                         'church_tax' => $row['Kirche'] ?? null,
                         'tax_id_number' => ($row['Identifikationsnummer'] ?? ($row['Identifikationsnr'] ?? null)),
                         'child_allowance' => $this->toInt($row['Kinderfreibetrag'] ?? null),
@@ -796,6 +796,42 @@ class UnifiedImportService
                                 $contract->person_group_id = $personGroup->id;
                                 if (!$personGroup->wasRecentlyCreated) {
                                     echo " [Personengruppe: {$personGroup->name}]";
+                                }
+                            }
+                            
+                            // Steuerklasse -> tax_class_id (auf Contract)
+                            $taxClassRaw = trim((string) ($row['Steuerklasse'] ?? ''));
+                            if ($taxClassRaw !== '' && $taxClassRaw !== '[leer]') {
+                                // Steuerklassen sind global (kein team_id), daher Suche nur per Code
+                                $taxClass = \Platform\Hcm\Models\HcmTaxClass::where('code', $taxClassRaw)->first();
+                                
+                                if (!$taxClass) {
+                                    // Erstelle neue Steuerklasse falls nicht vorhanden
+                                    $taxClassNameMapping = [
+                                        '1' => 'Steuerklasse I (ledig)',
+                                        '2' => 'Steuerklasse II (alleinstehend mit Kind)',
+                                        '3' => 'Steuerklasse III (verheiratet, besser verdienend)',
+                                        '4' => 'Steuerklasse IV (verheiratet, beide gleich)',
+                                        '5' => 'Steuerklasse V (verheiratet, geringer verdienend)',
+                                        '6' => 'Steuerklasse VI (mehrere Arbeitsverhältnisse)',
+                                        '23' => 'Steuerklasse 23 (Kombination II+III, z.B. geschieden mit Unterhalt)',
+                                    ];
+                                    
+                                    $name = $taxClassNameMapping[$taxClassRaw] ?? ('Steuerklasse ' . $taxClassRaw);
+                                    $taxClass = \Platform\Hcm\Models\HcmTaxClass::create([
+                                        'code' => $taxClassRaw,
+                                        'name' => $name,
+                                        'is_active' => true,
+                                    ]);
+                                    $stats['lookups_created']++;
+                                    echo " [Steuerklasse erstellt: {$taxClass->name}]";
+                                }
+                                
+                                if ($taxClass) {
+                                    $contract->tax_class_id = $taxClass->id;
+                                    if (!$taxClass->wasRecentlyCreated) {
+                                        echo " [Steuerklasse: {$taxClass->name}]";
+                                    }
                                 }
                             }
                             

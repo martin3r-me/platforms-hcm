@@ -57,6 +57,7 @@ class Show extends Component
             'employmentRelationship',
             'personGroup',
             'costCenterLinks.costCenter',
+            'taxClass',
         ]);
         
         $this->loadFormData();
