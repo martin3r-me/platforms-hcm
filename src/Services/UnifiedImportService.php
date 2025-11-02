@@ -161,9 +161,9 @@ class UnifiedImportService
                         'child_allowance' => $this->toInt($row['Kinderfreibetrag'] ?? null),
                         'insurance_status' => $row['VersicherungsStatus'] ?? null,
                         'payout_type' => $row['Auszahlungsart'] ?? null,
-                        'bank_account_holder' => $row['Kontoinhaber'] ?? null,
-                        'bank_iban' => $row['Iban'] ?? null,
-                        'bank_swift' => $row['Swift'] ?? null,
+                        'bank_account_holder' => trim((string) ($row['Kontoinhaber'] ?? '')) ?: null,
+                        'bank_iban' => trim((string) ($row['Iban'] ?? '')) ?: null,
+                        'bank_swift' => trim((string) ($row['Swift'] ?? '')) ?: null,
                         'health_insurance_ik' => $row['KrankenkasseBetriebsnummer'] ?? null,
                         'health_insurance_name' => $row['KrankenkasseName'] ?? ($row['Krankenkasse'] ?? null),
                         // Phase 1: Notfallkontakt

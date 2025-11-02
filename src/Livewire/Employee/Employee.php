@@ -60,6 +60,12 @@ class Employee extends Component
             'contracts.tariffLevel'
         ]);
         
+        // Verschüsselte Felder explizit lesen, damit sie entschlüsselt werden
+        // (für Livewire wire:model)
+        $this->employee->bank_account_holder;
+        $this->employee->bank_iban;
+        $this->employee->bank_swift;
+        
         // Verfügbare Kontakte für Verknüpfung laden
         $this->loadAvailableContacts();
     }
