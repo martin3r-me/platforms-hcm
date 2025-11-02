@@ -249,9 +249,10 @@ class UnifiedImportService
 
                     // CRM contact
                     echo "\n      [5/12] CRM-Kontakt erstellen/aktualisieren...";
-                    if ($genderId) echo " [gender_id:$genderId]";
-                    if ($academicTitleId) echo " [academic_title_id:$academicTitleId]";
-                    if ($salutationId) echo " [salutation_id:$salutationId]";
+                    echo " [genderText:{$genderText}]";
+                    if ($genderId) echo " [gender_id:$genderId]"; else echo " [gender_id:NULL]";
+                    if ($academicTitleId) echo " [academic_title_id:$academicTitleId]"; else echo " [academic_title_id:NULL]";
+                    if ($salutationId) echo " [salutation_id:$salutationId]"; else echo " [salutation_id:NULL]";
                     $contact = $this->upsertContact($employee, $row, $genderId, $academicTitleId, $salutationId);
                     if ($contact['created']) { 
                         echo " erstellt ✓";
@@ -1311,13 +1312,14 @@ class UnifiedImportService
                 'is_active' => true,
                 'created_by_user_id' => $employee->created_by_user_id,
             ];
-            if ($genderId) {
+            // Setze IDs auch wenn null (explizit)
+            if ($genderId !== null) {
                 $contactData['gender_id'] = $genderId;
             }
-            if ($academicTitleId) {
+            if ($academicTitleId !== null) {
                 $contactData['academic_title_id'] = $academicTitleId;
             }
-            if ($salutationId) {
+            if ($salutationId !== null) {
                 $contactData['salutation_id'] = $salutationId;
             }
             $contact = CrmContact::create($contactData);
@@ -1575,8 +1577,16 @@ class UnifiedImportService
         $genderText = trim($genderText);
         $genderLower = mb_strtolower($genderText);
         
-        // Mapping von Geschlecht zu Anrede
-        $genderToSalutation = [
+        // Mapping von numerischen Codes zu Anrede (aus altem System)
+        $numericToSalutation = [
+            '-1' => 'Herr',  // Mann
+            '0' => 'Frau',   // Frau
+            '1' => 'Herr',
+            '2' => 'Frau',
+        ];
+        
+        // Mapping von Geschlecht zu Anrede (Text)
+        $textToSalutation = [
             'männlich' => 'Herr',
             'male' => 'Herr',
             'm' => 'Herr',
@@ -1589,22 +1599,33 @@ class UnifiedImportService
             'd' => null,
         ];
         
-        $salutationName = $genderToSalutation[$genderLower] ?? null;
+        $salutationName = null;
+        
+        // Prüfe zuerst numerische Codes
+        if (isset($numericToSalutation[$genderText])) {
+            $salutationName = $numericToSalutation[$genderText];
+        }
+        // Dann Text-Mapping
+        elseif (isset($textToSalutation[$genderLower])) {
+            $salutationName = $textToSalutation[$genderLower];
+        }
         
         if (!$salutationName) {
             return null;
         }
         
-        // Versuche zuerst per Name zu finden
-        $salutation = CrmSalutation::whereRaw('LOWER(name) = ?', [mb_strtolower($salutationName)])->first();
+        // Generiere Code aus Name (Herr → HERR, Frau → FRAU)
+        $code = strtoupper($salutationName === 'Herr' ? 'HERR' : 'FRAU');
+        
+        // Versuche zuerst per Code zu finden (Standard-Codes: HERR, FRAU)
+        $salutation = CrmSalutation::where('code', $code)->first();
         
         if ($salutation) {
             return $salutation;
         }
         
-        // Versuche per Code zu finden (Standard-Codes: HERR, FRAU)
-        $code = strtoupper($salutationName === 'Herr' ? 'HERR' : 'FRAU');
-        $salutation = CrmSalutation::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])->first();
+        // Fallback: Versuche per Name zu finden (case-insensitive)
+        $salutation = CrmSalutation::whereRaw('LOWER(name) = ?', [mb_strtolower($salutationName)])->first();
         
         if ($salutation) {
             return $salutation;
