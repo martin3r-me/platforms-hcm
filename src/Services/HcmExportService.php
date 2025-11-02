@@ -137,6 +137,7 @@ class HcmExportService
             'contracts.jobTitles',
             'contracts.taxClass',
             'contracts.costCenterLinks.costCenter',
+            'contracts.levyTypes',
             'healthInsuranceCompany',
             'payoutMethod',
         ])
@@ -288,13 +289,11 @@ class HcmExportService
             $row[13] = $address->city ?? '';
         }
         
-        // 15. Betriebsteilcode (Arbeitgeber-Nummer)
-        $row[14] = (string)($employee->employer?->employer_number ?? '');
+        // 15. Betriebsteilcode (leer lassen)
+        $row[14] = '';
         
-        // 16. Abrechnungskreis (Kostenstelle)
-        if ($costCenter) {
-            $row[15] = is_object($costCenter) ? (string)($costCenter->code ?? '') : (string)$costCenter;
-        }
+        // 16. Abrechnungskreis (immer "Standard")
+        $row[15] = 'Standard';
         
         // 17. Eintrittsdatum
         $row[16] = $contract?->start_date?->format('d.m.Y') ?? '';
@@ -314,99 +313,119 @@ class HcmExportService
         // 28. Personengruppenschlüssel
         $row[27] = $contract?->personGroup?->code ?? '';
         
+        // 29. Beitragsgruppe (immer "1111")
+        $row[28] = '1111';
+        
         // 33. KK-Code (Einzugsstelle)
         $row[32] = $employee->healthInsuranceCompany?->ik_number ?? '';
         
-        // 41. Kinder
-        $row[40] = (string)($employee->children_count ?? 0);
+        // 42. Kinder (Index 41)
+        $row[41] = (string)($employee->children_count ?? 0);
         
-        // 43-45. Umlagepflicht
-        // Diese Felder müssen aus der DB kommen, aktuell haben wir sie nicht direkt
-        // TODO: Prüfen ob levy_u1, levy_u2, levy_insolvency auf Contract existieren
+        // 45-47. Umlagepflicht (U1, U2, Insolvenz) - Indizes 44-46
+        // Immer "Ja" setzen
+        $row[44] = 'Ja'; // Umlagepflicht U1 Lfz
+        $row[45] = 'Ja'; // Umlagepflicht U2
+        $row[46] = 'Ja'; // Umlagepflicht Insolvenz
         
-        // 49. Beschäftigungsverhältnis
-        $row[48] = $contract?->employmentRelationship?->code ?? '';
+        // 48. Staatsangehörigkeitsschlüssel (Index 47)
+        // Aus importierten Daten, normalisiert: "0" → "000", leer → "000"
+        $nationality = $employee->nationality ?: '';
+        if ($nationality === '0' || $nationality === '') {
+            $row[47] = '000';
+        } else {
+            $row[47] = $nationality;
+        }
         
-        // 51. Rentenart
-        $row[50] = $contract?->pensionType?->code ?? '';
+        // 50. Rentenbeginn (Index 49)
+        // (leer - wird später befüllt wenn vorhanden)
         
-        // 53. Saisonarbeitnehmer
-        $row[52] = $employee->is_seasonal_worker ? 'Ja' : 'Nein';
+        // 52. Beschäftigungsverhältnis (Index 51)
+        $row[51] = $contract?->employmentRelationship?->code ?? '';
         
-        // 54. Soz.-Versicherungsnr.
-        $row[53] = $contract?->social_security_number ?? '';
+        // 53. Mehrfachbeschäftigt (Index 52)
+        $row[52] = $contract?->has_additional_employment ? 'Ja' : 'Nein';
         
-        // 55. Geschlecht
+        // 54. Rentenart (Index 53)
+        $row[53] = $contract?->pensionType?->code ?? '';
+        
+        // 56. Saisonarbeitnehmer (Index 55)
+        $row[55] = $employee->is_seasonal_worker ? 'Ja' : 'Nein';
+        
+        // 57. Soz.-Versicherungsnr. (Index 56)
+        $row[56] = $contract?->social_security_number ?? '';
+        
+        // 58. Geschlecht (Index 57)
         $gender = $employee->gender ?? $contact?->gender ?? null;
         if ($gender === 'male' || $gender === 'männlich' || $gender === 'Männlich') {
-            $row[54] = 'Männlich';
+            $row[57] = 'Männlich';
         } elseif ($gender === 'female' || $gender === 'weiblich' || $gender === 'Weiblich') {
-            $row[54] = 'Weiblich';
+            $row[57] = 'Weiblich';
         }
         
-        // 56. Geburtsdatum
+        // 59. Geburtsdatum (Index 58)
         $birthDate = $employee->birth_date ?? $contact?->birth_date;
         if ($birthDate) {
-            $row[55] = is_string($birthDate) ? date('d.m.Y', strtotime($birthDate)) : $birthDate->format('d.m.Y');
+            $row[58] = is_string($birthDate) ? date('d.m.Y', strtotime($birthDate)) : $birthDate->format('d.m.Y');
         }
         
-        // 57. Geburtsname
-        $row[56] = $employee->birth_surname ?? $contact?->last_name ?? '';
+        // 60. Geburtsname (Index 59)
+        $row[59] = $employee->birth_surname ?? $contact?->last_name ?? '';
         
-        // 58. Geburtsort
-        $row[57] = $employee->birth_place ?? $contact?->birth_place ?? '';
+        // 61. Geburtsort (Index 60)
+        $row[60] = $employee->birth_place ?? $contact?->birth_place ?? '';
         
-        // 62. Geburtsland
-        $row[61] = $employee->birth_country ?? '';
+        // 64. Geburtsland (Index 63)
+        $row[63] = $employee->birth_country ?? '';
         
-        // 63. Krankenkasse (tats.)
-        $row[62] = $employee->healthInsuranceCompany?->name ?? '';
+        // 65. Krankenkasse (tats.) (Index 64)
+        $row[64] = $employee->healthInsuranceCompany?->name ?? '';
         
-        // 64. PGR 109/110:Versicherungsstatus
-        $row[63] = $contract?->insuranceStatus?->code ?? '';
+        // 66. PGR 109/110:Versicherungsstatus (Index 65)
+        $row[65] = $contract?->insuranceStatus?->code ?? '';
         
-        // 66. steuerpflichtig EStG § 1
-        $row[65] = 'unbeschränkt';
+        // 67. steuerpflichtig EStG § 1 (Index 66)
+        $row[66] = 'unbeschränkt';
         
-        // 67. Art der Besteuerung
-        $row[66] = 'individuell';
+        // 68. Art der Besteuerung (Index 67)
+        $row[67] = 'individuell';
         
-        // 69. Identifikationsnummer
-        $row[68] = $employee->tax_id_number ?? '';
+        // 70. Identifikationsnummer (Index 69)
+        $row[69] = $employee->tax_id_number ?? '';
         
-        // 72. Steuerklasse
-        $row[71] = $contract?->taxClass?->code ?? '';
+        // 74. Steuerklasse (Index 73)
+        $row[73] = $contract?->taxClass?->code ?? '';
         
-        // 75. Kinderfreibetrag
-        $row[74] = (string)($employee->child_allowance ?? 0);
+        // 76. Kinderfreibetrag (Index 75)
+        $row[75] = (string)($employee->child_allowance ?? 0);
         
-        // 81. Konfession
+        // 81. Konfession (Index 80)
         $row[80] = $employee->church_tax ?? '';
         
-        // 87-89. Arbeitszeit
-        // Teilzeitfaktor, Entgeltfaktor, Teilzeit Grund
+        // 90-92. Arbeitszeit
+        // Teilzeitfaktor, Entgeltfaktor, Teilzeit Grund (Indizes 89-91)
         $hoursPerWeek = $contract?->hours_per_month ? ($contract->hours_per_month / 4.333) : null;
         if ($hoursPerWeek) {
-            $row[86] = number_format($hoursPerWeek, 2, ',', '');
+            $row[89] = number_format($hoursPerWeek, 2, ',', '');
         }
         
         // Teilzeitfaktor berechnen
         if ($hoursPerWeek && $hoursPerWeek < 40) {
-            $row[87] = number_format($hoursPerWeek / 40, 2, ',', '');
+            $row[90] = number_format($hoursPerWeek / 40, 2, ',', '');
         } else {
-            $row[87] = '1,00';
+            $row[90] = '1,00';
         }
         
-        $row[88] = '1,00'; // Entgeltfaktor
+        $row[91] = '1,00'; // Entgeltfaktor
         
-        // 90. Funktion
+        // 93. Funktion (Index 92)
         $jobTitle = $contract?->jobTitles->first();
-        $row[89] = $jobTitle?->name ?? '';
+        $row[92] = $jobTitle?->name ?? '';
         
-        // 91. Beschäftigung in
-        $row[90] = 'Firma';
+        // 94. Beschäftigung in (Index 93)
+        $row[93] = 'Firma';
         
-        // 92. Tätigkeitsschlüssel (9-stellig)
+        // 95. Tätigkeitsschlüssel (9-stellig) (Index 94)
         // Stellen 1-5: Tätigkeitscode
         // Stelle 6: Schulabschluss (schooling_level)
         // Stelle 7: Berufsausbildung (vocational_training_level)
@@ -417,45 +436,49 @@ class HcmExportService
         $vocational = (string)($contract?->vocational_training_level ?? 0);
         $tempAgency = $contract?->is_temp_agency ? '2' : '1';
         $contractForm = (string)($contract?->contract_form ?? 0);
-        $row[91] = $activityCode . $schooling . $vocational . $tempAgency . $contractForm;
+        $row[94] = $activityCode . $schooling . $vocational . $tempAgency . $contractForm;
         
-        // 96. Entgelt Art
+        // 99. Entgelt Art (Index 98)
         $wageType = $contract?->wage_base_type ?? '';
         if ($wageType === 'hourly' || $contract?->hourly_wage) {
-            $row[95] = 'Stundenlohn';
+            $row[98] = 'Stundenlohn';
         } elseif ($wageType === 'monthly' || $contract?->base_salary) {
-            $row[95] = 'Monatslohn/Gehalt';
+            $row[98] = 'Monatslohn/Gehalt';
         }
         
-        // 98-102. Tarif
-        // Tarifart - muss aus TariffGroup/Agreement kommen
+        // 100-104. Tarif
+        // Tarifart (Index 99)
         $tariffAgreement = $contract?->tariffGroup?->tariffAgreement;
         if ($tariffAgreement) {
-            $row[97] = $tariffAgreement->name ?? '';
+            $row[99] = $tariffAgreement->name ?? '';
         }
-        $row[99] = $contract?->tariffGroup?->code ?? '';
-        $row[100] = $contract?->tariff_assignment_date?->format('d.m.Y') ?? '';
-        $row[101] = $contract?->tariffLevel?->level ?? '';
-        $row[102] = $contract?->tariff_level_start_date?->format('d.m.Y') ?? '';
+        // Tarifgruppe (Index 100)
+        $row[100] = $contract?->tariffGroup?->code ?? '';
+        // Tarifbasisdatum (Index 101)
+        $row[101] = $contract?->tariff_assignment_date?->format('d.m.Y') ?? '';
+        // Tarifstufe (Index 102)
+        $row[102] = $contract?->tariffLevel?->level ?? '';
+        // Tarifstufe seit (Index 103)
+        $row[103] = $contract?->tariff_level_start_date?->format('d.m.Y') ?? '';
         
-        // 109. Urlaubsverwaltung
+        // 109. Urlaubsverwaltung (Index 108)
         if ($contract?->vacation_entitlement) {
             $row[108] = 'Jahresanspruch';
         }
         
-        // 112-113. Dienststelle & Ort Dienststelle
+        // 112-113. Dienststelle & Ort Dienststelle (Indizes 111-112)
         if ($costCenter) {
             $row[111] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
             $row[112] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
         }
         
-        // 115. Familienstand
+        // 115. Familienstand (Index 114)
         $row[114] = $contact?->marital_status ?? '';
         
-        // 144-146. Kommunikation (privat)
-        $row[143] = $primaryPhone?->number ?? '';
-        $row[144] = $contact?->phoneNumbers->where('type', 'mobile')->first()?->number ?? '';
-        $row[145] = $primaryEmail?->email ?? '';
+        // 145-147. Kommunikation (privat) (Indizes 144-146)
+        $row[144] = $primaryPhone?->number ?? '';
+        $row[145] = $contact?->phoneNumbers->where('type', 'mobile')->first()?->number ?? '';
+        $row[146] = $primaryEmail?->email ?? '';
         
         // Alle anderen Felder bleiben leer (werden später befüllt wenn Daten vorhanden)
         
