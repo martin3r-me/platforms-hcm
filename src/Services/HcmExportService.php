@@ -463,12 +463,13 @@ class HcmExportService
         $row[68] = '';
         
         // 70. Haupt AG (Steuer) (Index 69)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[69] = '';
+        // Standardwert: "Ja" (Anmeldung bei ELStAM als Haupt- oder Neben-AG)
+        $row[69] = 'Ja';
         
         // 71. Herkunft LSt.-Merkmale gem. EStG (Index 70)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[70] = '';
+        // Standardwert: "ELStAM" (alle anderen Optionen sind Spezialfälle)
+        // Geringfügig Beschäftigte mit Pauschalversteuerung = leer
+        $row[70] = 'ELStAM';
         
         // 72. Steuerklasse (Index 71)
         $row[71] = $contract?->taxClass?->code ?? '';
@@ -634,8 +635,25 @@ class HcmExportService
         }
         
         // 108. Arbeitsplatz lt. § 156 SGB IX (Index 107)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[107] = '';
+        // Schwerbehindertenangabe basierend auf Behinderungsgrad
+        // Mögliche Ausprägungen:
+        // - zählt = AN ist nicht schw. behindert, zählt als volle Stelle
+        // - zählt (behindert) = AN ist schw. behindert
+        // - weniger 18 WStd. Abs.3 = AN ist nicht schw. behindert, zählt aufgrund geringer Arbeitszeit als halbe Stelle
+        // - Vertretung Abs.2 Nr.6, Teilhabe Abs.2 Nr.1, ABM Abs.2 Nr.4, sonstig Abs.2 Nr.2u3u5, befristet Abs.3
+        $workHoursPerWeek = $contract?->hours_per_month ? ($contract->hours_per_month / 4.333) : null;
+        $disabilityDegree = $employee->disability_degree ?? 0;
+        
+        if ($disabilityDegree && $disabilityDegree > 0) {
+            // Schwerbehindert (Grad > 0)
+            $row[107] = 'zählt (behindert)';
+        } elseif ($workHoursPerWeek && $workHoursPerWeek < 18) {
+            // Weniger als 18 Stunden/Woche
+            $row[107] = 'weniger 18 WStd. Abs.3';
+        } else {
+            // Standard: zählt als volle Stelle
+            $row[107] = 'zählt';
+        }
         
         // 109. Arbeitszeitschlüssel für REHADAT (Index 108)
         // (leer - wird später befüllt wenn vorhanden)

@@ -21,6 +21,8 @@ use Platform\Hcm\Models\HcmEmployeeIssue;
 use Platform\Hcm\Models\HcmPayoutMethod;
 use Platform\Hcm\Models\HcmChurchTaxType;
 use Platform\Crm\Models\CrmGender;
+use Platform\Crm\Models\CrmSalutation;
+use Platform\Crm\Models\CrmAcademicTitle;
 use Platform\Organization\Models\OrganizationCostCenter;
 use Platform\Hcm\Models\HcmTariffAgreement;
 use Platform\Hcm\Models\HcmTariffGroup;
@@ -154,6 +156,13 @@ class UnifiedImportService
                     $genderText = $row['Geschlecht'] ?? null;
                     $genderId = $this->findOrCreateGender($genderText)?->id;
                     
+                    // Titel (Academic Title) für CRM
+                    $titleText = $row['Titel'] ?? null;
+                    $academicTitleId = $this->findOrCreateAcademicTitle($titleText)?->id;
+                    
+                    // Anrede (Salutation) für CRM - aus Geschlecht ableiten, falls nicht vorhanden
+                    $salutationId = $this->findOrCreateSalutation($genderText)?->id;
+                    
                     $empCore = [
                         'is_active' => $isActive,
                         'birth_date' => $birth?->toDateString(),
@@ -240,7 +249,7 @@ class UnifiedImportService
 
                     // CRM contact
                     echo "\n      [5/12] CRM-Kontakt erstellen/aktualisieren...";
-                    $contact = $this->upsertContact($employee, $row, $genderId);
+                    $contact = $this->upsertContact($employee, $row, $genderId, $academicTitleId, $salutationId);
                     if ($contact['created']) { 
                         echo " erstellt ✓";
                         $stats['contacts_created']++; 
@@ -1250,7 +1259,7 @@ class UnifiedImportService
         return $stats;
     }
 
-    private function upsertContact(HcmEmployee $employee, array $row, ?int $genderId = null): array
+    private function upsertContact(HcmEmployee $employee, array $row, ?int $genderId = null, ?int $academicTitleId = null, ?int $salutationId = null): array
     {
         $teamId = $employee->team_id;
         $firstName = trim((string) ($row['Vorname'] ?? ''));
@@ -1302,6 +1311,12 @@ class UnifiedImportService
             if ($genderId) {
                 $contactData['gender_id'] = $genderId;
             }
+            if ($academicTitleId) {
+                $contactData['academic_title_id'] = $academicTitleId;
+            }
+            if ($salutationId) {
+                $contactData['salutation_id'] = $salutationId;
+            }
             $contact = CrmContact::create($contactData);
             $created = true;
         } else {
@@ -1311,6 +1326,8 @@ class UnifiedImportService
             ];
             if ($birth && !$contact->birth_date) { $update['birth_date'] = $birth; }
             if ($genderId && !$contact->gender_id) { $update['gender_id'] = $genderId; }
+            if ($academicTitleId && !$contact->academic_title_id) { $update['academic_title_id'] = $academicTitleId; }
+            if ($salutationId && !$contact->salutation_id) { $update['salutation_id'] = $salutationId; }
             $contact->update($update);
             $updated = true;
         }
@@ -1488,6 +1505,115 @@ class UnifiedImportService
             } catch (\Throwable $e) {}
         }
         return null;
+    }
+
+    /**
+     * Findet oder erstellt einen CrmAcademicTitle basierend auf dem Import-Wert
+     */
+    private function findOrCreateAcademicTitle(?string $titleText): ?CrmAcademicTitle
+    {
+        if (!$titleText || trim($titleText) === '' || trim($titleText) === '[leer]') {
+            return null;
+        }
+        
+        $titleText = trim($titleText);
+        $titleLower = mb_strtolower($titleText);
+        
+        // Versuche zuerst per Name zu finden
+        $title = CrmAcademicTitle::whereRaw('LOWER(name) = ?', [$titleLower])->first();
+        
+        if ($title) {
+            return $title;
+        }
+        
+        // Versuche per Code zu finden (falls Titel bereits als Code vorliegt)
+        $title = CrmAcademicTitle::whereRaw('LOWER(code) = ?', [mb_strtoupper($titleText)])->first();
+        
+        if ($title) {
+            return $title;
+        }
+        
+        // Wenn nicht gefunden, erstelle neuen Titel
+        // Generiere Code aus Name (z.B. "Dr." -> "DR", "Prof. Dr." -> "PROF_DR")
+        $code = strtoupper(preg_replace('/[^A-Z0-9]/', '_', $titleText));
+        $code = preg_replace('/_+/', '_', $code);
+        $code = trim($code, '_');
+        
+        // Verkürze zu langen Code
+        if (strlen($code) > 20) {
+            $code = substr($code, 0, 20);
+        }
+        
+        $title = CrmAcademicTitle::firstOrCreate(
+            ['code' => $code],
+            [
+                'name' => $titleText,
+                'code' => $code,
+                'is_active' => true,
+            ]
+        );
+        
+        return $title;
+    }
+
+    /**
+     * Findet oder erstellt eine CrmSalutation basierend auf dem Geschlecht
+     */
+    private function findOrCreateSalutation(?string $genderText): ?CrmSalutation
+    {
+        if (!$genderText || trim($genderText) === '' || trim($genderText) === '[leer]') {
+            return null;
+        }
+        
+        $genderText = trim($genderText);
+        $genderLower = mb_strtolower($genderText);
+        
+        // Mapping von Geschlecht zu Anrede
+        $genderToSalutation = [
+            'männlich' => 'Herr',
+            'male' => 'Herr',
+            'm' => 'Herr',
+            'weiblich' => 'Frau',
+            'female' => 'Frau',
+            'w' => 'Frau',
+            'f' => 'Frau',
+            'divers' => null, // Keine Standard-Anrede für Divers
+            'diverse' => null,
+            'd' => null,
+        ];
+        
+        $salutationName = $genderToSalutation[$genderLower] ?? null;
+        
+        if (!$salutationName) {
+            return null;
+        }
+        
+        // Versuche zuerst per Name zu finden
+        $salutation = CrmSalutation::whereRaw('LOWER(name) = ?', [mb_strtolower($salutationName)])->first();
+        
+        if ($salutation) {
+            return $salutation;
+        }
+        
+        // Versuche per Code zu finden (Standard-Codes: HERR, FRAU)
+        $code = strtoupper($salutationName === 'Herr' ? 'HERR' : 'FRAU');
+        $salutation = CrmSalutation::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])->first();
+        
+        if ($salutation) {
+            return $salutation;
+        }
+        
+        // Wenn nicht gefunden, erstelle neue Anrede
+        $salutation = CrmSalutation::firstOrCreate(
+            ['code' => $code],
+            [
+                'name' => $salutationName,
+                'code' => $code,
+                'is_active' => true,
+            ]
+        );
+        
+        return $salutation;
     }
 
     /**
