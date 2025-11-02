@@ -322,19 +322,19 @@ class HcmExportService
         // 42. Kinder (Index 41)
         $row[41] = (string)($employee->children_count ?? 0);
         
-        // 45-47. Umlagepflicht (U1, U2, Insolvenz) - Indizes 44-46
+        // 44-46. Umlagepflicht (U1, U2, Insolvenz) - Indizes 43-45
         // Immer "Ja" setzen
-        $row[44] = 'Ja'; // Umlagepflicht U1 Lfz
-        $row[45] = 'Ja'; // Umlagepflicht U2
-        $row[46] = 'Ja'; // Umlagepflicht Insolvenz
+        $row[43] = 'Ja'; // Umlagepflicht U1 Lfz
+        $row[44] = 'Ja'; // Umlagepflicht U2
+        $row[45] = 'Ja'; // Umlagepflicht Insolvenz
         
-        // 48. Staatsangehörigkeitsschlüssel (Index 47)
+        // 47. Staatsangehörigkeitsschlüssel (Index 46)
         // Aus importierten Daten, normalisiert: "0" → "000", leer → "000"
         $nationality = $employee->nationality ?: '';
         if ($nationality === '0' || $nationality === '') {
-            $row[47] = '000';
+            $row[46] = '000';
         } else {
-            $row[47] = $nationality;
+            $row[46] = $nationality;
         }
         
         // 50. Rentenbeginn (Index 49)

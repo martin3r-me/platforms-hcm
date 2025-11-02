@@ -58,5 +58,12 @@ class HcmExportTemplate extends Model
     {
         return $this->hasMany(HcmExport::class, 'export_template_id');
     }
+
+    public function columns()
+    {
+        return $this->hasMany(HcmExportTemplateColumn::class, 'export_template_id')
+                    ->orderBy('sort_order')
+                    ->orderBy('column_index');
+    }
 }
 
