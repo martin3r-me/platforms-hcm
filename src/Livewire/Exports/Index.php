@@ -35,6 +35,9 @@ class Index extends Component
 
     public function triggerExport(string $type): void
     {
+        // Flash-Messages löschen beim Öffnen des Modals
+        session()->forget(['success', 'error']);
+        
         $this->selectedExportType = $type;
         $this->selectedEmployerId = null;
         $this->modalShow = true;

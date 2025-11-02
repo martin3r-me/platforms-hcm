@@ -6,6 +6,25 @@
 
     <x-ui-page-container>
         <div class="px-4 sm:px-6 lg:px-8">
+            {{-- Flash Messages --}}
+            @if(session()->has('success'))
+                <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
+                        <p class="text-green-800">{{ session('success') }}</p>
+                    </div>
+                </div>
+            @endif
+
+            @if(session()->has('error'))
+                <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        @svg('heroicon-o-exclamation-triangle', 'w-5 h-5 text-red-600')
+                        <p class="text-red-800">{{ session('error') }}</p>
+                    </div>
+                </div>
+            @endif
+
             <x-ui-panel title="Export-Historie" subtitle="Übersicht aller durchgeführten Exports">
                 {{-- Filter & Suche --}}
                 <div class="flex gap-2 mb-4">
