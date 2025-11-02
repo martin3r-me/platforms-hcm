@@ -357,13 +357,17 @@ class HcmExportService
         $row[46] = 'Ja'; // Umlagepflicht Insolvenz
         
         // 48. Staatsangehörigkeitsschlüssel (Index 47)
-        // Aus importierten Daten, normalisiert: "0" → "000", leer → "000"
+        // Aus importierten Daten, normalisiert: Immer auf 3 Stellen auffüllen mit führenden Nullen
         $nationality = $employee->nationality ?: '';
-        if ($nationality === '0' || $nationality === '') {
+        if ($nationality === '' || $nationality === '0') {
             $row[47] = '000';
         } else {
-            $row[47] = $nationality;
+            // Auf 3 Stellen mit führenden Nullen auffüllen
+            $row[47] = str_pad((string)$nationality, 3, '0', STR_PAD_LEFT);
         }
+        
+        // 49. Leere Spalte (Index 48)
+        $row[48] = '';
         
         // 50. Rentenbeginn (Index 49)
         // (leer - wird später befüllt wenn vorhanden)
