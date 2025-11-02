@@ -8,19 +8,37 @@
         <div class="px-4 sm:px-6 lg:px-8">
             {{-- Flash Messages --}}
             @if(session()->has('success'))
-                <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div class="flex items-center gap-2">
-                        @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
-                        <p class="text-green-800">{{ session('success') }}</p>
+                <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg" 
+                     x-data="{ show: true }" 
+                     x-show="show" 
+                     x-transition
+                     x-init="setTimeout(() => { show = false; setTimeout(() => $wire.call('clearFlashMessages'), 300); }, 5000)">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
+                            <p class="text-green-800">{{ session('success') }}</p>
+                        </div>
+                        <button @click="show = false; setTimeout(() => $wire.call('clearFlashMessages'), 300)" class="text-green-600 hover:text-green-800">
+                            @svg('heroicon-o-x-mark', 'w-4 h-4')
+                        </button>
                     </div>
                 </div>
             @endif
 
             @if(session()->has('error'))
-                <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div class="flex items-center gap-2">
-                        @svg('heroicon-o-exclamation-triangle', 'w-5 h-5 text-red-600')
-                        <p class="text-red-800">{{ session('error') }}</p>
+                <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg" 
+                     x-data="{ show: true }" 
+                     x-show="show" 
+                     x-transition
+                     x-init="setTimeout(() => { show = false; setTimeout(() => $wire.call('clearFlashMessages'), 300); }, 5000)">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            @svg('heroicon-o-exclamation-triangle', 'w-5 h-5 text-red-600')
+                            <p class="text-red-800">{{ session('error') }}</p>
+                        </div>
+                        <button @click="show = false; setTimeout(() => $wire.call('clearFlashMessages'), 300)" class="text-red-600 hover:text-red-800">
+                            @svg('heroicon-o-x-mark', 'w-4 h-4')
+                        </button>
                     </div>
                 </div>
             @endif
@@ -156,6 +174,8 @@
         {{-- Export-Modal --}}
         <x-ui-modal wire:model="modalShow" title="Neuen Export erstellen">
             <div class="space-y-4">
+                {{-- Keine Flash-Messages im Modal anzeigen --}}
+                
                 <div>
                     <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
                         Export-Typ <span class="text-red-600">*</span>

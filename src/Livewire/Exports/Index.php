@@ -27,16 +27,27 @@ class Index extends Component
     public function mount()
     {
         // Keine Vorauswahl beim Mount - wird erst beim Öffnen des Modals gesetzt
+        // Flash-Messages nur einmal beim ersten Laden anzeigen, dann nicht mehr automatisch löschen
     }
 
     public function triggerExport(string $type): void
     {
-        // Flash-Messages löschen beim Öffnen des Modals
+        // Flash-Messages und Validierungsfehler löschen beim Öffnen des Modals
         session()->forget(['success', 'error']);
+        $this->resetValidation();
         
         $this->selectedExportType = $type;
         $this->selectedEmployerId = null;
         $this->modalShow = true;
+    }
+    
+    public function updatedModalShow($value): void
+    {
+        // Wenn Modal geschlossen wird, Validierungsfehler zurücksetzen
+        if (!$value) {
+            $this->resetValidation();
+            session()->forget(['success', 'error']);
+        }
     }
 
     public function executeExport(): void
@@ -126,6 +137,8 @@ class Index extends Component
         
         $export->delete();
         
+        // Alte Flash-Messages löschen und neue setzen
+        session()->forget(['success', 'error']);
         session()->flash('success', 'Export gelöscht');
     }
     
@@ -139,6 +152,11 @@ class Index extends Component
     {
         $this->showErrorModal = false;
         $this->errorDetails = null;
+    }
+    
+    public function clearFlashMessages(): void
+    {
+        session()->forget(['success', 'error']);
     }
 
     #[Computed]
