@@ -93,3 +93,12 @@ Route::get('/benefits', \Platform\Hcm\Livewire\Benefits\Index::class)->name('hcm
 Route::get('/issues', \Platform\Hcm\Livewire\Issues\Index::class)->name('hcm.issues.index');
 Route::get('/trainings', \Platform\Hcm\Livewire\Trainings\Index::class)->name('hcm.trainings.index');
 Route::get('/training-types', \Platform\Hcm\Livewire\TrainingTypes\Index::class)->name('hcm.training-types.index');
+
+// Exports
+Route::get('/exports', \Platform\Hcm\Livewire\Exports\Index::class)->name('hcm.exports.index');
+Route::get('/exports/{export}/download', function(\Platform\Hcm\Models\HcmExport $export) {
+    if (!$export->file_path || !\Storage::disk('public')->exists($export->file_path)) {
+        abort(404, 'Export-Datei nicht gefunden');
+    }
+    return \Storage::disk('public')->download($export->file_path, $export->file_name);
+})->name('hcm.exports.download');

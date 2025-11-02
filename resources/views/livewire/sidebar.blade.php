@@ -117,6 +117,14 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
+    {{-- Abschnitt: Exports --}}
+    <x-ui-sidebar-list label="Exports">
+        <x-ui-sidebar-item :href="route('hcm.exports.index')">
+            @svg('heroicon-o-arrow-down-tray', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Exports</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
     {{-- Collapsed: Icons-only --}}
     <div x-show="collapsed" class="px-2 py-2 border-b border-[var(--ui-border)]">
         <div class="flex flex-col gap-2">
