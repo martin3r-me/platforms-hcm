@@ -358,7 +358,8 @@ class HcmExportService
         
         // 47. Staatsangehörigkeitsschlüssel (Index 46)
         // Mappt Text-Werte (wie "Deutschland") zu 3-stelligen Codes oder normalisiert numerische Codes
-        $nationality = trim((string)($employee->nationality ?? ''));
+        // Wichtig: Auch "0" wird zu "000" normalisiert
+        $nationality = $employee->nationality ?? null;
         $row[46] = $this->mapNationalityToCode($nationality);
         
         // 48. Rentenbeginn (Index 47) - direkt nach Staatsangehörigkeit, keine leere Spalte dazwischen
@@ -391,12 +392,18 @@ class HcmExportService
         $row[54] = $contract?->social_security_number ?? '';
         
         // 56. Geschlecht (Index 55)
+        // Mögliche Ausprägungen: Weiblich, Männlich, Divers, X unbestimmt
         $gender = $employee->gender ?? $contact?->gender ?? null;
         if ($gender === 'male' || $gender === 'männlich' || $gender === 'Männlich') {
             $row[55] = 'Männlich';
         } elseif ($gender === 'female' || $gender === 'weiblich' || $gender === 'Weiblich') {
             $row[55] = 'Weiblich';
+        } elseif ($gender === 'divers' || $gender === 'diverse' || $gender === 'Divers') {
+            $row[55] = 'Divers';
+        } elseif ($gender === 'x' || $gender === 'X' || $gender === 'unbestimmt') {
+            $row[55] = 'X unbestimmt';
         }
+        // Wenn kein Geschlecht vorhanden, bleibt Spalte leer
         
         // 57. Geburtsdatum (Index 56)
         $birthDate = $employee->birth_date ?? $contact?->birth_date;
@@ -428,6 +435,8 @@ class HcmExportService
         $row[63] = $contract?->insuranceStatus?->code ?? '';
         
         // 65. steuerpflichtig EStG § 1 (Index 64)
+        // Mögliche Ausprägungen: unbeschränkt, beschränkt
+        // Standardmäßig "unbeschränkt" setzen, kann später aus Daten ermittelt werden
         $row[64] = 'unbeschränkt';
         
         // 66. Art der Besteuerung (Index 65)
@@ -478,33 +487,68 @@ class HcmExportService
         // (leer - wird später befüllt wenn vorhanden)
         $row[77] = '';
         
-        // 81. Konfession (Index 80)
-        $row[80] = $employee->church_tax ?? '';
+        // 79. Konfession (Index 78)
+        $row[78] = $employee->church_tax ?? '';
         
-        // 90-92. Arbeitszeit
-        // Teilzeitfaktor, Entgeltfaktor, Teilzeit Grund (Indizes 89-91)
+        // 80. Konfession Ehepartner (Index 79)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[79] = '';
+        
+        // 81. Lohnsteuerspezifikation (Index 80)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[80] = '';
+        
+        // 82. KV/PV Basistarif privat (Index 81)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[81] = '';
+        
+        // 83. Kilometer (FWA) (Index 82)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[82] = '';
+        
+        // 84. kein LSt.-Jahresausgleich (Index 83)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[83] = '';
+        
+        // 85. Arbeitskammer Pflicht (Index 84)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[84] = '';
+        
+        // 86. Sammelbeförderung (Index 85)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[85] = '';
+        
+        // 87. Arbeitszeitvereinbarung (Index 86)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[86] = '';
+        
+        // 88. Teilzeitfaktor (Index 87)
+        // Berechnet als Stunden pro Woche / 40 (z.B. 20h/Woche = 0,50)
         $hoursPerWeek = $contract?->hours_per_month ? ($contract->hours_per_month / 4.333) : null;
+        if ($hoursPerWeek && $hoursPerWeek < 40) {
+            $row[87] = number_format($hoursPerWeek / 40, 2, ',', '');
+        } elseif ($hoursPerWeek) {
+            $row[87] = '1,00';
+        }
+        
+        // 89. Entgeltfaktor (Index 88)
+        // Standardmäßig 1,00 (Vollzeit)
+        $row[88] = '1,00';
+        
+        // 90. Teilzeit Grund (Index 89)
+        // Stunden pro Woche (z.B. 40,00 oder 20,00)
         if ($hoursPerWeek) {
             $row[89] = number_format($hoursPerWeek, 2, ',', '');
         }
         
-        // Teilzeitfaktor berechnen
-        if ($hoursPerWeek && $hoursPerWeek < 40) {
-            $row[90] = number_format($hoursPerWeek / 40, 2, ',', '');
-        } else {
-            $row[90] = '1,00';
-        }
-        
-        $row[91] = '1,00'; // Entgeltfaktor
-        
-        // 93. Funktion (Index 92)
+        // 91. Funktion (Index 90)
         $jobTitle = $contract?->jobTitles->first();
-        $row[92] = $jobTitle?->name ?? '';
+        $row[90] = $jobTitle?->name ?? '';
         
-        // 94. Beschäftigung in (Index 93)
-        $row[93] = 'Firma';
+        // 92. Beschäftigung in (Index 91)
+        $row[91] = 'Firma';
         
-        // 95. Tätigkeitsschlüssel (9-stellig) (Index 94)
+        // 93. Tätigkeitsschlüssel (9-stellig) (Index 92)
         // Stellen 1-5: Tätigkeitscode
         // Stelle 6: Schulabschluss (schooling_level)
         // Stelle 7: Berufsausbildung (vocational_training_level)
@@ -515,44 +559,100 @@ class HcmExportService
         $vocational = (string)($contract?->vocational_training_level ?? 0);
         $tempAgency = $contract?->is_temp_agency ? '2' : '1';
         $contractForm = (string)($contract?->contract_form ?? 0);
-        $row[94] = $activityCode . $schooling . $vocational . $tempAgency . $contractForm;
+        $row[92] = $activityCode . $schooling . $vocational . $tempAgency . $contractForm;
         
-        // 99. Entgelt Art (Index 98)
+        // 94. UV Zuordnung (Index 93)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[93] = '';
+        
+        // 95. Berechnungsmerkmal (Index 94)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[94] = '';
+        
+        // 96. Statistiktyp (Index 95)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[95] = '';
+        
+        // 97. Entgelt Art (Index 96)
         $wageType = $contract?->wage_base_type ?? '';
         if ($wageType === 'hourly' || $contract?->hourly_wage) {
-            $row[98] = 'Stundenlohn';
+            $row[96] = 'Stundenlohn';
         } elseif ($wageType === 'monthly' || $contract?->base_salary) {
-            $row[98] = 'Monatslohn/Gehalt';
+            $row[96] = 'Monatslohn/Gehalt';
         }
         
-        // 100-104. Tarif
-        // Tarifart (Index 99)
+        // 98. §5 EntgFG: ärztliche AU-Feststellung spätestens am (Index 97)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[97] = '';
+        
+        // 99-103. Tarif
+        // Tarifart (Index 98)
         $tariffAgreement = $contract?->tariffGroup?->tariffAgreement;
         if ($tariffAgreement) {
-            $row[99] = $tariffAgreement->name ?? '';
+            $row[98] = $tariffAgreement->name ?? '';
         }
-        // Tarifgruppe (Index 100)
-        $row[100] = $contract?->tariffGroup?->code ?? '';
-        // Tarifbasisdatum (Index 101)
-        $row[101] = $contract?->tariff_assignment_date?->format('d.m.Y') ?? '';
-        // Tarifstufe (Index 102)
-        $row[102] = $contract?->tariffLevel?->level ?? '';
-        // Tarifstufe seit (Index 103)
-        $row[103] = $contract?->tariff_level_start_date?->format('d.m.Y') ?? '';
+        // Tarifgruppe (Index 99)
+        $row[99] = $contract?->tariffGroup?->code ?? '';
+        // Tarifbasisdatum (Index 100)
+        $row[100] = $contract?->tariff_assignment_date?->format('d.m.Y') ?? '';
+        // Tarifstufe (Index 101)
+        $row[101] = $contract?->tariffLevel?->level ?? '';
+        // Tarifstufe seit (Index 102)
+        $row[102] = $contract?->tariff_level_start_date?->format('d.m.Y') ?? '';
         
-        // 109. Urlaubsverwaltung (Index 108)
+        // 104. Tarifgebiet (Index 103)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[103] = '';
+        
+        // 105. Tarifprozent (Index 104)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[104] = '';
+        
+        // 106. Ausschluss tarifl. Sonderzahlung (Index 105)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[105] = '';
+        
+        // 107. Urlaubsverwaltung (Index 106)
         if ($contract?->vacation_entitlement) {
-            $row[108] = 'Jahresanspruch';
+            $row[106] = 'Jahresanspruch';
         }
         
-        // 112-113. Dienststelle & Ort Dienststelle (Indizes 111-112)
+        // 108. Arbeitsplatz lt. § 156 SGB IX (Index 107)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[107] = '';
+        
+        // 109. Arbeitszeitschlüssel für REHADAT (Index 108)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[108] = '';
+        
+        // 110. Schwerbehindert Pers.gruppe (Index 109)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[109] = '';
+        
+        // 111. Dienststelle (Index 110)
+        if ($costCenter) {
+            $row[110] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
+        }
+        
+        // 112. Ort Dienststelle (Index 111)
         if ($costCenter) {
             $row[111] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
-            $row[112] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
         }
         
-        // 115. Familienstand (Index 114)
-        $row[114] = $contact?->marital_status ?? '';
+        // 113. Aktenzeichen des Ausweises (Index 112)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[112] = '';
+        
+        // 114. Ausweis ab (Index 113)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[113] = '';
+        
+        // 115. Ausweis bis (Index 114)
+        // (leer - wird später befüllt wenn vorhanden)
+        $row[114] = '';
+        
+        // 116. Familienstand (Index 115)
+        $row[115] = $contact?->marital_status ?? '';
         
         // 145-147. Kommunikation (privat) (Indizes 144-146)
         $row[144] = $primaryPhone?->number ?? '';
