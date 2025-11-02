@@ -114,13 +114,6 @@
                 />
 
                 <x-ui-input-text 
-                    name="employee.payout_type"
-                    label="Auszahlungstyp"
-                    wire:model.live.debounce.500ms="employee.payout_type"
-                    placeholder="z.B. Überweisung, Bar, etc."
-                />
-
-                <x-ui-input-text 
                     name="employee.bank_account_holder"
                     label="Kontoinhaber"
                     wire:model.live.debounce.500ms="employee.bank_account_holder"
@@ -141,6 +134,18 @@
                     placeholder="COBADEFFXXX"
                 />
             </div>
+            
+            {{-- Info: Auszahlungsart wird über Lookup-Tabelle verwaltet --}}
+            @if($employee->payoutMethod)
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div class="text-xs text-blue-600">
+                        <strong>Aktuelle Auszahlungsart:</strong> {{ $employee->payoutMethod->name }}
+                        @if($employee->payoutMethod->external_code)
+                            <span class="text-xs text-blue-500 ml-2">(Code: {{ $employee->payoutMethod->external_code }})</span>
+                        @endif
+                    </div>
+                </div>
+            @endif
         </div>
 
         <!-- Verknüpfte Kontakte -->
