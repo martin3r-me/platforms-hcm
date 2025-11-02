@@ -26,11 +26,7 @@ class Index extends Component
 
     public function mount()
     {
-        // Ersten Export-Typ vorauswählen
-        $exportTypes = $this->exportTypes;
-        if (!empty($exportTypes)) {
-            $this->selectedExportType = array_key_first($exportTypes);
-        }
+        // Keine Vorauswahl beim Mount - wird erst beim Öffnen des Modals gesetzt
     }
 
     public function triggerExport(string $type): void

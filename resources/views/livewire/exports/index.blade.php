@@ -158,7 +158,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
-                        Export-Typ
+                        Export-Typ <span class="text-red-600">*</span>
                     </label>
                     <select 
                         wire:model.live="selectedExportType" 
@@ -170,7 +170,7 @@
                         @endforeach
                     </select>
                     @error('selectedExportType')
-                        <span class="text-sm text-red-600">{{ $message }}</span>
+                        <span class="text-sm text-red-600 mt-1 block">{{ $message }}</span>
                     @enderror
                 </div>
 
@@ -189,7 +189,7 @@
                             @endforeach
                         </select>
                         @error('selectedEmployerId')
-                            <span class="text-sm text-red-600">{{ $message }}</span>
+                            <span class="text-sm text-red-600 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
                 @endif
