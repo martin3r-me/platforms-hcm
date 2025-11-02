@@ -134,18 +134,32 @@ class Index extends Component
     {
         $export = HcmExport::findOrFail($exportId);
         
-        if (!$export->file_path || !Storage::disk('public')->exists($export->file_path)) {
+        // Team-Zugehörigkeit prüfen
+        $teamId = auth()->user()->currentTeam?->id;
+        if (!$teamId || $export->team_id !== $teamId) {
+            session()->flash('error', 'Zugriff verweigert');
+            return;
+        }
+        
+        if (!$export->file_path || !Storage::disk('local')->exists($export->file_path)) {
             session()->flash('error', 'Export-Datei nicht gefunden');
             return;
         }
 
-        return Storage::disk('public')->download($export->file_path, $export->file_name);
+        return Storage::disk('local')->download($export->file_path, $export->file_name);
     }
 
     public function deleteExport(HcmExport $export): void
     {
-        if ($export->file_path && Storage::disk('public')->exists($export->file_path)) {
-            Storage::disk('public')->delete($export->file_path);
+        // Team-Zugehörigkeit prüfen
+        $teamId = auth()->user()->currentTeam?->id;
+        if (!$teamId || $export->team_id !== $teamId) {
+            session()->flash('error', 'Zugriff verweigert');
+            return;
+        }
+        
+        if ($export->file_path && Storage::disk('local')->exists($export->file_path)) {
+            Storage::disk('local')->delete($export->file_path);
         }
         
         $export->delete();

@@ -97,8 +97,21 @@ Route::get('/training-types', \Platform\Hcm\Livewire\TrainingTypes\Index::class)
 // Exports
 Route::get('/exports', \Platform\Hcm\Livewire\Exports\Index::class)->name('hcm.exports.index');
 Route::get('/exports/{export}/download', function(\Platform\Hcm\Models\HcmExport $export) {
-    if (!$export->file_path || !\Storage::disk('public')->exists($export->file_path)) {
+    // Authentifizierung prüfen
+    if (!auth()->check()) {
+        abort(401, 'Nicht authentifiziert');
+    }
+    
+    // Team-Zugehörigkeit prüfen
+    $teamId = auth()->user()->currentTeam?->id;
+    if (!$teamId || $export->team_id !== $teamId) {
+        abort(403, 'Zugriff verweigert');
+    }
+    
+    // Datei-Prüfung
+    if (!$export->file_path || !\Storage::disk('local')->exists($export->file_path)) {
         abort(404, 'Export-Datei nicht gefunden');
     }
-    return \Storage::disk('public')->download($export->file_path, $export->file_name);
+    
+    return \Storage::disk('local')->download($export->file_path, $export->file_name);
 })->name('hcm.exports.download');

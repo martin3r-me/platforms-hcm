@@ -58,7 +58,7 @@ class HcmExportService
                 default => throw new \InvalidArgumentException("Unbekannter Export-Typ: {$export->type}"),
             };
 
-            $fileSize = Storage::disk('public')->size($filepath);
+            $fileSize = Storage::disk('local')->size($filepath);
             $recordCount = $this->getRecordCount($export, $filepath);
 
             $export->update([
@@ -155,7 +155,8 @@ class HcmExportService
         // UTF-8 BOM für Excel-Kompatibilität
         $csvData = "\xEF\xBB\xBF" . $csvData;
         
-        Storage::disk('public')->put($filepath, $csvData);
+        // Exports in geschütztem Storage-Verzeichnis speichern (nicht public)
+        Storage::disk('local')->put($filepath, $csvData);
 
         return $filepath;
     }
@@ -550,7 +551,8 @@ class HcmExportService
         }
 
         $csvData = "\xEF\xBB\xBF" . implode("\n", $csvData);
-        Storage::disk('public')->put($filepath, $csvData);
+        // Exports in geschütztem Storage-Verzeichnis speichern (nicht public)
+        Storage::disk('local')->put($filepath, $csvData);
 
         return $filepath;
     }
@@ -596,7 +598,7 @@ class HcmExportService
     private function getRecordCount(HcmExport $export, string $filepath): int
     {
         // Vereinfacht: Zähle Zeilen in CSV (ohne Header)
-        $content = Storage::disk('public')->get($filepath);
+        $content = Storage::disk('local')->get($filepath);
         $lines = explode("\n", $content);
         return max(0, count($lines) - 6); // Minus Header-Zeilen (5) und Trailer (1)
     }

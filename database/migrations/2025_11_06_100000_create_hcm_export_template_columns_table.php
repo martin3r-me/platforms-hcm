@@ -37,9 +37,9 @@ return new class extends Migration
             
             $table->timestamps();
             
-            // Indexe
-            $table->index(['export_template_id', 'column_index']);
-            $table->index(['export_template_id', 'sort_order']);
+            // Indexe (mit expliziten kurzen Namen, da MySQL max 64 Zeichen erlaubt)
+            $table->index(['export_template_id', 'column_index'], 'hcm_export_cols_template_idx');
+            $table->index(['export_template_id', 'sort_order'], 'hcm_export_cols_sort_idx');
         });
     }
 
