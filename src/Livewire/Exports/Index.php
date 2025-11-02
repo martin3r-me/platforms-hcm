@@ -18,13 +18,13 @@ class Index extends Component
     // Export-Trigger
     public $selectedExportType = '';
     public $selectedEmployerId = null;
-    public $showExportModal = false;
+    public $modalShow = false;
 
     public function triggerExport(string $type): void
     {
         $this->selectedExportType = $type;
         $this->selectedEmployerId = null;
-        $this->showExportModal = true;
+        $this->modalShow = true;
     }
 
     public function executeExport(): void
@@ -69,7 +69,7 @@ class Index extends Component
             // Export asynchron ausführen (oder synchron je nach Bedarf)
             $filepath = $service->executeExport($export);
             
-            $this->showExportModal = false;
+            $this->modalShow = false;
             $this->selectedExportType = '';
             $this->selectedEmployerId = null;
             
@@ -81,7 +81,7 @@ class Index extends Component
 
     public function cancelExport(): void
     {
-        $this->showExportModal = false;
+        $this->modalShow = false;
         $this->selectedExportType = '';
         $this->selectedEmployerId = null;
     }

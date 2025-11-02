@@ -134,7 +134,7 @@
         </div>
 
         {{-- Export-Modal --}}
-        <x-ui-modal wire:model="showExportModal" title="Neuen Export erstellen">
+        <x-ui-modal wire:model="modalShow" title="Neuen Export erstellen">
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
