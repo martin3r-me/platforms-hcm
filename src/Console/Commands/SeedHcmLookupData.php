@@ -9,6 +9,7 @@ use Platform\Hcm\Database\Seeders\HcmEmploymentRelationshipSeeder;
 use Platform\Hcm\Database\Seeders\HcmLevyTypeSeeder;
 use Platform\Hcm\Database\Seeders\HcmPersonGroupSeeder;
 use Platform\Hcm\Database\Seeders\HcmHealthInsuranceCompanySeeder;
+use Platform\Hcm\Database\Seeders\HcmChurchTaxTypeSeeder;
 
 class SeedHcmLookupData extends Command
 {
@@ -48,6 +49,7 @@ class SeedHcmLookupData extends Command
         (new HcmEmploymentRelationshipSeeder())->run();
         (new HcmLevyTypeSeeder())->run();
         (new HcmPersonGroupSeeder())->run();
+        (new HcmChurchTaxTypeSeeder())->run();
 
         $this->info('✅ HCM lookup data seeded successfully.');
         return 0;
