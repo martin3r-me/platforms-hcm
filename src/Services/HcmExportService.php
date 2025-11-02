@@ -123,6 +123,7 @@ class HcmExportService
             'crmContactLinks.contact.postalAddresses',
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
+            'crmContactLinks.contact.gender',
             'contracts' => function($q) {
                 $q->where('is_active', true)
                   ->orderBy('start_date', 'desc');
@@ -394,19 +395,24 @@ class HcmExportService
         
         // 56. Geschlecht (Index 55)
         // Mögliche Ausprägungen: Weiblich, Männlich, Divers, X unbestimmt
-        $gender = $employee->gender ?? $contact?->gender ?? null;
-        if ($gender === 'male' || $gender === 'männlich' || $gender === 'Männlich') {
-            $row[55] = 'Männlich';
-        } elseif ($gender === 'female' || $gender === 'weiblich' || $gender === 'Weiblich') {
-            $row[55] = 'Weiblich';
-        } elseif ($gender === 'divers' || $gender === 'diverse' || $gender === 'Divers') {
-            $row[55] = 'Divers';
-        } elseif ($gender === 'x' || $gender === 'X' || $gender === 'unbestimmt' || $gender === 'X unbestimmt') {
-            $row[55] = 'X unbestimmt';
-        } else {
-            // Wenn kein Geschlecht vorhanden, bleibt Spalte leer
-            $row[55] = '';
+        // Priorität: 1. CRM gender (gender_id), 2. HCM gender (String), 3. leer
+        $genderName = null;
+        if ($contact?->gender) {
+            // Aus CRM Gender-Lookup-Tabelle
+            $genderName = $contact->gender->name;
+        } elseif ($employee->gender) {
+            // Fallback: HCM String-Feld
+            $genderText = mb_strtolower(trim($employee->gender));
+            $genderName = match($genderText) {
+                'male', 'männlich', 'm' => 'Männlich',
+                'female', 'weiblich', 'w', 'f' => 'Weiblich',
+                'divers', 'diverse', 'd' => 'Divers',
+                'x unbestimmt', 'unbestimmt', 'x' => 'X unbestimmt',
+                default => null,
+            };
         }
+        
+        $row[55] = $genderName ?? '';
         
         // 57. Geburtsdatum (Index 56)
         $birthDate = $employee->birth_date ?? $contact?->birth_date;

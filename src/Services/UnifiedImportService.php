@@ -20,6 +20,7 @@ use Platform\Hcm\Models\HcmEmployeeIssueType;
 use Platform\Hcm\Models\HcmEmployeeIssue;
 use Platform\Hcm\Models\HcmPayoutMethod;
 use Platform\Hcm\Models\HcmChurchTaxType;
+use Platform\Crm\Models\CrmGender;
 use Platform\Organization\Models\OrganizationCostCenter;
 use Platform\Hcm\Models\HcmTariffAgreement;
 use Platform\Hcm\Models\HcmTariffGroup;
@@ -149,10 +150,14 @@ class UnifiedImportService
                     
                     echo "\n      [3/12] Mitarbeiter-Daten vorbereiten...";
 
+                    // Geschlecht mappen (für HCM als String, für CRM als ID)
+                    $genderText = $row['Geschlecht'] ?? null;
+                    $genderId = $this->findOrCreateGender($genderText)?->id;
+                    
                     $empCore = [
                         'is_active' => $isActive,
                         'birth_date' => $birth?->toDateString(),
-                        'gender' => $row['Geschlecht'] ?? null,
+                        'gender' => $genderText, // Legacy-String-Feld in HCM
                         'nationality' => $row['Staatsangehoerigkeit'] ?? null,
                         'children_count' => $this->toInt($row['Kinderanzahl'] ?? null),
                         'disability_degree' => $this->toInt($row['Grad der Behinderung'] ?? null),
@@ -235,7 +240,7 @@ class UnifiedImportService
 
                     // CRM contact
                     echo "\n      [5/12] CRM-Kontakt erstellen/aktualisieren...";
-                    $contact = $this->upsertContact($employee, $row);
+                    $contact = $this->upsertContact($employee, $row, $genderId);
                     if ($contact['created']) { 
                         echo " erstellt ✓";
                         $stats['contacts_created']++; 
@@ -1245,7 +1250,7 @@ class UnifiedImportService
         return $stats;
     }
 
-    private function upsertContact(HcmEmployee $employee, array $row): array
+    private function upsertContact(HcmEmployee $employee, array $row, ?int $genderId = null): array
     {
         $teamId = $employee->team_id;
         $firstName = trim((string) ($row['Vorname'] ?? ''));
@@ -1286,14 +1291,18 @@ class UnifiedImportService
         }
 
         if (!$contact) {
-            $contact = CrmContact::create([
+            $contactData = [
                 'team_id' => $teamId,
                 'first_name' => $firstName,
                 'last_name' => $lastName,
                 'birth_date' => $birth,
                 'is_active' => true,
                 'created_by_user_id' => $employee->created_by_user_id,
-            ]);
+            ];
+            if ($genderId) {
+                $contactData['gender_id'] = $genderId;
+            }
+            $contact = CrmContact::create($contactData);
             $created = true;
         } else {
             $update = [
@@ -1301,6 +1310,7 @@ class UnifiedImportService
                 'last_name' => $lastName ?: $contact->last_name,
             ];
             if ($birth && !$contact->birth_date) { $update['birth_date'] = $birth; }
+            if ($genderId && !$contact->gender_id) { $update['gender_id'] = $genderId; }
             $contact->update($update);
             $updated = true;
         }
@@ -1478,6 +1488,68 @@ class UnifiedImportService
             } catch (\Throwable $e) {}
         }
         return null;
+    }
+
+    /**
+     * Findet oder erstellt ein CrmGender basierend auf dem Import-Wert
+     */
+    private function findOrCreateGender(?string $genderText): ?CrmGender
+    {
+        if (!$genderText || trim($genderText) === '' || trim($genderText) === '[leer]') {
+            return null;
+        }
+        
+        $genderText = trim($genderText);
+        $genderLower = mb_strtolower($genderText);
+        
+        // Mapping von Text zu Code
+        $textToCode = [
+            'männlich' => 'MALE',
+            'male' => 'MALE',
+            'm' => 'MALE',
+            'weiblich' => 'FEMALE',
+            'female' => 'FEMALE',
+            'w' => 'FEMALE',
+            'f' => 'FEMALE',
+            'divers' => 'DIVERSE',
+            'diverse' => 'DIVERSE',
+            'd' => 'DIVERSE',
+            'x unbestimmt' => 'NOT_SPECIFIED',
+            'unbestimmt' => 'NOT_SPECIFIED',
+            'nicht angegeben' => 'NOT_SPECIFIED',
+        ];
+        
+        $code = $textToCode[$genderLower] ?? null;
+        
+        if (!$code) {
+            // Fallback: Versuche Code direkt zu verwenden (falls bereits ein Code)
+            $gender = CrmGender::where('code', strtoupper($genderText))->first();
+            if ($gender) {
+                return $gender;
+            }
+            return null;
+        }
+        
+        // Finde oder erstelle das Gender
+        $gender = CrmGender::where('code', $code)->first();
+        
+        if (!$gender) {
+            // Wenn nicht gefunden, erstelle mit Standard-Namen
+            $nameMapping = [
+                'MALE' => 'Männlich',
+                'FEMALE' => 'Weiblich',
+                'DIVERSE' => 'Divers',
+                'NOT_SPECIFIED' => 'Nicht angegeben',
+            ];
+            
+            $gender = CrmGender::create([
+                'code' => $code,
+                'name' => $nameMapping[$code] ?? $genderText,
+                'is_active' => true,
+            ]);
+        }
+        
+        return $gender;
     }
 
     /**
