@@ -43,6 +43,7 @@ class HcmEmployee extends Model implements EmployeeInterface
         'insurance_status',
         'payout_type',
         'payout_method_id',
+        'church_tax_type_id',
         'bank_account_holder',
         'bank_iban',
         'bank_swift',
@@ -254,6 +255,11 @@ class HcmEmployee extends Model implements EmployeeInterface
     public function payoutMethod()
     {
         return $this->belongsTo(HcmPayoutMethod::class, 'payout_method_id');
+    }
+
+    public function churchTaxType()
+    {
+        return $this->belongsTo(HcmChurchTaxType::class, 'church_tax_type_id');
     }
 
     public function activeContract(): ?HcmEmployeeContract

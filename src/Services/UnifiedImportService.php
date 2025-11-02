@@ -19,6 +19,7 @@ use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmEmployeeIssueType;
 use Platform\Hcm\Models\HcmEmployeeIssue;
 use Platform\Hcm\Models\HcmPayoutMethod;
+use Platform\Hcm\Models\HcmChurchTaxType;
 use Platform\Organization\Models\OrganizationCostCenter;
 use Platform\Hcm\Models\HcmTariffAgreement;
 use Platform\Hcm\Models\HcmTariffGroup;
@@ -156,7 +157,8 @@ class UnifiedImportService
                         'children_count' => $this->toInt($row['Kinderanzahl'] ?? null),
                         'disability_degree' => $this->toInt($row['Grad der Behinderung'] ?? null),
                         // tax_class wird nicht mehr auf Employee gesetzt, sondern auf Contract (tax_class_id)
-                        'church_tax' => $row['Kirche'] ?? null,
+                        'church_tax' => $row['Kirche'] ?? null, // Legacy-Feld, wird für Migration behalten
+                        'church_tax_type_id' => $this->findOrCreateChurchTaxType($row['Kirche'] ?? null, $teamId)?->id,
                         'tax_id_number' => ($row['Identifikationsnummer'] ?? ($row['Identifikationsnr'] ?? null)),
                         'child_allowance' => $this->toInt($row['Kinderfreibetrag'] ?? null),
                         'insurance_status' => $row['VersicherungsStatus'] ?? null,
@@ -1476,6 +1478,60 @@ class UnifiedImportService
             } catch (\Throwable $e) {}
         }
         return null;
+    }
+
+    /**
+     * Findet oder erstellt einen ChurchTaxType basierend auf dem Import-Wert
+     */
+    private function findOrCreateChurchTaxType(?string $churchTax, int $teamId): ?HcmChurchTaxType
+    {
+        if (!$churchTax || trim($churchTax) === '' || trim($churchTax) === '[leer]') {
+            return null;
+        }
+        
+        $churchTax = trim($churchTax);
+        $churchTaxLower = mb_strtolower($churchTax);
+        
+        // Mapping von Text zu Code (gleiche Logik wie im ExportService)
+        $textToCode = [
+            'altkatholisch' => 'AK',
+            'alt-katholisch' => 'AK',
+            'evangelisch' => 'EV',
+            'katholisch' => 'RK',
+            'römisch-katholisch' => 'RK',
+            'roemisch-katholisch' => 'RK',
+            'römisch katholisch' => 'RK',
+            'roemisch katholisch' => 'RK',
+            'lutherisch' => 'LT',
+            'evangelisch lutherisch' => 'LT',
+            'evangelisch reformiert' => 'RF',
+            'neuapostolisch' => 'NA',
+        ];
+        
+        // Prüfe ob bereits ein Code (2 Buchstaben)
+        if (preg_match('/^[A-Z]{2}$/i', $churchTax)) {
+            $code = strtoupper($churchTax);
+        } elseif (isset($textToCode[$churchTaxLower])) {
+            $code = $textToCode[$churchTaxLower];
+        } else {
+            // Fallback: Versuche Code aus Text zu extrahieren oder verwende ersten Teil
+            $code = strtoupper(substr($churchTax, 0, 2));
+        }
+        
+        // Finde oder erstelle den ChurchTaxType
+        $type = HcmChurchTaxType::where('code', $code)->first();
+        
+        if (!$type) {
+            // Wenn nicht gefunden, erstelle mit dem Code und Namen
+            $type = HcmChurchTaxType::create([
+                'code' => $code,
+                'name' => $churchTax, // Verwende den Import-Wert als Name
+                'description' => null,
+                'is_active' => true,
+            ]);
+        }
+        
+        return $type;
     }
 
     private function toInt($v): ?int

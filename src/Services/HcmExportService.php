@@ -119,6 +119,7 @@ class HcmExportService
         // Lade Mitarbeiter mit allen benötigten Relationen
         $employees = \Platform\Hcm\Models\HcmEmployee::with([
             'employer',
+            'churchTaxType',
             'crmContactLinks.contact.postalAddresses',
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
@@ -400,10 +401,12 @@ class HcmExportService
             $row[55] = 'Weiblich';
         } elseif ($gender === 'divers' || $gender === 'diverse' || $gender === 'Divers') {
             $row[55] = 'Divers';
-        } elseif ($gender === 'x' || $gender === 'X' || $gender === 'unbestimmt') {
+        } elseif ($gender === 'x' || $gender === 'X' || $gender === 'unbestimmt' || $gender === 'X unbestimmt') {
             $row[55] = 'X unbestimmt';
+        } else {
+            // Wenn kein Geschlecht vorhanden, bleibt Spalte leer
+            $row[55] = '';
         }
-        // Wenn kein Geschlecht vorhanden, bleibt Spalte leer
         
         // 57. Geburtsdatum (Index 56)
         $birthDate = $employee->birth_date ?? $contact?->birth_date;
@@ -488,7 +491,14 @@ class HcmExportService
         $row[77] = '';
         
         // 79. Konfession (Index 78)
-        $row[78] = $employee->church_tax ?? '';
+        // Nutzt die neue Lookup-Tabelle oder Fallback auf Legacy-Feld
+        if ($employee->churchTaxType) {
+            $row[78] = $employee->churchTaxType->code;
+        } else {
+            // Fallback: Legacy-Feld verwenden und mappen
+            $churchTax = $employee->church_tax ?? '';
+            $row[78] = $this->mapChurchTaxToCode($churchTax);
+        }
         
         // 80. Konfession Ehepartner (Index 79)
         // (leer - wird später befüllt wenn vorhanden)
@@ -765,6 +775,100 @@ class HcmExportService
         // Fallback: Wenn es ein Text ist, den wir nicht kennen, auf "000" setzen
         // (INFONIQA erwartet 3-stellige Codes)
         return '000';
+    }
+
+    /**
+     * Mappt Konfessionstext zu INFONIQA-Code
+     */
+    private function mapChurchTaxToCode(?string $churchTax): string
+    {
+        if (!$churchTax || trim($churchTax) === '') {
+            return '';
+        }
+        
+        $churchTax = trim($churchTax);
+        $churchTaxLower = mb_strtolower($churchTax);
+        
+        // Mapping von Konfessionstexten zu Codes
+        $mapping = [
+            // Altkatholisch
+            'altkatholisch' => 'AK',
+            'alt-katholisch' => 'AK',
+            'alt katholisch' => 'AK',
+            
+            // Evangelisch
+            'evangelisch' => 'EV',
+            'ev' => 'EV',
+            
+            // Freireligiöse Gemeinden
+            'freie religionsgemeinschaft alzey' => 'FA',
+            'fa' => 'FA',
+            'freireligiöse landesgemeinde baden' => 'FB',
+            'fb' => 'FB',
+            'freireligiöse landesgemeinde pfalz' => 'FG',
+            'fg' => 'FG',
+            'freireligiöse gemeinde mainz' => 'FM',
+            'fm' => 'FM',
+            'freireligiöse gemeinde offenbach' => 'FS',
+            'freireligiöse gemeinde offenbach/mainz' => 'FS',
+            'fs' => 'FS',
+            
+            // Französisch reformiert
+            'französisch reformiert' => 'FR',
+            'franzoesisch reformiert' => 'FR',
+            'fr' => 'FR',
+            
+            // Israelitisch/Jüdisch
+            'israelitische religionsgemeinschaft baden' => 'IB',
+            'ib' => 'IB',
+            'jüdische kultussteuer schleswig holstein' => 'IH',
+            'ih' => 'IH',
+            'israelitische kultussteuer hessen' => 'IL',
+            'il' => 'IL',
+            'israelitische kultussteuer frankfurt' => 'IS',
+            'israelitische bekenntnissteuer bayern' => 'IS',
+            'is' => 'IS',
+            'israelitische religionsgemeinschaft württemberg' => 'IW',
+            'iw' => 'IW',
+            'jüdische kultussteuer' => 'JD',
+            'jd' => 'JD',
+            'jüdische kultussteuer hamburg' => 'JH',
+            'jh' => 'JH',
+            
+            // Evangelisch lutherisch
+            'evangelisch lutherisch' => 'LT',
+            'lutherisch' => 'LT',
+            'lt' => 'LT',
+            
+            // Neuapostolisch
+            'neuapostolisch' => 'NA',
+            'na' => 'NA',
+            
+            // Evangelisch reformiert
+            'evangelisch reformiert' => 'RF',
+            'rf' => 'RF',
+            
+            // Römisch-Katholisch
+            'römisch-katholisch' => 'RK',
+            'roemisch-katholisch' => 'RK',
+            'römisch katholisch' => 'RK',
+            'roemisch katholisch' => 'RK',
+            'katholisch' => 'RK',
+            'rk' => 'RK',
+        ];
+        
+        // Direktes Mapping prüfen
+        if (isset($mapping[$churchTaxLower])) {
+            return $mapping[$churchTaxLower];
+        }
+        
+        // Wenn bereits ein Code (2 Buchstaben), direkt zurückgeben
+        if (preg_match('/^[A-Z]{2}$/i', $churchTax)) {
+            return strtoupper($churchTax);
+        }
+        
+        // Fallback: Original-Wert zurückgeben (falls kein Mapping gefunden)
+        return $churchTax;
     }
 
     /**

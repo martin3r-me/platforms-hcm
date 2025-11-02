@@ -16,6 +16,7 @@ class HcmLookupSeeder extends Seeder
         (new HcmLevyTypeSeeder())->run();
         (new HcmPersonGroupSeeder())->run();
         (new SeedHealthInsuranceCompanies())->run();
+        (new HcmChurchTaxTypeSeeder())->run();
     }
 }
 
