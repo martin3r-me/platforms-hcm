@@ -153,7 +153,9 @@ class UnifiedImportService
                     echo "\n      [3/12] Mitarbeiter-Daten vorbereiten...";
 
                     // Geschlecht mappen (für HCM als String, für CRM als ID)
-                    $genderText = $row['Geschlecht'] ?? null;
+                    // WICHTIG: Explizit in String konvertieren, da CSV-Werte wie "0" oder "-1" als Integer gelesen werden können
+                    $genderRaw = $row['Geschlecht'] ?? null;
+                    $genderText = $genderRaw !== null ? (string) $genderRaw : null;
                     $genderId = $this->findOrCreateGender($genderText)?->id;
                     
                     // Titel (Academic Title) für CRM
@@ -1570,7 +1572,8 @@ class UnifiedImportService
      */
     private function findOrCreateSalutation(?string $genderText): ?CrmSalutation
     {
-        if (!$genderText || trim($genderText) === '' || trim($genderText) === '[leer]') {
+        // WICHTIG: Prüfe explizit auf null/empty, nicht mit !$genderText, da '0' sonst als falsy behandelt wird
+        if ($genderText === null || trim($genderText) === '' || trim($genderText) === '[leer]') {
             return null;
         }
         
@@ -1649,7 +1652,8 @@ class UnifiedImportService
      */
     private function findOrCreateGender(?string $genderText): ?CrmGender
     {
-        if (!$genderText || trim($genderText) === '' || trim($genderText) === '[leer]') {
+        // WICHTIG: Prüfe explizit auf null/empty, nicht mit !$genderText, da '0' sonst als falsy behandelt wird
+        if ($genderText === null || trim($genderText) === '' || trim($genderText) === '[leer]') {
             return null;
         }
         
