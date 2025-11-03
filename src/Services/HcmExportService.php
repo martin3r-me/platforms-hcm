@@ -376,6 +376,38 @@ class HcmExportService
             $jobradIndex++;
         }
 
+        $bkvIndex = 1;
+        foreach ($benefitsByType->get('bkv', collect()) as $benefit) {
+            $benefitDate = $benefit->start_date ? Carbon::parse($benefit->start_date) : $contractStart;
+            $amount = $this->parseMonetary($benefit->monthly_contribution_employee);
+
+            $purposeParts = [];
+            if (!empty($benefit->contract_number)) {
+                $purposeParts[] = 'Vertrag ' . $benefit->contract_number;
+            }
+            if (!empty($benefit->description) && $benefit->description !== '[leer]') {
+                $purposeParts[] = $benefit->description;
+            }
+            if ($amount !== null) {
+                $purposeParts[] = 'Rate ' . $this->formatEuro($amount);
+            }
+
+            $rows[] = $this->makeInfoniqaBankRow(
+                $employeeNumber,
+                'SONSTIGE ' . $bkvIndex,
+                $this->formatBankDate($benefitDate),
+                'Einzug',
+                $this->truncate($benefit->insurance_company ?: 'Allianz', 70),
+                '',
+                '',
+                $this->composePurpose($purposeParts),
+                $mandant,
+                ''
+            );
+
+            $bkvIndex++;
+        }
+
         $bavIndex = 1;
         foreach ($benefitsByType->get('bav', collect()) as $benefit) {
             $benefitDate = $benefit->start_date ? Carbon::parse($benefit->start_date) : $contractStart;
