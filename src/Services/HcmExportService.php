@@ -343,12 +343,10 @@ class HcmExportService
         // IK-Nummer der Kasse als Excel-Safe String (führende 0 erhalten)
         $row[32] = $this->toExcelString($employee->healthInsuranceCompany?->ik_number ?? '');
         
-        // 41. Kinder (Index 40)
-        $row[40] = (string)($employee->children_count ?? 0);
-        
-        // 42. Kinder unter 25 Jahren für PV-Abschlag (Index 41)
-        // TODO: Später aus Daten
-        $row[41] = '';
+        // 41. Kinder (vom Nutzer gewünscht: eine Spalte weiter rechts)
+        // Leere 40, schreibe Anzahl Kinder nach 41
+        $row[40] = '';
+        $row[41] = (string)($employee->children_count ?? 0);
         
         // 43. PV-Beitrag privat (Index 42)
         // TODO: Später aus Daten
@@ -364,7 +362,8 @@ class HcmExportService
         // Mappt Text-Werte (wie "Deutschland") zu 3-stelligen Codes oder normalisiert numerische Codes
         // Wichtig: Auch "0" wird zu "000" normalisiert
         $nationality = $employee->nationality ?? null;
-        $row[46] = $this->mapNationalityToCode($nationality);
+        // Excel-sicher (z.B. ="000")
+        $row[46] = $this->toExcelString($this->mapNationalityToCode($nationality));
         
         // 48. Rentenbeginn (Index 47) - direkt nach Staatsangehörigkeit, keine leere Spalte dazwischen
         // (leer - wird später befüllt wenn vorhanden)
@@ -400,7 +399,7 @@ class HcmExportService
         // Mögliche Ausprägungen: Weiblich, Männlich, Divers, X unbestimmt
         // Priorität: 1. CRM gender (gender_id), 2. HCM gender (String), 3. leer
         $genderName = null;
-        if ($contact?->gender) {
+        if ($contact?->gender && ($contact->gender->name ?? null)) {
             // Aus CRM Gender-Lookup-Tabelle
             $genderName = $contact->gender->name;
         } elseif ($employee->gender) {
@@ -413,6 +412,16 @@ class HcmExportService
                 'female', 'weiblich', 'w', 'f' => 'Weiblich',
                 'divers', 'diverse', 'd' => 'Divers',
                 'x unbestimmt', 'unbestimmt', 'x' => 'X unbestimmt',
+                default => null,
+            };
+        } elseif ($contact?->gender && ($contact->gender->code ?? null)) {
+            // Zusätzlicher Fallback: Code aus Lookup mappen
+            $code = strtoupper((string)$contact->gender->code);
+            $genderName = match($code) {
+                'MALE' => 'Männlich',
+                'FEMALE' => 'Weiblich',
+                'DIVERSE' => 'Divers',
+                'NOT_SPECIFIED' => '',
                 default => null,
             };
         }
