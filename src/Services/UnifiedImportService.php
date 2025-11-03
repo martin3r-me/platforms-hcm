@@ -11,6 +11,9 @@ use Platform\Crm\Models\CrmContactLink;
 use Platform\Crm\Models\CrmPostalAddress;
 use Platform\Crm\Models\CrmPhoneType;
 use Platform\Crm\Models\CrmEmailType;
+use libphonenumber\PhoneNumberUtil;
+use libphonenumber\NumberParseException;
+use libphonenumber\PhoneNumberFormat;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Models\HcmEmployer;
@@ -1444,7 +1447,8 @@ class UnifiedImportService
 
     private function upsertPhoneNumber(CrmContact $contact, string $number, array $typeCodes, bool $makePrimary = false): bool
     {
-        $normalized = $this->normalizePhoneNumber($number);
+        $parsedData = $this->buildPhoneDataForStorage($number);
+        $normalized = $this->normalizePhoneNumber($parsedData['international'] ?? $number);
         $typeId = $this->resolvePhoneTypeId($typeCodes);
 
         $existing = $contact->phoneNumbers->first(function ($phone) use ($number, $normalized) {
@@ -1477,6 +1481,12 @@ class UnifiedImportService
                 $update['is_active'] = true;
             }
 
+            foreach (['raw_input', 'international', 'national', 'country_code'] as $field) {
+                if (array_key_exists($field, $parsedData) && $parsedData[$field] !== $existing->{$field}) {
+                    $update[$field] = $parsedData[$field];
+                }
+            }
+
             if (!empty($update)) {
                 $existing->fill($update);
                 $existing->phoneable_id = $contact->id;
@@ -1493,12 +1503,12 @@ class UnifiedImportService
             return $makePrimary;
         }
 
-        $new = $contact->phoneNumbers()->create([
-            'raw_input' => $number,
-            'phone_type_id' => $typeId,
-            'is_primary' => $makePrimary,
-            'is_active' => true,
-        ]);
+        $phoneData = $parsedData;
+        $phoneData['phone_type_id'] = $typeId;
+        $phoneData['is_primary'] = $makePrimary;
+        $phoneData['is_active'] = true;
+
+        $new = $contact->phoneNumbers()->create($phoneData);
 
         if ($contact->relationLoaded('phoneNumbers')) {
             $contact->setRelation('phoneNumbers', $contact->phoneNumbers->push($new));
@@ -1519,8 +1529,23 @@ class UnifiedImportService
             return '';
         }
 
-        $normalized = preg_replace('/[^0-9]+/', '', $number);
-        return $normalized ?? '';
+        $number = trim($number);
+        if ($number === '') {
+            return '';
+        }
+
+        try {
+            $phoneUtil = PhoneNumberUtil::getInstance();
+            $phone = $phoneUtil->parse($number, 'DE');
+            if ($phoneUtil->isValidNumber($phone)) {
+                $formatted = $phoneUtil->format($phone, PhoneNumberFormat::E164);
+                return preg_replace('/[^0-9]+/', '', $formatted) ?? '';
+            }
+        } catch (NumberParseException $e) {
+            // ignore and fallback to simple normalization
+        }
+
+        return preg_replace('/[^0-9]+/', '', $number) ?? '';
     }
 
     private function resolvePhoneTypeId(array $codes): ?int
@@ -1542,6 +1567,37 @@ class UnifiedImportService
         }
 
         return null;
+    }
+
+    private function buildPhoneDataForStorage(string $number, string $defaultRegion = 'DE'): array
+    {
+        $data = [
+            'raw_input' => $number,
+            'international' => null,
+            'national' => null,
+            'country_code' => null,
+        ];
+
+        $number = trim($number);
+
+        if ($number === '') {
+            return $data;
+        }
+
+        try {
+            $phoneUtil = PhoneNumberUtil::getInstance();
+            $phone = $phoneUtil->parse($number, $defaultRegion);
+
+            if ($phoneUtil->isValidNumber($phone)) {
+                $data['international'] = $phoneUtil->format($phone, PhoneNumberFormat::E164);
+                $data['national'] = $phoneUtil->format($phone, PhoneNumberFormat::NATIONAL);
+                $data['country_code'] = $phoneUtil->getRegionCodeForNumber($phone) ?: $defaultRegion;
+            }
+        } catch (NumberParseException $e) {
+            // ignore and use raw input only
+        }
+
+        return $data;
     }
 
     private function syncEmailAddresses(CrmContact $contact, array $row): void
