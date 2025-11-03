@@ -9,6 +9,8 @@ use League\Csv\Reader;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Models\CrmContactLink;
 use Platform\Crm\Models\CrmPostalAddress;
+use Platform\Crm\Models\CrmPhoneType;
+use Platform\Crm\Models\CrmEmailType;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Models\HcmEmployer;
@@ -38,6 +40,9 @@ class UnifiedImportService
     public function __construct(
         private int $employerId
     ) {}
+
+    private array $phoneTypeCache = [];
+    private array $emailTypeCache = [];
 
     public function run(string $csvPath, bool $dryRun = true, ?string $effectiveMonth = null): array
     {
@@ -1395,7 +1400,260 @@ class UnifiedImportService
             ]);
         }
 
+        $this->syncPhoneNumbers($contact, $row);
+        $this->syncEmailAddresses($contact, $row);
+
         return ['created' => $created, 'updated' => $updated];
+    }
+
+    private function syncPhoneNumbers(CrmContact $contact, array $row): void
+    {
+        $contact->loadMissing('phoneNumbers.phoneType');
+
+        $phoneConfigs = [
+            ['field' => 'TelefonNrPrivat1', 'types' => ['PRIVATE', 'HOME'], 'primary' => true],
+            ['field' => 'TelefonNrPrivatMobil', 'types' => ['MOBILE', 'PRIVATE'], 'primary_if_none' => true],
+            ['field' => 'TelefonNrGeschaeftlich', 'types' => ['BUSINESS']],
+            ['field' => 'TelefonNrDienstlich', 'types' => ['BUSINESS']],
+            ['field' => 'TelefonNrGeschaeftlichMobil', 'types' => ['BUSINESS', 'MOBILE']],
+            ['field' => 'TelefonNrFax', 'types' => ['FAX']],
+            ['field' => 'FaxNr', 'types' => ['FAX']],
+        ];
+
+        $hasPrimary = $contact->phoneNumbers->contains(fn($phone) => $phone->is_primary);
+
+        foreach ($phoneConfigs as $config) {
+            $value = $row[$config['field']] ?? null;
+            $value = is_string($value) ? trim($value) : '';
+
+            if ($value === '' || $value === '[leer]') {
+                continue;
+            }
+
+            $makePrimary = $config['primary'] ?? false;
+            if (!$makePrimary && ($config['primary_if_none'] ?? false) && !$hasPrimary) {
+                $makePrimary = true;
+            }
+
+            $wasPrimary = $this->upsertPhoneNumber($contact, $value, $config['types'] ?? [], $makePrimary);
+            if ($wasPrimary) {
+                $hasPrimary = true;
+            }
+        }
+    }
+
+    private function upsertPhoneNumber(CrmContact $contact, string $number, array $typeCodes, bool $makePrimary = false): bool
+    {
+        $normalized = $this->normalizePhoneNumber($number);
+        $typeId = $this->resolvePhoneTypeId($typeCodes);
+
+        $existing = $contact->phoneNumbers->first(function ($phone) use ($number, $normalized) {
+            $existingRaw = trim((string) ($phone->raw_input ?? ''));
+            $existingNormalized = $this->normalizePhoneNumber(
+                $phone->international
+                    ?? $phone->national
+                    ?? $existingRaw
+            );
+
+            if ($normalized !== '' && $existingNormalized !== '' && $normalized === $existingNormalized) {
+                return true;
+            }
+
+            return $existingRaw !== '' && strcasecmp($existingRaw, $number) === 0;
+        });
+
+        if ($existing) {
+            $update = [];
+
+            if ($typeId && $existing->phone_type_id !== $typeId) {
+                $update['phone_type_id'] = $typeId;
+            }
+
+            if ($makePrimary && !$existing->is_primary) {
+                $update['is_primary'] = true;
+            }
+
+            if (!$existing->is_active) {
+                $update['is_active'] = true;
+            }
+
+            if (!empty($update)) {
+                $existing->fill($update);
+                $existing->phoneable_id = $contact->id;
+                $existing->phoneable_type = CrmContact::class;
+                $existing->save();
+            }
+
+            if ($makePrimary) {
+                $contact->phoneNumbers()
+                    ->where('id', '!=', $existing->id)
+                    ->update(['is_primary' => false]);
+            }
+
+            return $makePrimary;
+        }
+
+        $new = $contact->phoneNumbers()->create([
+            'raw_input' => $number,
+            'phone_type_id' => $typeId,
+            'is_primary' => $makePrimary,
+            'is_active' => true,
+        ]);
+
+        if ($contact->relationLoaded('phoneNumbers')) {
+            $contact->setRelation('phoneNumbers', $contact->phoneNumbers->push($new));
+        }
+
+        if ($makePrimary) {
+            $contact->phoneNumbers()
+                ->where('id', '!=', $new->id)
+                ->update(['is_primary' => false]);
+        }
+
+        return $makePrimary;
+    }
+
+    private function normalizePhoneNumber(?string $number): string
+    {
+        if ($number === null) {
+            return '';
+        }
+
+        $normalized = preg_replace('/[^0-9]+/', '', $number);
+        return $normalized ?? '';
+    }
+
+    private function resolvePhoneTypeId(array $codes): ?int
+    {
+        foreach ($codes as $code) {
+            $slug = strtoupper(trim($code));
+
+            if ($slug === '' || $slug === '*') {
+                continue;
+            }
+
+            if (!array_key_exists($slug, $this->phoneTypeCache)) {
+                $this->phoneTypeCache[$slug] = CrmPhoneType::whereRaw('UPPER(code) = ?', [$slug])->value('id');
+            }
+
+            if (!empty($this->phoneTypeCache[$slug])) {
+                return $this->phoneTypeCache[$slug];
+            }
+        }
+
+        return null;
+    }
+
+    private function syncEmailAddresses(CrmContact $contact, array $row): void
+    {
+        $contact->loadMissing('emailAddresses.emailType');
+
+        $emailConfigs = [
+            ['field' => 'EMailPrivat', 'types' => ['PRIVATE'], 'primary' => true],
+            ['field' => 'EMailGeschaeftlich', 'types' => ['BUSINESS', 'INFO'], 'primary_if_none' => true],
+            ['field' => 'EMail', 'types' => ['BUSINESS', 'INFO']],
+        ];
+
+        $hasPrimary = $contact->emailAddresses->contains(fn($email) => $email->is_primary);
+
+        foreach ($emailConfigs as $config) {
+            $value = $row[$config['field']] ?? null;
+            $value = is_string($value) ? trim($value) : '';
+
+            if ($value === '' || $value === '[leer]') {
+                continue;
+            }
+
+            $makePrimary = $config['primary'] ?? false;
+            if (!$makePrimary && ($config['primary_if_none'] ?? false) && !$hasPrimary) {
+                $makePrimary = true;
+            }
+
+            $wasPrimary = $this->upsertEmailAddress($contact, $value, $config['types'] ?? [], $makePrimary);
+            if ($wasPrimary) {
+                $hasPrimary = true;
+            }
+        }
+    }
+
+    private function upsertEmailAddress(CrmContact $contact, string $email, array $typeCodes, bool $makePrimary = false): bool
+    {
+        $lower = mb_strtolower($email);
+        $typeId = $this->resolveEmailTypeId($typeCodes);
+
+        $existing = $contact->emailAddresses->first(function ($address) use ($lower) {
+            return mb_strtolower($address->email_address ?? '') === $lower;
+        });
+
+        if ($existing) {
+            $update = [];
+
+            if ($typeId && $existing->email_type_id !== $typeId) {
+                $update['email_type_id'] = $typeId;
+            }
+
+            if ($makePrimary && !$existing->is_primary) {
+                $update['is_primary'] = true;
+            }
+
+            if (!$existing->is_active) {
+                $update['is_active'] = true;
+            }
+
+            if (!empty($update)) {
+                $existing->fill($update);
+                $existing->save();
+            }
+
+            if ($makePrimary) {
+                $contact->emailAddresses()
+                    ->where('id', '!=', $existing->id)
+                    ->update(['is_primary' => false]);
+            }
+
+            return $makePrimary;
+        }
+
+        $new = $contact->emailAddresses()->create([
+            'email_address' => $email,
+            'email_type_id' => $typeId,
+            'is_primary' => $makePrimary,
+            'is_active' => true,
+            'is_verified' => false,
+        ]);
+
+        if ($contact->relationLoaded('emailAddresses')) {
+            $contact->setRelation('emailAddresses', $contact->emailAddresses->push($new));
+        }
+
+        if ($makePrimary) {
+            $contact->emailAddresses()
+                ->where('id', '!=', $new->id)
+                ->update(['is_primary' => false]);
+        }
+
+        return $makePrimary;
+    }
+
+    private function resolveEmailTypeId(array $codes): ?int
+    {
+        foreach ($codes as $code) {
+            $slug = strtoupper(trim($code));
+
+            if ($slug === '' || $slug === '*') {
+                continue;
+            }
+
+            if (!array_key_exists($slug, $this->emailTypeCache)) {
+                $this->emailTypeCache[$slug] = CrmEmailType::whereRaw('UPPER(code) = ?', [$slug])->value('id');
+            }
+
+            if (!empty($this->emailTypeCache[$slug])) {
+                return $this->emailTypeCache[$slug];
+            }
+        }
+
+        return null;
     }
 
     private function mapBenefitsFromRow(HcmEmployee $employee, ?HcmEmployeeContract $contract, array $row, int $teamId, ?int $createdByUserId, ?Carbon $startDate = null): void
