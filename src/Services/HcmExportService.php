@@ -121,8 +121,8 @@ class HcmExportService
             'employer',
             'churchTaxType',
             'crmContactLinks.contact.postalAddresses',
-            'crmContactLinks.contact.emailAddresses',
-            'crmContactLinks.contact.phoneNumbers',
+            'crmContactLinks.contact.emailAddresses.emailType',
+            'crmContactLinks.contact.phoneNumbers.phoneType',
             'crmContactLinks.contact.gender',
             'crmContactLinks.contact.salutation',
             'contracts' => function($q) {
@@ -360,6 +360,11 @@ class HcmExportService
             'phone_private' => 'Telefonnr. (privat)',
             'mobile_private' => 'Mobiltelefonnr. (privat)',
             'email_private' => 'E-Mail (privat)',
+            'phone_business' => 'Telefonnr. (dienstl.)',
+            'mobile_business' => 'Mobiltelefonnr. (dienstl.)',
+            'fax_business' => 'Faxnr. (dienstl.)',
+            'email_business' => 'E-Mail (dienstl.)',
+            'email_epost' => 'E-Mail (E-Post',
         ];
 
         foreach ($labels as $key => $label) {
@@ -426,9 +431,6 @@ class HcmExportService
     {
         $contact = $employee->crmContactLinks->first()?->contact;
         $address = $contact?->postalAddresses->first();
-        $primaryMobile = $contact?->phoneNumbers->where('type', 'mobile')->first();
-        $primaryPhone = $primaryMobile ?? $contact?->phoneNumbers->first();
-        $primaryEmail = $contact?->emailAddresses->first();
         $costCenter = $contract?->getCostCenter();
 
         $headers = $this->getInfoniqaHeaders();
@@ -441,6 +443,81 @@ class HcmExportService
             }
             $row[$indexes[$key]] = $value ?? '';
         };
+
+        $phones = ($contact?->phoneNumbers ?? collect())
+            ->filter(fn($phone) => $phone && ($phone->is_active ?? true))
+            ->sortByDesc(fn($phone) => (($phone->is_primary ?? false) ? 2 : 0) + ($phone->created_at?->timestamp ?? 0))
+            ->values();
+        $usedPhoneIds = [];
+
+        $findPhone = function (array $preferredCodes, bool $allowReuse = false) use (&$phones, &$usedPhoneIds) {
+            $preferredCodes = array_map('strtoupper', $preferredCodes);
+            $allowAny = in_array('*', $preferredCodes, true);
+
+            $match = $phones->first(function ($phone) use ($preferredCodes, $allowAny, $allowReuse, $usedPhoneIds) {
+                if (!$allowReuse && in_array($phone->id, $usedPhoneIds, true)) {
+                    return false;
+                }
+
+                $code = strtoupper($phone->phoneType?->code ?? '');
+                if ($allowAny) {
+                    return true;
+                }
+
+                return in_array($code, $preferredCodes, true);
+            });
+
+            if ($match && !$allowReuse) {
+                $usedPhoneIds[] = $match->id;
+            }
+
+            return $match;
+        };
+
+        $formatPhone = static function ($phone): string {
+            if (!$phone) {
+                return '';
+            }
+
+            return $phone->full_phone_number
+                ?? $phone->display_number
+                ?? $phone->national
+                ?? $phone->international
+                ?? $phone->raw_input
+                ?? '';
+        };
+
+        $emails = ($contact?->emailAddresses ?? collect())
+            ->filter(fn($email) => $email && ($email->is_active ?? true))
+            ->sortByDesc(fn($email) => (($email->is_primary ?? false) ? 2 : 0) + (($email->is_verified ?? false) ? 1 : 0))
+            ->values();
+        $usedEmailIds = [];
+
+        $findEmail = function (array $preferredCodes, bool $allowReuse = false) use (&$emails, &$usedEmailIds) {
+            $preferredCodes = array_map('strtoupper', $preferredCodes);
+            $allowAny = in_array('*', $preferredCodes, true);
+
+            $match = $emails->first(function ($email) use ($preferredCodes, $allowAny, $allowReuse, $usedEmailIds) {
+                if (!$allowReuse && in_array($email->id, $usedEmailIds, true)) {
+                    return false;
+                }
+
+                $code = strtoupper($email->emailType?->code ?? '');
+                if ($allowAny) {
+                    return true;
+                }
+
+                return in_array($code, $preferredCodes, true);
+            });
+
+            if ($match && !$allowReuse) {
+                $usedEmailIds[] = $match->id;
+            }
+
+            return $match;
+        };
+
+        $formatEmail = static fn($email): string => $email?->email_address ?? '';
 
         $set('employee_number', (string)($employee->employee_number ?? ''));
 
@@ -484,8 +561,55 @@ class HcmExportService
         $set('kv_contract_type', $hasBkv ? '1' : '');
         $set('health_insurance_code', $this->toExcelString($employee->healthInsuranceCompany?->ik_number ?? ''));
 
-        $set('children', (string)($employee->children_count ?? 0));
-        $set('children_pv', '');
+        $set('children', '');
+        $set('children_pv', (string)($employee->children_count ?? 0));
+
+        $phonePrivate = $findPhone(['PRIVATE', 'HOME', 'MOBILE']);
+        if (!$phonePrivate) {
+            $phonePrivate = $findPhone(['BUSINESS'], true);
+        }
+
+        $mobilePrivate = $findPhone(['MOBILE', 'PRIVATE'], false);
+        if (!$mobilePrivate || ($phonePrivate && $mobilePrivate && $mobilePrivate->id === $phonePrivate->id)) {
+            $mobilePrivate = $findPhone(['BUSINESS', '*'], true);
+        }
+
+        $phoneBusiness = $findPhone(['BUSINESS'], false);
+        if (!$phoneBusiness) {
+            $phoneBusiness = $findPhone(['PRIVATE', 'MOBILE'], true);
+        }
+
+        $mobileBusiness = $findPhone(['BUSINESS_MOBILE', 'MOBILE', 'BUSINESS'], true);
+        if (!$mobileBusiness) {
+            $mobileBusiness = $phoneBusiness;
+        }
+
+        $faxBusiness = $findPhone(['FAX'], true);
+
+        $set('phone_private', $formatPhone($phonePrivate));
+        $set('mobile_private', $formatPhone($mobilePrivate));
+        $set('phone_business', $formatPhone($phoneBusiness));
+        $set('mobile_business', $formatPhone($mobileBusiness));
+        $set('fax_business', $formatPhone($faxBusiness));
+
+        $emailPrivate = $findEmail(['PRIVATE'], false);
+        if (!$emailPrivate) {
+            $emailPrivate = $findEmail(['*'], true);
+        }
+
+        $emailBusiness = $findEmail(['BUSINESS'], false);
+        if (!$emailBusiness) {
+            $emailBusiness = $findEmail(['INFO', 'SUPPORT', 'BILLING', 'OTHER'], true);
+        }
+
+        $emailEpost = $findEmail(['EPOST', 'BILLING', 'INFO', 'BUSINESS'], true);
+        if (!$emailEpost) {
+            $emailEpost = $emailBusiness ?: $emailPrivate;
+        }
+
+        $set('email_private', $formatEmail($emailPrivate));
+        $set('email_business', $formatEmail($emailBusiness));
+        $set('email_epost', $formatEmail($emailEpost));
 
         $set('levy_u1', 'Ja');
         $set('levy_u2', 'Ja');
@@ -603,10 +727,6 @@ class HcmExportService
         $set('badge_from', '');
         $set('badge_to', '');
         $set('marital_status', $contact?->marital_status ?? '');
-
-        $set('phone_private', $primaryPhone?->number ?? '');
-        $set('mobile_private', $primaryMobile?->number ?? '');
-        $set('email_private', $primaryEmail?->email ?? '');
 
         return $this->escapeCsvRow($row);
     }
