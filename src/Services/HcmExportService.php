@@ -559,7 +559,10 @@ class HcmExportService
 
         $hasBkv = $employee->benefits->contains(fn ($benefit) => $benefit->benefit_type === 'bkv' && $benefit->is_active);
         $set('kv_contract_type', $hasBkv ? '1' : '');
-        $set('health_insurance_code', $this->toExcelString($employee->healthInsuranceCompany?->ik_number ?? ''));
+        $ikNumber = $employee->healthInsuranceCompany?->ik_number
+            ?? $employee->health_insurance_ik
+            ?? ($employee->healthInsuranceCompany?->code ?? '');
+        $set('health_insurance_code', $this->toExcelString(trim((string) $ikNumber)));
 
         $set('children', '');
         $set('children_pv', (string)($employee->children_count ?? 0));
@@ -574,41 +577,26 @@ class HcmExportService
             $mobilePrivate = $findPhone(['BUSINESS', '*'], true);
         }
 
-        $phoneBusiness = $findPhone(['BUSINESS'], false);
-        if (!$phoneBusiness) {
-            $phoneBusiness = $findPhone(['PRIVATE', 'MOBILE'], true);
-        }
-
-        $mobileBusiness = $findPhone(['BUSINESS_MOBILE', 'MOBILE', 'BUSINESS'], true);
-        if (!$mobileBusiness) {
-            $mobileBusiness = $phoneBusiness;
-        }
-
-        $faxBusiness = $findPhone(['FAX'], true);
-
         $set('phone_private', $formatPhone($phonePrivate));
         $set('mobile_private', $formatPhone($mobilePrivate));
-        $set('phone_business', $formatPhone($phoneBusiness));
-        $set('mobile_business', $formatPhone($mobileBusiness));
-        $set('fax_business', $formatPhone($faxBusiness));
+        $set('phone_business', '');
+        $set('mobile_business', '');
+        $set('fax_business', '');
 
         $emailPrivate = $findEmail(['PRIVATE'], false);
         if (!$emailPrivate) {
             $emailPrivate = $findEmail(['*'], true);
         }
 
-        $emailBusiness = $findEmail(['BUSINESS'], false);
-        if (!$emailBusiness) {
-            $emailBusiness = $findEmail(['INFO', 'SUPPORT', 'BILLING', 'OTHER'], true);
-        }
-
         $emailEpost = $findEmail(['EPOST', 'BILLING', 'INFO', 'BUSINESS'], true);
         if (!$emailEpost) {
-            $emailEpost = $emailBusiness ?: $emailPrivate;
+            $emailEpost = $emailPrivate;
         }
 
+        $businessEmail = trim((string)($employee->business_email ?? ''));
+
         $set('email_private', $formatEmail($emailPrivate));
-        $set('email_business', $formatEmail($emailBusiness));
+        $set('email_business', $businessEmail);
         $set('email_epost', $formatEmail($emailEpost));
 
         $set('levy_u1', 'Ja');
@@ -697,7 +685,7 @@ class HcmExportService
         }
         $set('tariff_group', $contract?->tariffGroup?->code ?? '');
         $set('tariff_reference_date', $contract?->tariff_assignment_date?->format('d.m.Y') ?? '');
-        $set('tariff_level', $contract?->tariffLevel?->level ?? '');
+        $set('tariff_level', $this->formatTariffLevel($contract?->tariffLevel));
         $set('tariff_level_since', $contract?->tariff_level_start_date?->format('d.m.Y') ?? '');
         $set('tariff_area', '');
         $set('tariff_percent', '');
@@ -926,6 +914,39 @@ class HcmExportService
         
         // Fallback: Original-Wert zurückgeben (falls kein Mapping gefunden)
         return $churchTax;
+    }
+
+    /**
+     * Formatiert die Tarifstufe für den Export
+     */
+    private function formatTariffLevel($tariffLevel): string
+    {
+        if (!$tariffLevel) {
+            return '';
+        }
+
+        $candidates = [
+            $tariffLevel->code ?? null,
+            $tariffLevel->name ?? null,
+            $tariffLevel->level ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === null) {
+                continue;
+            }
+
+            if (is_numeric($candidate)) {
+                return (string) $candidate;
+            }
+
+            $value = trim((string) $candidate);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
     }
 
     /**
