@@ -292,7 +292,8 @@ class HcmExportService
             $row[7] = $address->street ?? '';
             $row[8] = $address->house_number ?? '';
             $row[11] = $address->country ?? 'DE';
-            $row[12] = $address->postal_code ?? '';
+            // PLZ als Excel-Safe String, damit führende 0 erhalten bleiben
+            $row[12] = $this->toExcelString($address->postal_code ?? '');
             $row[13] = $address->city ?? '';
         }
         
@@ -339,7 +340,8 @@ class HcmExportService
         $row[31] = $hasBkv ? '1' : '';
         
         // 33. KK-Code (Einzugsstelle) (Index 32)
-        $row[32] = $employee->healthInsuranceCompany?->ik_number ?? '';
+        // IK-Nummer der Kasse als Excel-Safe String (führende 0 erhalten)
+        $row[32] = $this->toExcelString($employee->healthInsuranceCompany?->ik_number ?? '');
         
         // 41. Kinder (Index 40)
         $row[40] = (string)($employee->children_count ?? 0);
@@ -391,7 +393,8 @@ class HcmExportService
         $row[53] = $employee->is_seasonal_worker ? 'Ja' : 'Nein';
         
         // 55. Soz.-Versicherungsnr. (Index 54)
-        $row[54] = $contract?->social_security_number ?? '';
+        // Soz.-Versicherungsnr. Excel-Safe (verhindert wissenschaftliche Notation/Verlust führender 0)
+        $row[54] = $this->toExcelString($contract?->social_security_number ?? '');
         
         // 56. Geschlecht (Index 55)
         // Mögliche Ausprägungen: Weiblich, Männlich, Divers, X unbestimmt
@@ -404,6 +407,8 @@ class HcmExportService
             // Fallback: HCM String-Feld
             $genderText = mb_strtolower(trim($employee->gender));
             $genderName = match($genderText) {
+                '-1' => 'Männlich',
+                '0' => 'Weiblich',
                 'male', 'männlich', 'm' => 'Männlich',
                 'female', 'weiblich', 'w', 'f' => 'Weiblich',
                 'divers', 'diverse', 'd' => 'Divers',
@@ -456,7 +461,8 @@ class HcmExportService
         $row[66] = '';
         
         // 68. Identifikationsnummer (Index 67)
-        $row[67] = $employee->tax_id_number ?? '';
+        // Identifikationsnummer Excel-Safe (verhindert E+ Darstellung)
+        $row[67] = $this->toExcelString($employee->tax_id_number ?? '');
         
         // 69. abw. Geburtsdatum lt. Pass (Index 68)
         // (leer - wird später befüllt wenn vorhanden)
@@ -950,6 +956,23 @@ class HcmExportService
             }
         }
         return implode(';', $escapedRow);
+    }
+
+    /**
+     * Excel-sichere String-Ausgabe: erzwingt Textformat (z.B. ="00123")
+     * Verhindert Verlust führender Nullen und wissenschaftliche Notation in Excel
+     */
+    private function toExcelString(?string $value): string
+    {
+        $value = (string)($value ?? '');
+        if ($value === '') {
+            return '';
+        }
+        // Wenn bereits als ="..." formatiert, zurückgeben
+        if (preg_match('/^=\".*\"$/', $value)) {
+            return $value;
+        }
+        return '="' . $value . '"';
     }
 
     /**
