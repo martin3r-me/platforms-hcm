@@ -66,11 +66,11 @@ class Index extends Component
     public function executeExport(): void
     {
         $rules = [
-            'selectedExportType' => 'required|string|in:infoniqa-ma,payroll,employees',
+            'selectedExportType' => 'required|string|in:infoniqa-ma,infoniqa-dimensions,payroll,employees',
         ];
         
-        // Für INFONIQA MA-Export ist employer_id erforderlich
-        if ($this->selectedExportType === 'infoniqa-ma') {
+        // Für INFONIQA Exporte ist employer_id erforderlich
+        if (in_array($this->selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions'], true)) {
             $rules['selectedEmployerId'] = 'required|exists:hcm_employers,id';
         }
         
@@ -95,14 +95,15 @@ class Index extends Component
             
             $name = match($exportType) {
                 'infoniqa-ma' => 'INFONIQA MA Export',
+                'infoniqa-dimensions' => 'INFONIQA Dimensionen Export',
                 'payroll' => 'Lohnarten Export',
                 'employees' => 'Mitarbeiter Export',
                 default => 'Export',
             };
             
-            // Parameter für INFONIQA MA-Export
+            // Parameter für INFONIQA-Exporte
             $parameters = null;
-            if ($exportType === 'infoniqa-ma') {
+            if (in_array($exportType, ['infoniqa-ma', 'infoniqa-dimensions'], true)) {
                 $parameters = ['employer_id' => $employerId];
             }
             
@@ -141,12 +142,24 @@ class Index extends Component
             return;
         }
         
-        if (!$export->file_path || !Storage::disk('local')->exists($export->file_path)) {
+        if (!$export->file_path) {
+            session()->flash('error', 'Export-Datei nicht gefunden');
+            return;
+        }
+        
+        $disk = null;
+        if (Storage::disk('local')->exists($export->file_path)) {
+            $disk = 'local';
+        } elseif (Storage::disk('public')->exists($export->file_path)) {
+            $disk = 'public';
+        }
+
+        if (!$disk) {
             session()->flash('error', 'Export-Datei nicht gefunden');
             return;
         }
 
-        return Storage::disk('local')->download($export->file_path, $export->file_name);
+        return Storage::disk($disk)->download($export->file_path, $export->file_name);
     }
 
     public function deleteExport(HcmExport $export): void
@@ -158,8 +171,12 @@ class Index extends Component
             return;
         }
         
-        if ($export->file_path && Storage::disk('local')->exists($export->file_path)) {
-            Storage::disk('local')->delete($export->file_path);
+        if ($export->file_path) {
+            foreach (['local', 'public'] as $disk) {
+                if (Storage::disk($disk)->exists($export->file_path)) {
+                    Storage::disk($disk)->delete($export->file_path);
+                }
+            }
         }
         
         $export->delete();
@@ -240,6 +257,7 @@ class Index extends Component
     {
         return [
             'infoniqa-ma' => 'INFONIQA MA Export',
+            'infoniqa-dimensions' => 'INFONIQA Dimensionen Export',
             'payroll' => 'Lohnarten Export',
             'employees' => 'Mitarbeiter Export',
         ];

@@ -2,9 +2,11 @@
 
 namespace Platform\Hcm\Services;
 
+use Carbon\Carbon;
 use Platform\Hcm\Models\HcmExport;
 use Platform\Hcm\Models\HcmExportTemplate;
 use Platform\Hcm\Models\HcmEmployer;
+use Platform\Hcm\Models\HcmEmployeeContract;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -52,14 +54,19 @@ class HcmExportService
             // Basierend auf Export-Typ die entsprechende Methode aufrufen
             $filepath = match($export->type) {
                 'infoniqa-ma' => $this->exportInfoniqa($export),
+                'infoniqa-dimensions' => $this->exportInfoniqaDimensions($export),
                 'payroll' => $this->exportPayroll($export),
                 'employees' => $this->exportEmployees($export),
                 'custom' => $this->exportCustom($export),
                 default => throw new \InvalidArgumentException("Unbekannter Export-Typ: {$export->type}"),
             };
 
-            $fileSize = Storage::disk('local')->size($filepath);
-            $recordCount = $this->getRecordCount($export, $filepath);
+            $disk = Storage::disk('local')->exists($filepath)
+                ? 'local'
+                : (Storage::disk('public')->exists($filepath) ? 'public' : 'local');
+
+            $fileSize = Storage::disk($disk)->size($filepath);
+            $recordCount = $this->getRecordCount($export, $filepath, $disk);
 
             $export->update([
                 'status' => 'completed',
@@ -720,6 +727,76 @@ class HcmExportService
     }
 
     /**
+     * INFONIQA Dimensionen-Export (Kostenstellen je Mitarbeiter)
+     */
+    private function exportInfoniqaDimensions(HcmExport $export): string
+    {
+        $filename = 'infoniqa_dimension_export_' . date('Y-m-d_H-i-s') . '.csv';
+        $filepath = 'exports/hcm/' . $filename;
+
+        $parameters = $export->parameters ?? [];
+        $employerId = $parameters['employer_id'] ?? null;
+
+        if (!$employerId) {
+            throw new \InvalidArgumentException('INFONIQA Dimensionen Export benötigt employer_id in den Parametern');
+        }
+
+        $employer = HcmEmployer::findOrFail($employerId);
+        if ($employer->team_id !== $this->teamId) {
+            throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
+        }
+
+        $targetDate = Carbon::create(2025, 10, 1);
+        $dateValue = $targetDate->format('d.m.Y');
+
+        $employees = \Platform\Hcm\Models\HcmEmployee::with([
+                'contracts' => function ($query) {
+                    $query->where('is_active', true)
+                        ->orderByDesc('start_date');
+                },
+                'contracts.costCenterLinks.costCenter',
+            ])
+            ->where('team_id', $this->teamId)
+            ->where('employer_id', $employerId)
+            ->where('is_active', true)
+            ->get();
+
+        $lines = [];
+
+        foreach ($employees as $employee) {
+            if (empty($employee->employee_number)) {
+                continue;
+            }
+
+            $contract = $employee->contracts->first();
+            if (!$contract) {
+                continue;
+            }
+
+            $costCenterCode = $this->resolveCostCenterCodeForDate($contract, $targetDate);
+            if ($costCenterCode === null || $costCenterCode === '') {
+                continue;
+            }
+
+            $lines[] = $this->escapeCsvRow([
+                $this->toExcelString($employee->employee_number),
+                $dateValue,
+                $costCenterCode,
+                '',
+                '',
+                '',
+                '100',
+                'ja',
+            ]);
+        }
+
+        $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
+        Storage::disk('local')->put($filepath, $csvData);
+
+        return $filepath;
+    }
+
+    /**
      * Payroll-Export (einfacher)
      */
     private function exportPayroll(HcmExport $export): string
@@ -987,6 +1064,49 @@ class HcmExportService
     }
 
     /**
+     * Liefert den Kostenstellencode für einen Vertrag zu einem Stichtag
+     */
+    private function resolveCostCenterCodeForDate(HcmEmployeeContract $contract, Carbon $targetDate): ?string
+    {
+        $links = $contract->relationLoaded('costCenterLinks')
+            ? $contract->costCenterLinks
+            : $contract->costCenterLinks()->with('costCenter')->get();
+
+        $links->loadMissing('costCenter');
+
+        $link = $links
+            ->filter(function ($link) use ($targetDate) {
+                $startOk = !$link->start_date || $link->start_date->lte($targetDate);
+                $endOk = !$link->end_date || $link->end_date->gte($targetDate);
+                return $startOk && $endOk;
+            })
+            ->sort(function ($a, $b) {
+                if ($a->is_primary !== $b->is_primary) {
+                    return $b->is_primary <=> $a->is_primary;
+                }
+
+                $startA = $a->start_date ? $a->start_date->timestamp : 0;
+                $startB = $b->start_date ? $b->start_date->timestamp : 0;
+
+                return $startB <=> $startA;
+            })
+            ->first();
+
+        if ($link && $link->costCenter) {
+            $code = $link->costCenter->code ?? '';
+            if ($code !== '') {
+                return (string) $code;
+            }
+        }
+
+        if (!empty($contract->cost_center)) {
+            return (string) $contract->cost_center;
+        }
+
+        return null;
+    }
+
+    /**
      * Hilfsmethode: CSV-Zeile escapen
      */
     private function escapeCsvRow(array $row): string
@@ -1026,11 +1146,29 @@ class HcmExportService
     /**
      * Ermittelt die Anzahl der Datensätze im Export
      */
-    private function getRecordCount(HcmExport $export, string $filepath): int
+    private function getRecordCount(HcmExport $export, string $filepath, string $disk = 'local'): int
     {
-        // Vereinfacht: Zähle Zeilen in CSV (ohne Header)
-        $content = Storage::disk('local')->get($filepath);
+        if (!Storage::disk($disk)->exists($filepath)) {
+            return 0;
+        }
+
+        $content = Storage::disk($disk)->get($filepath);
+        $content = ltrim($content, "\xEF\xBB\xBF");
+        $content = str_replace(["\r\n", "\r"], "\n", $content);
+        $content = trim($content);
+
+        if ($content === '') {
+            return 0;
+        }
+
         $lines = explode("\n", $content);
-        return max(0, count($lines) - 6); // Minus Header-Zeilen (5) und Trailer (1)
+        $lineCount = count($lines);
+
+        return match ($export->type) {
+            'infoniqa-ma' => max(0, $lineCount - 6),
+            'payroll', 'employees' => max(0, $lineCount - 1),
+            'infoniqa-dimensions' => $lineCount,
+            default => max(0, $lineCount),
+        };
     }
 }
