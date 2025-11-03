@@ -215,8 +215,6 @@ class HcmExportService
         $lines[] = $this->escapeCsvRow($this->getInfoniqaBankRow4());
         $lines[] = $this->escapeCsvRow($this->getInfoniqaBankHeaders());
 
-        $blankRow = $this->escapeCsvRow(array_fill(0, 10, ''));
-
         foreach ($employees as $employee) {
             if (empty($employee->employee_number)) {
                 continue;
@@ -230,12 +228,6 @@ class HcmExportService
             foreach ($rows as $row) {
                 $lines[] = $this->escapeCsvRow($row);
             }
-
-            $lines[] = $blankRow;
-        }
-
-        if (!empty($lines) && end($lines) === $blankRow) {
-            array_pop($lines);
         }
 
         $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
