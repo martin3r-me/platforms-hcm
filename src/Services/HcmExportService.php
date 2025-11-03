@@ -124,6 +124,7 @@ class HcmExportService
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
             'crmContactLinks.contact.gender',
+            'crmContactLinks.contact.salutation',
             'contracts' => function($q) {
                 $q->where('is_active', true)
                   ->orderBy('start_date', 'desc');
@@ -169,19 +170,12 @@ class HcmExportService
     private function generateInfoniqaCsv(Collection $employees, HcmEmployer $employer): string
     {
         $lines = [];
-        $totalColumns = 199;
+        $headers = $this->getInfoniqaHeaders();
+        $totalColumns = count($headers);
         
-        // Zeile 1: Mandantennummer + "Konv Mitarbeiter" + leere Spalten + spezielle Werte
-        $row1 = array_fill(0, $totalColumns, '');
+        // Zeile 1 aus Vorlage übernehmen und Mandantennummer setzen
+        $row1 = $this->getInfoniqaRow1();
         $row1[0] = (string)($employer->employer_number ?? '');
-        $row1[1] = 'Konv Mitarbeiter';
-        $row1[73] = 'Fehlt im neuen KonvTool'; // Position 74 (Index 73)
-        $row1[89] = 'WfbM'; // Position 90
-        $row1[90] = 'ATZ'; // Position 91
-        $row1[91] = 'KUG'; // Position 92
-        $row1[92] = 'ZVK'; // Position 93
-        $row1[93] = 'Bau'; // Position 94
-        $row1[94] = 'BV'; // Position 95
         $lines[] = $this->escapeCsvRow($row1);
         
         // Zeile 2: Kategorien (exakt nach Vorlage)
@@ -203,7 +197,7 @@ class HcmExportService
         // Datenzeilen
         foreach ($employees as $employee) {
             foreach ($employee->contracts as $contract) {
-                $lines[] = $this->generateInfoniqaEmployeeRow($employee, $contract, $totalColumns);
+                $lines[] = $this->generateInfoniqaEmployeeRow($employee, $contract);
             }
         }
         
@@ -213,6 +207,16 @@ class HcmExportService
         $lines[] = $this->escapeCsvRow($trailer);
         
         return implode("\n", $lines);
+    }
+
+    /**
+     * Zeile 1: Kopfzeile (Mandanten-/Konv-Info)
+     */
+    private function getInfoniqaRow1(): array
+    {
+        // Originalzeile aus Vorlage; Mandantennummer wird später überschrieben
+        $values = explode(';', '5484810;Konv Mitarbeiter;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Fehlt im neuen KonvTool;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;WfbM;;;;;;;;;;;;;;;;;ATZ;;;;KUG;;;;ZVK;;;;Bau;;;BV;;;;;;');
+        return array_pad($values, 199, '');
     }
 
     /**
@@ -248,468 +252,362 @@ class HcmExportService
      */
     private function getInfoniqaHeaders(): array
     {
-        $values = explode(';', 'Nr.;Anrede;Titel;Namenszusatz;Vorname;Namensvorsatz;Name;Straße;Hausnr.;Hausnr.-zusatz;Adresszusatz;Länderkennzeichen;PLZ Code;Ort;Betriebsteilcode;Abrechnungskreis;Eintrittsdatum;Austrittsdatum;Austrittsgrund;Vertragsende;Befristungsgrund;Ende Probezeit;Entlassung / Kündigung am;unwiderrufliche Freistellung am;Betriebszugehörigkeit seit;Berufserf./Ausbildung seit;Ende der Ausbildung;Personengruppenschlüssel;Beitragsgruppe;BYGR KV;KV-Kennzeichen;KV Vertragsart;KK-Code (Einzugsstelle);KV-Beitrag privat;BYGR RV;RV-Kennzeichen;BYGR AV;AV-Kennzeichen;BYGR PV;PV-Kennzeichen;Kinder;Kinder unter 25 Jahren für PV-Abschlag;PV-Beitrag privat;Umlagepflicht U1 Lfz;Umlagepflicht U2;Umlagepflicht Insolvenz;Staatsangehörigkeitsschlüssel;Rentenbeginn;Befreiung von RV-Pflicht ab (§ 6 Abs.1b SGBVI);Beschäftigungsverhältnis;Mehrfachbeschäftigt;Rentenart;Altersrente beantragt am;Saisonarbeitnehmer;Soz.-Versicherungsnr.;Geschlecht;Geburtsdatum;Geburtsname;Geburtsort;Namenszusatz Geburtsname;Namensvorsatz Geburtsname;Geburtsland;Krankenkasse (tats.);PGR 109/110:Versicherungsstatus;steuerpflichtig EStG § 1;Art der Besteuerung;wer trägt die Steuer;Identifikationsnummer;abw. Geburtsdatum lt. Pass;Haupt AG (Steuer);Herkunft LSt.-Merkmale gem. EStG;Steuerklasse;Faktor nach § 39f EStG;Kinderfreibetrag;Freibetrag Monat;Freibetrag Jahr;Hinzurechnung Monat;Hinzurechnung Jahr;Konfession;Konfession Ehepartner;Lohnsteuerspezifikation;KV/PV Basistarif privat;Kilometer (FWA);kein LSt.-Jahresausgleich;Arbeitskammer Pflicht;Sammelbeförderung;Arbeitszeitvereinbarung;Teilzeitfaktor;Entgeltfaktor;Teilzeit Grund;Funktion;Beschäftigung in;Tätigkeitsschlüssel;UV Zuordnung;Berechnungsmerkmal;Statistiktyp;Entgelt Art;§5 EntgFG: ärztliche AU-Feststellung spätestens am;Tarifart;Tarifgruppe;Tarifbasisdatum;Tarifstufe;Tarifstufe seit;Tarifgebiet;Tarifprozent;Ausschluss tarifl. Sonderzahlung;Urlaubsverwaltung;Arbeitsplatz lt. § 156 SGB IX;Arbeitszeitschlüssel für REHADAT;Schwerbehindert Pers.gruppe;Dienststelle;Ort Dienststelle;Aktenzeichen des Ausweises;Ausweis ab;Ausweis bis;Familienstand;Mutmaßlicher Entbindungstag;tats. Entbindungstag;Beschäftigungsverbot Beginn;Beschäftigungsverbot Ende;Beschäftigungsverbot Art;Schutzfrist Beginn;Schutzfrist Ende;Elternzeit Beginn;Elternzeit Ende;Elternzeit Art;Ordnungsmerkmal Wert 01;Ordnungsmerkmal Wert 02;Ordnungsmerkmal Wert 03;Ordnungsmerkmal Wert 04;Ordnungsmerkmal Wert 05;Ordnungsmerkmal Wert 06;Ordnungsmerkmal Wert 07;Ordnungsmerkmal Wert 08;Ordnungsmerkmal Wert 09;Ordnungsmerkmal Wert 10;Buchungsgruppencode;freier Text;Telefonnr. (privat);Mobiltelefonnr. (privat);E-Mail (privat);Telefonnr. (dienstl.);Mobiltelefonnr. (dienstl.);Faxnr. (dienstl.);E-Mail (dienstl.);E-Mail (E-Post;nationale ID;;ist Vers.-Bezug gem. §229;Beitragsabführungspflicht;Mehrfachbezug;max. beitragspfl. Vers.-Bezug;Beihilfe berechtigt;Zahlungszyklus;Aktenzeichen;;§ 168 SGB VI Leistungsträger WfbM;§ 179 SGB VI Leistungsträger WfbM;Heimkostenbeteiligung WfbM;;ATZ Vertrag vom;ATZ Beginn;ATZ Blockmodell Beginn;ATZ Freizeitphase Beginn;ATZ RV Prozent;ATZ Begrenzung ZBE;ATZ UB/ZBE bei Kr.-Geld;ATZ Aufstockung bei Kr.-Geld;ATZ Netto Prozent;ATZ Brutto Prozent;;Flex Beginn;Flex Ende;Flex Institut;Flex Vertragsnr WGH;Flex Vertragsnr. (WGH-AG);;KuG Leistungssatz;KuG Beginn;KuG Leistungsgruppe f. Grenzgänger;;Kasse (ZV);Vertragsbeginn ZV;Mitgliedsnr. in ZV;;Arbeitnehmergruppe;Winterb.-Umlage;Siko-Flex Meldung;;BV-Mitgliedsnummer;BV Selbszahler;;Aufwandspauschale;Funktionsbeschreibung;Von Mandant;KK Betriebsnummer;Tätigkeitscode Lfdnr.;Abschlagsbetrag');
+        $values = explode(';', 'Nr.;Anrede;Titel;Namenszusatz;Vorname;Namensvorsatz;Name;Straße;Hausnr.;Hausnr.-zusatz;Adresszusatz;Länderkennzeichen;PLZ Code;Ort;Betriebsteilcode;Abrechnungskreis;Eintrittsdatum;Austrittsdatum;Austrittsgrund;Vertragsende;Befristungsgrund;Ende Probezeit;Entlassung / Kündigung am;unwiderrufliche Freistellung am;Betriebszugehörigkeit seit;Berufserf./Ausbildung seit;Ende der Ausbildung;Personengruppenschlüssel;Beitragsgruppe;BYGR KV;KV-Kennzeichen;KV Vertragsart;KK-Code (Einzugsstelle);KV-Beitrag privat;BYGR RV;RV-Kennzeichen;BYGR AV;AV-Kennzeichen;BYGR PV;PV-Kennzeichen;Kinder;Kinder unter 25 Jahren für PV-Abschlag;PV-Beitrag privat;Umlagepflicht U1 Lfz;Umlagepflicht U2;Umlagepflicht Insolvenz;Staatsangehörigkeitsschlüssel;;Rentenbeginn;Befreiung von RV-Pflicht ab (§ 6 Abs.1b SGBVI);Beschäftigungsverhältnis;Mehrfachbeschäftigt;Rentenart;Altersrente beantragt am;Saisonarbeitnehmer;Soz.-Versicherungsnr.;Geschlecht;Geburtsdatum;Geburtsname;Geburtsort;Namenszusatz Geburtsname;Namensvorsatz Geburtsname;Geburtsland;Krankenkasse (tats.);PGR 109/110:Versicherungsstatus;steuerpflichtig EStG § 1;Art der Besteuerung;wer trägt die Steuer;Identifikationsnummer;abw. Geburtsdatum lt. Pass;Haupt AG (Steuer);Herkunft LSt.-Merkmale gem. EStG;Steuerklasse;Faktor nach § 39f EStG;Kinderfreibetrag;Freibetrag Monat;Freibetrag Jahr;Hinzurechnung Monat;Hinzurechnung Jahr;Konfession;Konfession Ehepartner;Lohnsteuerspezifikation;KV/PV Basistarif privat;Kilometer (FWA);kein LSt.-Jahresausgleich;Arbeitskammer Pflicht;Sammelbeförderung;Arbeitszeitvereinbarung;Teilzeitfaktor;Entgeltfaktor;Teilzeit Grund;Funktion;Beschäftigung in;Tätigkeitsschlüssel;UV Zuordnung;Berechnungsmerkmal;Statistiktyp;Entgelt Art;§5 EntgFG: ärztliche AU-Feststellung spätestens am;Tarifart;Tarifgruppe;Tarifbasisdatum;Tarifstufe;Tarifstufe seit;Tarifgebiet;Tarifprozent;Ausschluss tarifl. Sonderzahlung;Urlaubsverwaltung;Arbeitsplatz lt. § 156 SGB IX;Arbeitszeitschlüssel für REHADAT;Schwerbehindert Pers.gruppe;Dienststelle;Ort Dienststelle;Aktenzeichen des Ausweises;Ausweis ab;Ausweis bis;Familienstand;Mutmaßlicher Entbindungstag;tats. Entbindungstag;Beschäftigungsverbot Beginn;Beschäftigungsverbot Ende;Beschäftigungsverbot Art;Schutzfrist Beginn;Schutzfrist Ende;Elternzeit Beginn;Elternzeit Ende;Elternzeit Art;Ordnungsmerkmal Wert 01;Ordnungsmerkmal Wert 02;Ordnungsmerkmal Wert 03;Ordnungsmerkmal Wert 04;Ordnungsmerkmal Wert 05;Ordnungsmerkmal Wert 06;Ordnungsmerkmal Wert 07;Ordnungsmerkmal Wert 08;Ordnungsmerkmal Wert 09;Ordnungsmerkmal Wert 10;Buchungsgruppencode;freier Text;Telefonnr. (privat);Mobiltelefonnr. (privat);E-Mail (privat);Telefonnr. (dienstl.);Mobiltelefonnr. (dienstl.);Faxnr. (dienstl.);E-Mail (dienstl.);E-Mail (E-Post;nationale ID;;ist Vers.-Bezug gem. §229;Beitragsabführungspflicht;Mehrfachbezug;max. beitragspfl. Vers.-Bezug;Beihilfe berechtigt;Zahlungszyklus;Aktenzeichen;;§ 168 SGB VI Leistungsträger WfbM;§ 179 SGB VI Leistungsträger WfbM;Heimkostenbeteiligung WfbM;;ATZ Vertrag vom;ATZ Beginn;ATZ Blockmodell Beginn;ATZ Freizeitphase Beginn;ATZ RV Prozent;ATZ Begrenzung ZBE;ATZ UB/ZBE bei Kr.-Geld;ATZ Aufstockung bei Kr.-Geld;ATZ Netto Prozent;ATZ Brutto Prozent;;Flex Beginn;Flex Ende;Flex Institut;Flex Vertragsnr WGH;Flex Vertragsnr. (WGH-AG);;KuG Leistungssatz;KuG Beginn;KuG Leistungsgruppe f. Grenzgänger;;Kasse (ZV);Vertragsbeginn ZV;Mitgliedsnr. in ZV;;Arbeitnehmergruppe;Winterb.-Umlage;Siko-Flex Meldung;;BV-Mitgliedsnummer;BV Selbszahler;;Aufwandspauschale;Funktionsbeschreibung;Von Mandant;KK Betriebsnummer;Tätigkeitscode Lfdnr.;Abschlagsbetrag');
         return array_pad($values, 199, '');
+    }
+
+    /**
+     * Liefert Index-Zuordnungen für benötigte Spaltennamen
+     */
+    private function getInfoniqaColumnIndexes(): array
+    {
+        static $indexes = null;
+
+        if ($indexes !== null) {
+            return $indexes;
+        }
+
+        $headers = $this->getInfoniqaHeaders();
+
+        $labels = [
+            'employee_number' => 'Nr.',
+            'salutation' => 'Anrede',
+            'first_name' => 'Vorname',
+            'last_name' => 'Name',
+            'street' => 'Straße',
+            'house_number' => 'Hausnr.',
+            'country_code' => 'Länderkennzeichen',
+            'postal_code' => 'PLZ Code',
+            'city' => 'Ort',
+            'payroll_circle' => 'Abrechnungskreis',
+            'entry_date' => 'Eintrittsdatum',
+            'exit_date' => 'Austrittsdatum',
+            'contract_end' => 'Vertragsende',
+            'probation_end' => 'Ende Probezeit',
+            'seniority_since' => 'Betriebszugehörigkeit seit',
+            'person_group' => 'Personengruppenschlüssel',
+            'contribution_group' => 'Beitragsgruppe',
+            'kv_contract_type' => 'KV Vertragsart',
+            'health_insurance_code' => 'KK-Code (Einzugsstelle)',
+            'children' => 'Kinder',
+            'children_pv' => 'Kinder unter 25 Jahren für PV-Abschlag',
+            'levy_u1' => 'Umlagepflicht U1 Lfz',
+            'levy_u2' => 'Umlagepflicht U2',
+            'levy_insolvency' => 'Umlagepflicht Insolvenz',
+            'nationality' => 'Staatsangehörigkeitsschlüssel',
+            'rentenbeginn' => 'Rentenbeginn',
+            'rv_exemption' => 'Befreiung von RV-Pflicht ab (§ 6 Abs.1b SGBVI)',
+            'employment_relationship' => 'Beschäftigungsverhältnis',
+            'multiple_employment' => 'Mehrfachbeschäftigt',
+            'pension_type' => 'Rentenart',
+            'seasonal_worker' => 'Saisonarbeitnehmer',
+            'social_security_number' => 'Soz.-Versicherungsnr.',
+            'gender' => 'Geschlecht',
+            'birth_date' => 'Geburtsdatum',
+            'birth_name' => 'Geburtsname',
+            'birth_place' => 'Geburtsort',
+            'birth_country' => 'Geburtsland',
+            'health_insurance_name' => 'Krankenkasse (tats.)',
+            'insurance_status' => 'PGR 109/110:Versicherungsstatus',
+            'tax_residency' => 'steuerpflichtig EStG § 1',
+            'tax_type' => 'Art der Besteuerung',
+            'tax_payer' => 'wer trägt die Steuer',
+            'tax_id' => 'Identifikationsnummer',
+            'main_employer' => 'Haupt AG (Steuer)',
+            'tax_feature_origin' => 'Herkunft LSt.-Merkmale gem. EStG',
+            'tax_class' => 'Steuerklasse',
+            'child_allowance' => 'Kinderfreibetrag',
+            'allowance_month' => 'Freibetrag Monat',
+            'allowance_year' => 'Freibetrag Jahr',
+            'addition_month' => 'Hinzurechnung Monat',
+            'addition_year' => 'Hinzurechnung Jahr',
+            'church_tax' => 'Konfession',
+            'kv_pv_basic' => 'KV/PV Basistarif privat',
+            'kilometer' => 'Kilometer (FWA)',
+            'no_tax_annual' => 'kein LSt.-Jahresausgleich',
+            'labour_chamber' => 'Arbeitskammer Pflicht',
+            'collective_transport' => 'Sammelbeförderung',
+            'working_time_agreement' => 'Arbeitszeitvereinbarung',
+            'part_time_factor' => 'Teilzeitfaktor',
+            'salary_factor' => 'Entgeltfaktor',
+            'part_time_reason' => 'Teilzeit Grund',
+            'job_function' => 'Funktion',
+            'employment_location' => 'Beschäftigung in',
+            'job_key' => 'Tätigkeitsschlüssel',
+            'uv_assignment' => 'UV Zuordnung',
+            'calculation_feature' => 'Berechnungsmerkmal',
+            'statistics_type' => 'Statistiktyp',
+            'salary_type' => 'Entgelt Art',
+            'medical_certificate_date' => '§5 EntgFG: ärztliche AU-Feststellung spätestens am',
+            'tariff_type' => 'Tarifart',
+            'tariff_group' => 'Tarifgruppe',
+            'tariff_reference_date' => 'Tarifbasisdatum',
+            'tariff_level' => 'Tarifstufe',
+            'tariff_level_since' => 'Tarifstufe seit',
+            'tariff_area' => 'Tarifgebiet',
+            'tariff_percent' => 'Tarifprozent',
+            'tariff_bonus_exclusion' => 'Ausschluss tarifl. Sonderzahlung',
+            'vacation_management' => 'Urlaubsverwaltung',
+            'workplace_sgb' => 'Arbeitsplatz lt. § 156 SGB IX',
+            'rehadat_code' => 'Arbeitszeitschlüssel für REHADAT',
+            'disabled_group' => 'Schwerbehindert Pers.gruppe',
+            'department' => 'Dienststelle',
+            'department_city' => 'Ort Dienststelle',
+            'badge_number' => 'Aktenzeichen des Ausweises',
+            'badge_from' => 'Ausweis ab',
+            'badge_to' => 'Ausweis bis',
+            'marital_status' => 'Familienstand',
+            'phone_private' => 'Telefonnr. (privat)',
+            'mobile_private' => 'Mobiltelefonnr. (privat)',
+            'email_private' => 'E-Mail (privat)',
+        ];
+
+        foreach ($labels as $key => $label) {
+            $index = array_search($label, $headers, true);
+            if ($index === false) {
+                throw new \RuntimeException("INFONIQA-Header '{$label}' wurde nicht gefunden.");
+            }
+            $indexes[$key] = $index;
+        }
+
+        // Leerspalte direkt nach Staatsangehörigkeitsschlüssel
+        $rentenIndex = $indexes['rentenbeginn'] ?? array_search('Rentenbeginn', $headers, true);
+        if ($rentenIndex === false) {
+            throw new \RuntimeException('INFONIQA-Header "Rentenbeginn" wurde nicht gefunden.');
+        }
+        $indexes['blank_after_nationality'] = $rentenIndex - 1;
+
+        return $indexes;
+    }
+
+    private function resolveInfoniqaGender($employee, $contact): ?string
+    {
+        $candidates = [
+            $contact?->gender?->code ?? null,
+            $contact?->gender?->name ?? null,
+            $employee->gender ?? null,
+        ];
+
+        foreach ($candidates as $value) {
+            $mapped = $this->mapGenderToken($value);
+            if ($mapped !== null) {
+                return $mapped;
+            }
+        }
+
+        return null;
+    }
+
+    private function mapGenderToken($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $token = mb_strtolower(trim((string) $value));
+
+        if ($token === '') {
+            return null;
+        }
+
+        return match ($token) {
+            '-1', '1', 'male', 'männlich', 'maennlich', 'm', 'herr' => 'Männlich',
+            '0', '2', 'female', 'weiblich', 'weibl.', 'w', 'f', 'frau' => 'Weiblich',
+            'divers', 'diverse', 'd' => 'Divers',
+            'x', 'x unbestimmt', 'unbestimmt', 'not_specified', 'nicht angegeben' => 'X unbestimmt',
+            default => null,
+        };
     }
 
     /**
      * Generiert eine Mitarbeiter-Zeile im INFONIQA-Format
      */
-    private function generateInfoniqaEmployeeRow($employee, $contract, int $totalColumns): string
+    private function generateInfoniqaEmployeeRow($employee, $contract): string
     {
         $contact = $employee->crmContactLinks->first()?->contact;
         $address = $contact?->postalAddresses->first();
-        $primaryPhone = $contact?->phoneNumbers->where('type', 'mobile')->first() ?? $contact?->phoneNumbers->first();
+        $primaryMobile = $contact?->phoneNumbers->where('type', 'mobile')->first();
+        $primaryPhone = $primaryMobile ?? $contact?->phoneNumbers->first();
         $primaryEmail = $contact?->emailAddresses->first();
         $costCenter = $contract?->getCostCenter();
-        
-        $row = array_fill(0, $totalColumns, '');
-        
-        // 1. Nr. (Mitarbeiternummer)
-        $row[0] = (string)($employee->employee_number ?? '');
-        
-        // 2. Anrede
-        $title = $contact?->title ?? '';
-        if ($title === 'Herr' || $title === 'Frau') {
-            $row[1] = $title;
-        } elseif ($employee->gender === 'male' || $contact?->gender === 'male') {
-            $row[1] = 'Herr';
-        } elseif ($employee->gender === 'female' || $contact?->gender === 'female') {
-            $row[1] = 'Frau';
+
+        $headers = $this->getInfoniqaHeaders();
+        $indexes = $this->getInfoniqaColumnIndexes();
+        $row = array_fill(0, count($headers), '');
+
+        $set = function (string $key, $value) use (&$row, $indexes): void {
+            if (!isset($indexes[$key])) {
+                return;
+            }
+            $row[$indexes[$key]] = $value ?? '';
+        };
+
+        $set('employee_number', (string)($employee->employee_number ?? ''));
+
+        $genderName = $this->resolveInfoniqaGender($employee, $contact);
+
+        $salutation = '';
+        if ($contact?->salutation?->name) {
+            $salutation = $contact->salutation->name;
+        } elseif (in_array($contact?->title, ['Herr', 'Frau'], true)) {
+            $salutation = $contact->title;
+        } elseif ($genderName === 'Männlich') {
+            $salutation = 'Herr';
+        } elseif ($genderName === 'Weiblich') {
+            $salutation = 'Frau';
         }
-        
-        // 3. Titel
-        // 4. Namenszusatz
-        // 5. Vorname
-        $row[4] = $contact?->first_name ?? '';
-        
-        // 6. Namensvorsatz
-        // 7. Name
-        $row[6] = $contact?->last_name ?? '';
-        
-        // 8-14. Adresse
+        $set('salutation', $salutation);
+
+        $set('first_name', $contact?->first_name ?? '');
+        $set('last_name', $contact?->last_name ?? '');
+
+        $set('country_code', 'DE');
         if ($address) {
-            $row[7] = $address->street ?? '';
-            $row[8] = $address->house_number ?? '';
-            $row[11] = $address->country ?? 'DE';
-            // PLZ als Excel-Safe String, damit führende 0 erhalten bleiben
-            $row[12] = $this->toExcelString($address->postal_code ?? '');
-            $row[13] = $address->city ?? '';
+            $set('street', $address->street ?? '');
+            $set('house_number', $address->house_number ?? '');
+            $set('country_code', $address->country ?? 'DE');
+            $set('postal_code', $this->toExcelString($address->postal_code ?? ''));
+            $set('city', $address->city ?? '');
         }
-        
-        // 15. Betriebsteilcode (leer lassen)
-        $row[14] = '';
-        
-        // 16. Abrechnungskreis (immer "Standard")
-        $row[15] = 'Standard';
-        
-        // 17. Eintrittsdatum
-        $row[16] = $contract?->start_date?->format('d.m.Y') ?? '';
-        
-        // 18. Austrittsdatum
-        $row[17] = $contract?->end_date?->format('d.m.Y') ?? '';
-        
-        // 20. Vertragsende
-        $row[19] = $contract?->end_date?->format('d.m.Y') ?? '';
-        
-        // 22. Ende Probezeit
-        $row[21] = $contract?->probation_end_date?->format('d.m.Y') ?? '';
-        
-        // 25. Betriebszugehörigkeit seit
-        $row[24] = $contract?->start_date?->format('d.m.Y') ?? '';
-        
-        // 28. Personengruppenschlüssel
-        $row[27] = $contract?->personGroup?->code ?? '';
-        
-        // 29. Beitragsgruppe (immer "1111")
-        $row[28] = '1111';
-        
-        // 30. BYGR KV (Index 29)
-        // TODO: Später aus Tarif-Lookup
-        $row[29] = '';
-        
-        // 31. KV-Kennzeichen (Index 30)
-        // TODO: Später aus Tarif-Lookup
-        $row[30] = '';
-        
-        // 32. KV Vertragsart (Index 31)
-        // "1" wenn privat versichert (BKV vorhanden), sonst leer
-        $hasBkv = $employee->benefits->contains(function($benefit) {
-            return $benefit->benefit_type === 'bkv' && $benefit->is_active;
-        });
-        $row[31] = $hasBkv ? '1' : '';
-        
-        // 33. KK-Code (Einzugsstelle) (Index 32)
-        // IK-Nummer der Kasse als Excel-Safe String (führende 0 erhalten)
-        $row[32] = $this->toExcelString($employee->healthInsuranceCompany?->ik_number ?? '');
-        
-        // 41. Kinder (vom Nutzer gewünscht: eine Spalte weiter rechts)
-        // Leere 40, schreibe Anzahl Kinder nach 41
-        $row[40] = '';
-        $row[41] = (string)($employee->children_count ?? 0);
-        
-        // 43. PV-Beitrag privat (Index 42)
-        // TODO: Später aus Daten
-        $row[42] = '';
-        
-        // 44-46. Umlagepflicht (U1, U2, Insolvenz) - Indizes 43-45
-        // Immer "Ja" setzen
-        $row[43] = 'Ja'; // Umlagepflicht U1 Lfz
-        $row[44] = 'Ja'; // Umlagepflicht U2
-        $row[45] = 'Ja'; // Umlagepflicht Insolvenz
-        
-        // 47. Staatsangehörigkeitsschlüssel (Index 46)
-        // Mappt Text-Werte (wie "Deutschland") zu 3-stelligen Codes oder normalisiert numerische Codes
-        // Wichtig: Auch "0" wird zu "000" normalisiert
-        $nationality = $employee->nationality ?? null;
-        // Excel-sicher (z.B. ="000")
-        $row[46] = $this->toExcelString($this->mapNationalityToCode($nationality));
-        
-        // 48. Rentenbeginn (Index 47) - direkt nach Staatsangehörigkeit, keine leere Spalte dazwischen
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[47] = '';
-        
-        // 49. Befreiung von RV-Pflicht (Index 48)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[48] = '';
-        
-        // 50. Beschäftigungsverhältnis (Index 49)
-        // Mapping von internen Codes zu INFONIQA-Werten
+
+        $set('payroll_circle', 'Standard');
+        $set('entry_date', $contract?->start_date?->format('d.m.Y') ?? '');
+        $set('exit_date', $contract?->end_date?->format('d.m.Y') ?? '');
+        $set('contract_end', $contract?->end_date?->format('d.m.Y') ?? '');
+        $set('probation_end', $contract?->probation_end_date?->format('d.m.Y') ?? '');
+        $set('seniority_since', $contract?->start_date?->format('d.m.Y') ?? '');
+
+        $set('person_group', $contract?->personGroup?->code ?? '');
+        $set('contribution_group', '1111');
+
+        $hasBkv = $employee->benefits->contains(fn ($benefit) => $benefit->benefit_type === 'bkv' && $benefit->is_active);
+        $set('kv_contract_type', $hasBkv ? '1' : '');
+        $set('health_insurance_code', $this->toExcelString($employee->healthInsuranceCompany?->ik_number ?? ''));
+
+        $set('children', (string)($employee->children_count ?? 0));
+        $set('children_pv', '');
+
+        $set('levy_u1', 'Ja');
+        $set('levy_u2', 'Ja');
+        $set('levy_insolvency', 'Ja');
+
+        $set('nationality', $this->toExcelString($this->mapNationalityToCode($employee->nationality ?? null)));
+        if (isset($indexes['blank_after_nationality'])) {
+            $row[$indexes['blank_after_nationality']] = '';
+        }
+        $set('rentenbeginn', '');
+        $set('rv_exemption', '');
+
         $employmentCode = $contract?->employmentRelationship?->code ?? '';
-        $row[49] = $this->mapEmploymentRelationshipToInfoniqa($employmentCode);
-        
-        // 51. Mehrfachbeschäftigt (Index 50)
-        $row[50] = $contract?->has_additional_employment ? 'Ja' : 'Nein';
-        
-        // 52. Rentenart (Index 51)
-        $row[51] = $contract?->pensionType?->code ?? '';
-        
-        // 53. Altersrente beantragt am (Index 52)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[52] = '';
-        
-        // 54. Saisonarbeitnehmer (Index 53)
-        $row[53] = $employee->is_seasonal_worker ? 'Ja' : 'Nein';
-        
-        // 55. Soz.-Versicherungsnr. (Index 54)
-        // Soz.-Versicherungsnr. Excel-Safe (verhindert wissenschaftliche Notation/Verlust führender 0)
-        $row[54] = $this->toExcelString($contract?->social_security_number ?? '');
-        
-        // 56. Geschlecht (Index 55)
-        // Mögliche Ausprägungen: Weiblich, Männlich, Divers, X unbestimmt
-        // Priorität: 1. CRM gender (gender_id), 2. HCM gender (String), 3. leer
-        $genderName = null;
-        if ($contact?->gender && ($contact->gender->name ?? null)) {
-            // Aus CRM Gender-Lookup-Tabelle
-            $genderName = $contact->gender->name;
-        } elseif ($employee->gender) {
-            // Fallback: HCM String-Feld
-            $genderText = mb_strtolower(trim($employee->gender));
-            $genderName = match($genderText) {
-                '-1' => 'Männlich',
-                '0' => 'Weiblich',
-                'male', 'männlich', 'm' => 'Männlich',
-                'female', 'weiblich', 'w', 'f' => 'Weiblich',
-                'divers', 'diverse', 'd' => 'Divers',
-                'x unbestimmt', 'unbestimmt', 'x' => 'X unbestimmt',
-                default => null,
-            };
-        } elseif ($contact?->gender && ($contact->gender->code ?? null)) {
-            // Zusätzlicher Fallback: Code aus Lookup mappen
-            $code = strtoupper((string)$contact->gender->code);
-            $genderName = match($code) {
-                'MALE' => 'Männlich',
-                'FEMALE' => 'Weiblich',
-                'DIVERSE' => 'Divers',
-                'NOT_SPECIFIED' => '',
-                default => null,
-            };
-        }
-        
-        $row[55] = $genderName ?? '';
-        
-        // 57. Geburtsdatum (Index 56)
+        $set('employment_relationship', $this->mapEmploymentRelationshipToInfoniqa($employmentCode));
+        $set('multiple_employment', $contract?->has_additional_employment ? 'Ja' : 'Nein');
+        $set('pension_type', $contract?->pensionType?->code ?? '');
+        $set('seasonal_worker', $employee->is_seasonal_worker ? 'Ja' : 'Nein');
+        $set('social_security_number', $this->toExcelString($contract?->social_security_number ?? ''));
+        $set('gender', $genderName ?? '');
+
         $birthDate = $employee->birth_date ?? $contact?->birth_date;
         if ($birthDate) {
-            $row[56] = is_string($birthDate) ? date('d.m.Y', strtotime($birthDate)) : $birthDate->format('d.m.Y');
+            $set('birth_date', is_string($birthDate) ? date('d.m.Y', strtotime($birthDate)) : $birthDate->format('d.m.Y'));
         }
-        
-        // 58. Geburtsname (Index 57)
-        $row[57] = $employee->birth_surname ?? $contact?->last_name ?? '';
-        
-        // 59. Geburtsort (Index 58)
-        $row[58] = $employee->birth_place ?? $contact?->birth_place ?? '';
-        
-        // 60. Namenszusatz Geburtsname (Index 59)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[59] = '';
-        
-        // 61. Namensvorsatz Geburtsname (Index 60)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[60] = '';
-        
-        // 62. Geburtsland (Index 61)
-        $row[61] = $employee->birth_country ?? '';
-        
-        // 63. Krankenkasse (tats.) (Index 62)
-        $row[62] = $employee->healthInsuranceCompany?->name ?? '';
-        
-        // 64. PGR 109/110:Versicherungsstatus (Index 63)
-        $row[63] = $contract?->insuranceStatus?->code ?? '';
-        
-        // 65. steuerpflichtig EStG § 1 (Index 64)
-        // Mögliche Ausprägungen: unbeschränkt, beschränkt
-        // Standardmäßig "unbeschränkt" setzen, kann später aus Daten ermittelt werden
-        $row[64] = 'unbeschränkt';
-        
-        // 66. Art der Besteuerung (Index 65)
-        $row[65] = 'individuell';
-        
-        // 67. wer trägt die Steuer (Index 66)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[66] = '';
-        
-        // 68. Identifikationsnummer (Index 67)
-        // Identifikationsnummer Excel-Safe (verhindert E+ Darstellung)
-        $row[67] = $this->toExcelString($employee->tax_id_number ?? '');
-        
-        // 69. abw. Geburtsdatum lt. Pass (Index 68)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[68] = '';
-        
-        // 70. Haupt AG (Steuer) (Index 69)
-        // Standardwert: "Ja" (Anmeldung bei ELStAM als Haupt- oder Neben-AG)
-        $row[69] = 'Ja';
-        
-        // 71. Herkunft LSt.-Merkmale gem. EStG (Index 70)
-        // Standardwert: "ELStAM" (alle anderen Optionen sind Spezialfälle)
-        // Geringfügig Beschäftigte mit Pauschalversteuerung = leer
-        $row[70] = 'ELStAM';
-        
-        // 72. Steuerklasse (Index 71)
-        $row[71] = $contract?->taxClass?->code ?? '';
-        
-        // 73. Faktor nach § 39f EStG (Index 72)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[72] = '';
-        
-        // 74. Kinderfreibetrag (Index 73)
-        $row[73] = (string)($employee->child_allowance ?? 0);
-        
-        // 75. Freibetrag Monat (Index 74)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[74] = '';
-        
-        // 76. Freibetrag Jahr (Index 75)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[75] = '';
-        
-        // 77. Hinzurechnung Monat (Index 76)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[76] = '';
-        
-        // 78. Hinzurechnung Jahr (Index 77)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[77] = '';
-        
-        // 79. Konfession (Index 78)
-        // Nutzt die neue Lookup-Tabelle oder Fallback auf Legacy-Feld
+
+        $set('birth_name', $employee->birth_surname ?? $contact?->last_name ?? '');
+        $set('birth_place', $employee->birth_place ?? $contact?->birth_place ?? '');
+        $set('birth_country', $employee->birth_country ?? '');
+        $set('health_insurance_name', $employee->healthInsuranceCompany?->name ?? '');
+        $set('insurance_status', $contract?->insuranceStatus?->code ?? '');
+
+        $set('tax_residency', 'unbeschränkt');
+        $set('tax_type', 'individuell');
+        $set('tax_payer', '');
+        $set('tax_id', $this->toExcelString($employee->tax_id_number ?? ''));
+        $set('main_employer', 'Ja');
+        $set('tax_feature_origin', 'ELStAM');
+        $set('tax_class', $contract?->taxClass?->code ?? '');
+        $set('child_allowance', (string)($employee->child_allowance ?? 0));
+        $set('allowance_month', '');
+        $set('allowance_year', '');
+        $set('addition_month', '');
+        $set('addition_year', '');
+
         if ($employee->churchTaxType) {
-            $row[78] = $employee->churchTaxType->code;
+            $set('church_tax', $employee->churchTaxType->code);
         } else {
-            // Fallback: Legacy-Feld verwenden und mappen
-            $churchTax = $employee->church_tax ?? '';
-            $row[78] = $this->mapChurchTaxToCode($churchTax);
+            $set('church_tax', $this->mapChurchTaxToCode($employee->church_tax ?? ''));
         }
-        
-        // 80. Konfession Ehepartner (Index 79)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[79] = '';
-        
-        // 81. Lohnsteuerspezifikation (Index 80)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[80] = '';
-        
-        // 82. KV/PV Basistarif privat (Index 81)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[81] = '';
-        
-        // 83. Kilometer (FWA) (Index 82)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[82] = '';
-        
-        // 84. kein LSt.-Jahresausgleich (Index 83)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[83] = '';
-        
-        // 85. Arbeitskammer Pflicht (Index 84)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[84] = '';
-        
-        // 86. Sammelbeförderung (Index 85)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[85] = '';
-        
-        // 87. Arbeitszeitvereinbarung (Index 86)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[86] = '';
-        
-        // 88. Teilzeitfaktor (Index 87)
-        // Berechnet als Stunden pro Woche / 40 (z.B. 20h/Woche = 0,50)
+
         $hoursPerWeek = $contract?->hours_per_month ? ($contract->hours_per_month / 4.333) : null;
         if ($hoursPerWeek && $hoursPerWeek < 40) {
-            $row[87] = number_format($hoursPerWeek / 40, 2, ',', '');
+            $set('part_time_factor', number_format($hoursPerWeek / 40, 2, ',', ''));
         } elseif ($hoursPerWeek) {
-            $row[87] = '1,00';
+            $set('part_time_factor', '1,00');
         }
-        
-        // 89. Entgeltfaktor (Index 88)
-        // Standardmäßig 1,00 (Vollzeit)
-        $row[88] = '1,00';
-        
-        // 90. Teilzeit Grund (Index 89)
-        // Stunden pro Woche (z.B. 40,00 oder 20,00)
+        $set('salary_factor', '1,00');
         if ($hoursPerWeek) {
-            $row[89] = number_format($hoursPerWeek, 2, ',', '');
+            $set('part_time_reason', number_format($hoursPerWeek, 2, ',', ''));
+        } else {
+            $set('part_time_reason', '');
         }
-        
-        // 91. Funktion (Index 90)
+
         $jobTitle = $contract?->jobTitles->first();
-        $row[90] = $jobTitle?->name ?? '';
-        
-        // 92. Beschäftigung in (Index 91)
-        $row[91] = 'Firma';
-        
-        // 93. Tätigkeitsschlüssel (9-stellig) (Index 92)
-        // Stellen 1-5: Tätigkeitscode
-        // Stelle 6: Schulabschluss (schooling_level)
-        // Stelle 7: Berufsausbildung (vocational_training_level)
-        // Stelle 8: Leiharbeit (1=nein, 2=ja)
-        // Stelle 9: Vertragsform (contract_form)
+        $set('job_function', $jobTitle?->name ?? '');
+        $set('employment_location', 'Firma');
+
         $activityCode = str_pad($contract?->primaryJobActivity?->code ?? '00000', 5, '0', STR_PAD_LEFT);
         $schooling = (string)($contract?->schooling_level ?? 0);
         $vocational = (string)($contract?->vocational_training_level ?? 0);
         $tempAgency = $contract?->is_temp_agency ? '2' : '1';
         $contractForm = (string)($contract?->contract_form ?? 0);
-        $row[92] = $activityCode . $schooling . $vocational . $tempAgency . $contractForm;
-        
-        // 94. UV Zuordnung (Index 93)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[93] = '';
-        
-        // 95. Berechnungsmerkmal (Index 94)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[94] = '';
-        
-        // 96. Statistiktyp (Index 95)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[95] = '';
-        
-        // 97. Entgelt Art (Index 96)
+        $set('job_key', $activityCode . $schooling . $vocational . $tempAgency . $contractForm);
+
         $wageType = $contract?->wage_base_type ?? '';
         if ($wageType === 'hourly' || $contract?->hourly_wage) {
-            $row[96] = 'Stundenlohn';
+            $set('salary_type', 'Stundenlohn');
         } elseif ($wageType === 'monthly' || $contract?->base_salary) {
-            $row[96] = 'Monatslohn/Gehalt';
+            $set('salary_type', 'Monatslohn/Gehalt');
         }
-        
-        // 98. §5 EntgFG: ärztliche AU-Feststellung spätestens am (Index 97)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[97] = '';
-        
-        // 99-103. Tarif
-        // Tarifart (Index 98)
+
         $tariffAgreement = $contract?->tariffGroup?->tariffAgreement;
         if ($tariffAgreement) {
-            $row[98] = $tariffAgreement->name ?? '';
+            $set('tariff_type', $tariffAgreement->name ?? '');
         }
-        // Tarifgruppe (Index 99)
-        $row[99] = $contract?->tariffGroup?->code ?? '';
-        // Tarifbasisdatum (Index 100)
-        $row[100] = $contract?->tariff_assignment_date?->format('d.m.Y') ?? '';
-        // Tarifstufe (Index 101)
-        $row[101] = $contract?->tariffLevel?->level ?? '';
-        // Tarifstufe seit (Index 102)
-        $row[102] = $contract?->tariff_level_start_date?->format('d.m.Y') ?? '';
-        
-        // 104. Tarifgebiet (Index 103)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[103] = '';
-        
-        // 105. Tarifprozent (Index 104)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[104] = '';
-        
-        // 106. Ausschluss tarifl. Sonderzahlung (Index 105)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[105] = '';
-        
-        // 107. Urlaubsverwaltung (Index 106)
+        $set('tariff_group', $contract?->tariffGroup?->code ?? '');
+        $set('tariff_reference_date', $contract?->tariff_assignment_date?->format('d.m.Y') ?? '');
+        $set('tariff_level', $contract?->tariffLevel?->level ?? '');
+        $set('tariff_level_since', $contract?->tariff_level_start_date?->format('d.m.Y') ?? '');
+        $set('tariff_area', '');
+        $set('tariff_percent', '');
+        $set('tariff_bonus_exclusion', '');
+
         if ($contract?->vacation_entitlement) {
-            $row[106] = 'Jahresanspruch';
+            $set('vacation_management', 'Jahresanspruch');
         }
-        
-        // 108. Arbeitsplatz lt. § 156 SGB IX (Index 107)
-        // Schwerbehindertenangabe basierend auf Behinderungsgrad
-        // Mögliche Ausprägungen:
-        // - zählt = AN ist nicht schw. behindert, zählt als volle Stelle
-        // - zählt (behindert) = AN ist schw. behindert
-        // - weniger 18 WStd. Abs.3 = AN ist nicht schw. behindert, zählt aufgrund geringer Arbeitszeit als halbe Stelle
-        // - Vertretung Abs.2 Nr.6, Teilhabe Abs.2 Nr.1, ABM Abs.2 Nr.4, sonstig Abs.2 Nr.2u3u5, befristet Abs.3
-        $workHoursPerWeek = $contract?->hours_per_month ? ($contract->hours_per_month / 4.333) : null;
-        $disabilityDegree = $employee->disability_degree ?? 0;
-        
-        if ($disabilityDegree && $disabilityDegree > 0) {
-            // Schwerbehindert (Grad > 0)
-            $row[107] = 'zählt (behindert)';
-        } elseif ($workHoursPerWeek && $workHoursPerWeek < 18) {
-            // Weniger als 18 Stunden/Woche
-            $row[107] = 'weniger 18 WStd. Abs.3';
-        } else {
-            // Standard: zählt als volle Stelle
-            $row[107] = 'zählt';
+
+        $workplaceValue = 'zählt';
+        if (($employee->disability_degree ?? 0) > 0) {
+            $workplaceValue = 'zählt (behindert)';
+        } elseif ($hoursPerWeek && $hoursPerWeek < 18) {
+            $workplaceValue = 'weniger 18 WStd. Abs.3';
         }
-        
-        // 109. Arbeitszeitschlüssel für REHADAT (Index 108)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[108] = '';
-        
-        // 110. Schwerbehindert Pers.gruppe (Index 109)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[109] = '';
-        
-        // 111. Dienststelle (Index 110)
+        $set('workplace_sgb', $workplaceValue);
+        $set('rehadat_code', '');
+        $set('disabled_group', '');
+
         if ($costCenter) {
-            $row[110] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
+            $name = is_object($costCenter) ? ($costCenter->name ?? '') : '';
+            $set('department', $name);
+            $set('department_city', $name);
         }
-        
-        // 112. Ort Dienststelle (Index 111)
-        if ($costCenter) {
-            $row[111] = is_object($costCenter) ? ($costCenter->name ?? '') : '';
-        }
-        
-        // 113. Aktenzeichen des Ausweises (Index 112)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[112] = '';
-        
-        // 114. Ausweis ab (Index 113)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[113] = '';
-        
-        // 115. Ausweis bis (Index 114)
-        // (leer - wird später befüllt wenn vorhanden)
-        $row[114] = '';
-        
-        // 116. Familienstand (Index 115)
-        $row[115] = $contact?->marital_status ?? '';
-        
-        // 145-147. Kommunikation (privat) (Indizes 144-146)
-        $row[144] = $primaryPhone?->number ?? '';
-        $row[145] = $contact?->phoneNumbers->where('type', 'mobile')->first()?->number ?? '';
-        $row[146] = $primaryEmail?->email ?? '';
-        
-        // Alle anderen Felder bleiben leer (werden später befüllt wenn Daten vorhanden)
-        
+
+        $set('badge_number', '');
+        $set('badge_from', '');
+        $set('badge_to', '');
+        $set('marital_status', $contact?->marital_status ?? '');
+
+        $set('phone_private', $primaryPhone?->number ?? '');
+        $set('mobile_private', $primaryMobile?->number ?? '');
+        $set('email_private', $primaryEmail?->email ?? '');
+
         return $this->escapeCsvRow($row);
     }
 
