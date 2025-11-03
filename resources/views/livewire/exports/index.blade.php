@@ -231,7 +231,7 @@
                     <x-ui-button 
                         variant="primary" 
                         wire:click="executeExport"
-                        :disabled="!$selectedExportType || ((['infoniqa-ma','infoniqa-dimensions'].includes($selectedExportType)) && !$selectedEmployerId)"
+                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions'], true) && !$selectedEmployerId)"
                     >
                         @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
                         Export starten
