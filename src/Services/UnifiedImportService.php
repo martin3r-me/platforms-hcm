@@ -1863,11 +1863,18 @@ class UnifiedImportService
             'kaufpreis_netto' => 'purchase_price_net',
             'unverbindliche_preisempfehlung' => 'msrp',
             'sb' => 'deductible',
+            'gehaltsumwandlung' => 'salary_conversion',
+            'leasingrate_ohne_agav' => 'leasing_rate',
             'leasingrate' => 'leasing_rate',
             'versicherungsrate' => 'insurance_rate',
+            'versicherungsrate_an' => 'insurance_rate_employee',
+            'versicherungsrate_ag' => 'insurance_rate_employer',
+            'ausfall_versicherung' => 'insurance_rate_outage',
+            'haftplicht_rechtsschutz' => 'insurance_rate_liability',
             'servicerate' => 'service_rate',
             'gesamt_netto' => 'total_net',
             'gesamt_brutto' => 'total_gross',
+            'kosten_ag_monatlich' => 'employer_cost_monthly',
             'kst' => 'cost_center',
             'bemerkung' => 'note',
         ];
@@ -2003,10 +2010,49 @@ class UnifiedImportService
         $contractReference = $contractReference !== '' ? $contractReference : null;
 
         $costCenter = $data['cost_center'] ?? null;
-        $costCenter = $costCenter !== '' ? $costCenter : null;
+        $costCenter = $costCenter !== '' ? trim((string) $costCenter) : null;
 
         $note = $data['note'] ?? null;
         $note = $note !== '' ? $note : null;
+
+        $salaryConversion = $this->toFloat($data['salary_conversion'] ?? null);
+        $leasingRate = $this->toFloat($data['leasing_rate'] ?? null);
+        $insuranceRate = $this->toFloat($data['insurance_rate'] ?? null);
+        $insuranceRateEmployee = $this->toFloat($data['insurance_rate_employee'] ?? null);
+        $insuranceRateEmployer = $this->toFloat($data['insurance_rate_employer'] ?? null);
+        $insuranceRateOutage = $this->toFloat($data['insurance_rate_outage'] ?? null);
+        $insuranceRateLiability = $this->toFloat($data['insurance_rate_liability'] ?? null);
+        $serviceRate = $this->toFloat($data['service_rate'] ?? null);
+        $employerCostMonthly = $this->toFloat($data['employer_cost_monthly'] ?? null);
+
+        if ($insuranceRate === null) {
+            $insuranceParts = array_filter([
+                $insuranceRateEmployee,
+                $insuranceRateEmployer,
+                $insuranceRateOutage,
+                $insuranceRateLiability,
+            ], fn ($value) => $value !== null);
+
+            if (!empty($insuranceParts)) {
+                $insuranceRate = round(array_sum($insuranceParts), 2);
+            }
+        }
+
+        $totalNet = $this->toFloat($data['total_net'] ?? null);
+        if ($totalNet === null) {
+            $components = array_filter([
+                $salaryConversion,
+                $leasingRate,
+                $insuranceRateEmployee,
+                $serviceRate,
+            ], fn ($value) => $value !== null);
+
+            if (!empty($components)) {
+                $totalNet = round(array_sum($components), 2);
+            }
+        }
+
+        $totalGross = $this->toFloat($data['total_gross'] ?? null);
 
         return [
             'contract_reference' => $contractReference,
@@ -2017,11 +2063,17 @@ class UnifiedImportService
             'purchase_price_net' => $this->toFloat($data['purchase_price_net'] ?? null),
             'msrp' => $this->toFloat($data['msrp'] ?? null),
             'deductible' => $this->toFloat($data['deductible'] ?? null),
-            'leasing_rate' => $this->toFloat($data['leasing_rate'] ?? null),
-            'insurance_rate' => $this->toFloat($data['insurance_rate'] ?? null),
-            'service_rate' => $this->toFloat($data['service_rate'] ?? null),
-            'total_net' => $this->toFloat($data['total_net'] ?? null),
-            'total_gross' => $this->toFloat($data['total_gross'] ?? null),
+            'salary_conversion' => $salaryConversion,
+            'leasing_rate' => $leasingRate,
+            'insurance_rate' => $insuranceRate,
+            'insurance_rate_employee' => $insuranceRateEmployee,
+            'insurance_rate_employer' => $insuranceRateEmployer,
+            'insurance_rate_outage' => $insuranceRateOutage,
+            'insurance_rate_liability' => $insuranceRateLiability,
+            'service_rate' => $serviceRate,
+            'employer_cost_monthly' => $employerCostMonthly,
+            'total_net' => $totalNet,
+            'total_gross' => $totalGross,
             'cost_center' => $costCenter,
             'note' => $note,
         ];
@@ -2038,20 +2090,67 @@ class UnifiedImportService
         $startDate = $leaseStart instanceof Carbon ? $leaseStart->toDateString() : ($handoverDate instanceof Carbon ? $handoverDate->toDateString() : null);
         $endDate = $leaseEnd instanceof Carbon ? $leaseEnd->copy()->endOfMonth()->toDateString() : null;
 
-        $totalNet = $payload['total_net'];
-        if ($totalNet === null) {
-            $components = array_filter([
-                $payload['leasing_rate'],
-                $payload['insurance_rate'],
-                $payload['service_rate'],
-            ], fn($value) => $value !== null);
+        $salaryConversion = $payload['salary_conversion'];
+        $leasingRate = $payload['leasing_rate'];
+        $insuranceTotal = $payload['insurance_rate'];
+        $insuranceEmployee = $payload['insurance_rate_employee'];
+        $insuranceEmployer = $payload['insurance_rate_employer'];
+        $serviceRate = $payload['service_rate'];
+        $employerCostMonthly = $payload['employer_cost_monthly'];
 
-            if (count($components) === 3) {
-                $totalNet = round(array_sum($components), 2);
+        if ($insuranceTotal === null && $insuranceEmployee !== null) {
+            $insuranceTotal = $insuranceEmployee + ($payload['insurance_rate_outage'] ?? 0) + ($payload['insurance_rate_liability'] ?? 0);
+            if ($insuranceTotal > 0 && $insuranceEmployer !== null) {
+                $insuranceTotal += $insuranceEmployer;
+            }
+            if ($insuranceTotal === 0.0) {
+                $insuranceTotal = null;
             }
         }
 
-        $monthlyNetString = $totalNet !== null ? number_format($totalNet, 2, '.', '') : null;
+        $totalNet = $payload['total_net'];
+        if ($totalNet === null) {
+            $candidateComponents = array_filter([
+                $salaryConversion,
+                $leasingRate,
+                $insuranceEmployee ?? $insuranceTotal,
+                $serviceRate,
+            ], fn ($value) => $value !== null);
+
+            if (!empty($candidateComponents)) {
+                $totalNet = round(array_sum($candidateComponents), 2);
+            }
+        }
+
+        $monthlyEmployeeAmount = $salaryConversion ?? $totalNet;
+        if ($monthlyEmployeeAmount === null) {
+            $components = array_filter([
+                $leasingRate,
+                $insuranceEmployee ?? $insuranceTotal,
+                $serviceRate,
+            ], fn ($value) => $value !== null);
+
+            if (!empty($components)) {
+                $monthlyEmployeeAmount = round(array_sum($components), 2);
+            }
+        }
+
+        $monthlyEmployeeString = $monthlyEmployeeAmount !== null ? number_format($monthlyEmployeeAmount, 2, '.', '') : null;
+        $monthlyEmployerString = $employerCostMonthly !== null ? number_format($employerCostMonthly, 2, '.', '') : null;
+        if ($monthlyEmployerString === null) {
+            $employerComponents = array_filter([
+                $insuranceEmployer,
+                $payload['insurance_rate_outage'],
+                $payload['insurance_rate_liability'],
+            ], fn ($value) => $value !== null);
+
+            if (!empty($employerComponents)) {
+                $monthlyEmployerAmount = round(array_sum($employerComponents), 2);
+                if ($monthlyEmployerAmount > 0) {
+                    $monthlyEmployerString = number_format($monthlyEmployerAmount, 2, '.', '');
+                }
+            }
+        }
 
         $benefitSpecific = array_filter([
             'contract_reference' => $contractReference,
@@ -2062,9 +2161,15 @@ class UnifiedImportService
             'purchase_price_net' => $payload['purchase_price_net'],
             'msrp' => $payload['msrp'],
             'deductible' => $payload['deductible'],
+            'salary_conversion' => $salaryConversion,
             'leasing_rate' => $payload['leasing_rate'],
-            'insurance_rate' => $payload['insurance_rate'],
+            'insurance_rate_total' => $insuranceTotal,
+            'insurance_rate_employee' => $insuranceEmployee,
+            'insurance_rate_employer' => $insuranceEmployer,
+            'insurance_rate_outage' => $payload['insurance_rate_outage'],
+            'insurance_rate_liability' => $payload['insurance_rate_liability'],
             'service_rate' => $payload['service_rate'],
+            'employer_cost_monthly' => $employerCostMonthly,
             'total_net' => $payload['total_net'],
             'total_gross' => $payload['total_gross'],
             'cost_center' => $payload['cost_center'],
@@ -2076,8 +2181,8 @@ class UnifiedImportService
             'contract_number' => $contractReference,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'monthly_contribution_employee' => $monthlyNetString,
-            'monthly_contribution_employer' => null,
+            'monthly_contribution_employee' => $monthlyEmployeeString,
+            'monthly_contribution_employer' => $monthlyEmployerString,
             'contribution_frequency' => 'monthly',
             'benefit_specific_data' => $benefitSpecific,
             'notes' => $payload['note'] ?? null,
