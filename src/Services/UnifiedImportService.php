@@ -1743,6 +1743,17 @@ class UnifiedImportService
         }
 
         $header = $this->normalizeJobRadHeader($headerRow);
+
+        while (!in_array('employee_name', $header, true)) {
+            $nextHeaderRow = fgetcsv($handle, 0, ';');
+
+            if (!$nextHeaderRow) {
+                fclose($handle);
+                throw new \RuntimeException('CSV enthält keine Kopfzeile mit "Mitarbeiter"');
+            }
+
+            $header = $this->normalizeJobRadHeader($nextHeaderRow);
+        }
         $line = 1;
 
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
@@ -1761,9 +1772,13 @@ class UnifiedImportService
                 continue;
             }
 
+            $employeeName = $data['employee_name'] ?? '';
+            if ($employeeName === '' || mb_strtolower($employeeName) === 'mitarbeiter') {
+                continue;
+            }
+
             $stats['rows']++;
 
-            $employeeName = $data['employee_name'] ?? '';
             if ($employeeName === '') {
                 $stats['errors'][] = "Zeile {$line}: Mitarbeitername fehlt";
                 continue;
