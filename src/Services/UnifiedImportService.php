@@ -1712,6 +1712,417 @@ class UnifiedImportService
         return null;
     }
 
+    public function importJobRadBenefits(string $csvPath, bool $dryRun = false): array
+    {
+        if (!is_file($csvPath)) {
+            throw new \InvalidArgumentException("CSV nicht gefunden: {$csvPath}");
+        }
+
+        $employer = HcmEmployer::findOrFail($this->employerId);
+        $teamId = $employer->team_id;
+
+        $stats = [
+            'rows' => 0,
+            'benefits_created' => 0,
+            'benefits_updated' => 0,
+            'employees_not_found' => [],
+            'contracts_missing' => [],
+            'errors' => [],
+            'samples' => [],
+        ];
+
+        $handle = fopen($csvPath, 'r');
+        if (!$handle) {
+            throw new \RuntimeException("CSV-Datei konnte nicht geöffnet werden: {$csvPath}");
+        }
+
+        $headerRow = fgetcsv($handle, 0, ';');
+        if (!$headerRow) {
+            fclose($handle);
+            throw new \RuntimeException('CSV-Header konnte nicht gelesen werden');
+        }
+
+        $header = $this->normalizeJobRadHeader($headerRow);
+        $line = 1;
+
+        while (($row = fgetcsv($handle, 0, ';')) !== false) {
+            $line++;
+            $normalizedRow = array_map(fn($value) => $this->normalizeJobRadField($value), $row);
+
+            if (empty(array_filter($normalizedRow, fn($value) => $value !== ''))) {
+                continue;
+            }
+
+            $paddedRow = array_pad($normalizedRow, count($header), null);
+            $data = @array_combine($header, $paddedRow);
+
+            if (!$data) {
+                $stats['errors'][] = "Zeile {$line}: Konnte nicht geparst werden";
+                continue;
+            }
+
+            $stats['rows']++;
+
+            $employeeName = $data['employee_name'] ?? '';
+            if ($employeeName === '') {
+                $stats['errors'][] = "Zeile {$line}: Mitarbeitername fehlt";
+                continue;
+            }
+
+            try {
+                $employee = $this->findEmployeeForJobRad($employeeName, $employer);
+                if (!$employee) {
+                    $stats['employees_not_found'][] = $employeeName;
+                    continue;
+                }
+
+                $contract = $employee->contracts()
+                    ->where('is_active', true)
+                    ->orderByDesc('start_date')
+                    ->first() ?? $employee->contracts()->orderByDesc('start_date')->first();
+
+                if (!$contract) {
+                    $stats['contracts_missing'][] = $employeeName;
+                    continue;
+                }
+
+                $payload = $this->buildJobRadPayload($data);
+                $payload['employee_name'] = $employeeName;
+
+                $action = $this->upsertJobRadBenefit($employee, $contract, $payload, $teamId, $employer->created_by_user_id, $dryRun);
+
+                if ($action === 'created') {
+                    $stats['benefits_created']++;
+                    if (count($stats['samples']) < 5) {
+                        $stats['samples'][] = [
+                            'employee' => $employeeName,
+                            'contract_reference' => $payload['contract_reference'] ?? null,
+                            'monthly_net' => $payload['total_net'],
+                        ];
+                    }
+                } elseif ($action === 'updated') {
+                    $stats['benefits_updated']++;
+                }
+            } catch (\Throwable $e) {
+                $stats['errors'][] = "Zeile {$line} ({$employeeName}): " . $e->getMessage();
+            }
+        }
+
+        fclose($handle);
+
+        $stats['employees_not_found'] = array_values(array_unique($stats['employees_not_found']));
+        $stats['contracts_missing'] = array_values(array_unique($stats['contracts_missing']));
+
+        return $stats;
+    }
+
+    private function normalizeJobRadField(?string $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $value = (string) $value;
+        $value = str_replace("\xEF\xBB\xBF", '', $value);
+
+        foreach (['UTF-8', 'Windows-1252', 'ISO-8859-1'] as $encoding) {
+            $converted = @mb_convert_encoding($value, 'UTF-8', $encoding);
+            if ($converted !== false) {
+                $value = $converted;
+                break;
+            }
+        }
+
+        $value = str_replace(["\xC2\xA0", "\xA0"], ' ', $value);
+        return trim($value);
+    }
+
+    private function mapJobRadHeaderKey(?string $header, int $index): string
+    {
+        $header = $this->normalizeJobRadField($header);
+
+        if ($header === '') {
+            if ($index === 1) {
+                return 'contract_reference';
+            }
+
+            return 'column_' . $index;
+        }
+
+        $header = str_replace(['ä','Ä','ö','Ö','ü','Ü','ß'], ['ae','ae','oe','oe','ue','ue','ss'], $header);
+        $header = mb_strtolower($header);
+        $header = preg_replace('/[^a-z0-9]+/u', '_', $header);
+        $header = trim($header, '_');
+
+        $map = [
+            'mitarbeiter' => 'employee_name',
+            'uebernahme' => 'takeover_date',
+            'leasingbeginn' => 'lease_start',
+            'dauer_monate' => 'duration_months',
+            'leasingende' => 'lease_end',
+            'kaufpreis_netto' => 'purchase_price_net',
+            'unverbindliche_preisempfehlung' => 'msrp',
+            'sb' => 'deductible',
+            'leasingrate' => 'leasing_rate',
+            'versicherungsrate' => 'insurance_rate',
+            'servicerate' => 'service_rate',
+            'gesamt_netto' => 'total_net',
+            'gesamt_brutto' => 'total_gross',
+            'kst' => 'cost_center',
+            'bemerkung' => 'note',
+        ];
+
+        return $map[$header] ?? $header;
+    }
+
+    private function normalizeJobRadHeader(array $headerRow): array
+    {
+        $normalized = [];
+
+        foreach ($headerRow as $index => $column) {
+            $key = $this->mapJobRadHeaderKey($column, $index);
+            $baseKey = $key;
+            $suffix = 2;
+
+            while (in_array($key, $normalized, true)) {
+                $key = $baseKey . '_' . $suffix++;
+            }
+
+            $normalized[] = $key;
+        }
+
+        return $normalized;
+    }
+
+    private function parseJobRadMonth(?string $value): ?Carbon
+    {
+        $value = $this->normalizeJobRadField($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $value = str_replace('.', '', $value);
+        $value = preg_replace('/\s+/', ' ', $value);
+
+        if (preg_match('/^(?<month>[A-Za-zÄÖÜäöüß]+)\s*(?<year>\d{2,4})$/u', $value, $matches)) {
+            $monthKey = mb_strtolower($matches['month']);
+            $monthKey = str_replace(['ä','ö','ü','ß'], ['ae','oe','ue','ss'], $monthKey);
+            $monthKey = substr($monthKey, 0, 3);
+
+            $monthMap = [
+                'jan' => 1,
+                'feb' => 2,
+                'mae' => 3,
+                'mar' => 3,
+                'mrz' => 3,
+                'apr' => 4,
+                'mai' => 5,
+                'jun' => 6,
+                'jul' => 7,
+                'aug' => 8,
+                'sep' => 9,
+                'okt' => 10,
+                'nov' => 11,
+                'dez' => 12,
+                'dec' => 12,
+            ];
+
+            if (!isset($monthMap[$monthKey])) {
+                return null;
+            }
+
+            $year = (int) $matches['year'];
+            if ($year < 100) {
+                $year += $year >= 70 ? 1900 : 2000;
+            }
+
+            return Carbon::create($year, $monthMap[$monthKey], 1);
+        }
+
+        return $this->parseDate($value);
+    }
+
+    private function findEmployeeForJobRad(string $fullName, HcmEmployer $employer): ?HcmEmployee
+    {
+        $fullName = trim($fullName);
+        if ($fullName === '') {
+            return null;
+        }
+
+        $lastName = $fullName;
+        $firstName = '';
+
+        if (str_contains($fullName, ',')) {
+            [$lastName, $firstName] = array_map('trim', explode(',', $fullName, 2));
+        } else {
+            $parts = preg_split('/\s+/', $fullName);
+            if ($parts) {
+                $lastName = array_pop($parts);
+                $firstName = implode(' ', $parts);
+            }
+        }
+
+        $lastLower = mb_strtolower($lastName);
+        $firstLower = mb_strtolower($firstName);
+
+        $query = HcmEmployee::with('crmContactLinks.contact')
+            ->where('team_id', $employer->team_id)
+            ->where('employer_id', $employer->id)
+            ->whereHas('crmContactLinks.contact', function ($q) use ($lastLower, $firstLower) {
+                $q->whereRaw('LOWER(last_name) = ?', [$lastLower]);
+
+                if ($firstLower !== '') {
+                    $q->whereRaw('LOWER(first_name) LIKE ?', [$firstLower . '%']);
+                }
+            });
+
+        $employees = $query->get();
+
+        if ($employees->count() === 1) {
+            return $employees->first();
+        }
+
+        if ($employees->isEmpty()) {
+            return null;
+        }
+
+        foreach ($employees as $candidate) {
+            $contact = $candidate->crmContactLinks->first()?->contact;
+            if ($contact && $firstLower !== '' && mb_strtolower($contact->first_name) === $firstLower) {
+                return $candidate;
+            }
+        }
+
+        return $employees->first();
+    }
+
+    private function buildJobRadPayload(array $data): array
+    {
+        $contractReference = $data['contract_reference'] ?? ($data['column_1'] ?? null);
+        $contractReference = $contractReference !== '' ? $contractReference : null;
+
+        $costCenter = $data['cost_center'] ?? null;
+        $costCenter = $costCenter !== '' ? $costCenter : null;
+
+        $note = $data['note'] ?? null;
+        $note = $note !== '' ? $note : null;
+
+        return [
+            'contract_reference' => $contractReference,
+            'handover_date' => $this->parseDate($data['takeover_date'] ?? null),
+            'lease_start' => $this->parseJobRadMonth($data['lease_start'] ?? null),
+            'lease_end' => $this->parseJobRadMonth($data['lease_end'] ?? null),
+            'duration_months' => $this->toInt($data['duration_months'] ?? null),
+            'purchase_price_net' => $this->toFloat($data['purchase_price_net'] ?? null),
+            'msrp' => $this->toFloat($data['msrp'] ?? null),
+            'deductible' => $this->toFloat($data['deductible'] ?? null),
+            'leasing_rate' => $this->toFloat($data['leasing_rate'] ?? null),
+            'insurance_rate' => $this->toFloat($data['insurance_rate'] ?? null),
+            'service_rate' => $this->toFloat($data['service_rate'] ?? null),
+            'total_net' => $this->toFloat($data['total_net'] ?? null),
+            'total_gross' => $this->toFloat($data['total_gross'] ?? null),
+            'cost_center' => $costCenter,
+            'note' => $note,
+        ];
+    }
+
+    private function upsertJobRadBenefit(HcmEmployee $employee, HcmEmployeeContract $contract, array $payload, int $teamId, ?int $createdByUserId, bool $dryRun): string
+    {
+        $contractReference = $payload['contract_reference'] ?? null;
+
+        $handoverDate = $payload['handover_date'];
+        $leaseStart = $payload['lease_start'];
+        $leaseEnd = $payload['lease_end'];
+
+        $startDate = $leaseStart instanceof Carbon ? $leaseStart->toDateString() : ($handoverDate instanceof Carbon ? $handoverDate->toDateString() : null);
+        $endDate = $leaseEnd instanceof Carbon ? $leaseEnd->copy()->endOfMonth()->toDateString() : null;
+
+        $totalNet = $payload['total_net'];
+        if ($totalNet === null) {
+            $components = array_filter([
+                $payload['leasing_rate'],
+                $payload['insurance_rate'],
+                $payload['service_rate'],
+            ], fn($value) => $value !== null);
+
+            if (count($components) === 3) {
+                $totalNet = round(array_sum($components), 2);
+            }
+        }
+
+        $monthlyNetString = $totalNet !== null ? number_format($totalNet, 2, '.', '') : null;
+
+        $benefitSpecific = array_filter([
+            'contract_reference' => $contractReference,
+            'handover_date' => $handoverDate instanceof Carbon ? $handoverDate->toDateString() : null,
+            'lease_start' => $leaseStart instanceof Carbon ? $leaseStart->toDateString() : null,
+            'lease_end' => $endDate,
+            'duration_months' => $payload['duration_months'],
+            'purchase_price_net' => $payload['purchase_price_net'],
+            'msrp' => $payload['msrp'],
+            'deductible' => $payload['deductible'],
+            'leasing_rate' => $payload['leasing_rate'],
+            'insurance_rate' => $payload['insurance_rate'],
+            'service_rate' => $payload['service_rate'],
+            'total_net' => $payload['total_net'],
+            'total_gross' => $payload['total_gross'],
+            'cost_center' => $payload['cost_center'],
+        ], fn($value) => $value !== null && $value !== '');
+
+        $benefitData = [
+            'name' => trim('JobRad ' . ($contractReference ?? '')) ?: 'JobRad Leasing',
+            'description' => 'JobRad Leasing',
+            'contract_number' => $contractReference,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'monthly_contribution_employee' => $monthlyNetString,
+            'monthly_contribution_employer' => null,
+            'contribution_frequency' => 'monthly',
+            'benefit_specific_data' => $benefitSpecific,
+            'notes' => $payload['note'] ?? null,
+            'is_active' => true,
+        ];
+
+        $query = HcmEmployeeBenefit::where('employee_id', $employee->id)
+            ->where('employee_contract_id', $contract->id)
+            ->where('benefit_type', 'jobrad');
+
+        if ($contractReference) {
+            $query->where(function ($q) use ($contractReference) {
+                $q->where('contract_number', $contractReference)
+                  ->orWhere(function ($sub) use ($contractReference) {
+                      $sub->whereNotNull('benefit_specific_data')
+                          ->whereJsonContains('benefit_specific_data->contract_reference', $contractReference);
+                  });
+            });
+        } else {
+            $query->whereNull('contract_number');
+        }
+
+        $existing = $query->first();
+
+        if ($existing) {
+            if (!$dryRun) {
+                $existing->update($benefitData);
+            }
+
+            return 'updated';
+        }
+
+        if (!$dryRun) {
+            HcmEmployeeBenefit::create(array_merge([
+                'team_id' => $teamId,
+                'employee_id' => $employee->id,
+                'employee_contract_id' => $contract->id,
+                'benefit_type' => 'jobrad',
+                'created_by_user_id' => $createdByUserId,
+            ], $benefitData));
+        }
+
+        return 'created';
+    }
+
     private function mapBenefitsFromRow(HcmEmployee $employee, ?HcmEmployeeContract $contract, array $row, int $teamId, ?int $createdByUserId, ?Carbon $startDate = null): void
     {
         if (!$contract) { return; }
@@ -2138,7 +2549,10 @@ class UnifiedImportService
     private function toFloat($v): ?float
     {
         if ($v === null || trim((string) $v) === '' || trim((string) $v) === '[leer]') return null;
-        $s = str_replace(['.',' '], '', (string) $v);
+        $s = (string) $v;
+        $s = str_replace(["\xC2\xA0", "\xA0"], '', $s);
+        $s = str_replace(['€', 'EUR', 'eur', 'â‚¬'], '', $s);
+        $s = str_replace(['.',' '], '', $s);
         $s = str_replace(',', '.', $s);
         return is_numeric($s) ? (float) $s : null;
     }
