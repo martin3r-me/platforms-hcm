@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Platform\Hcm\Models\HcmExport;
 use Platform\Hcm\Models\HcmExportTemplate;
 use Platform\Hcm\Models\HcmEmployer;
+use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -55,6 +56,7 @@ class HcmExportService
             $filepath = match($export->type) {
                 'infoniqa-ma' => $this->exportInfoniqa($export),
                 'infoniqa-dimensions' => $this->exportInfoniqaDimensions($export),
+                'infoniqa-bank' => $this->exportInfoniqaBank($export),
                 'payroll' => $this->exportPayroll($export),
                 'employees' => $this->exportEmployees($export),
                 'custom' => $this->exportCustom($export),
@@ -169,6 +171,274 @@ class HcmExportService
         Storage::disk('local')->put($filepath, $csvData);
 
         return $filepath;
+    }
+
+    /**
+     * INFONIQA Bankverbindungen-Export
+     */
+    private function exportInfoniqaBank(HcmExport $export): string
+    {
+        $filename = 'infoniqa_bank_export_' . date('Y-m-d_H-i-s') . '.csv';
+        $filepath = 'exports/hcm/' . $filename;
+
+        $parameters = $export->parameters ?? [];
+        $employerId = $parameters['employer_id'] ?? null;
+
+        if (!$employerId) {
+            throw new \InvalidArgumentException('INFONIQA Bank-Export benötigt employer_id in den Parametern');
+        }
+
+        $employer = HcmEmployer::findOrFail($employerId);
+        if ($employer->team_id !== $this->teamId) {
+            throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
+        }
+
+        $employees = HcmEmployee::with([
+                'contracts',
+                'benefits' => function ($query) {
+                    $query->where('is_active', true);
+                },
+                'crmContactLinks.contact',
+            ])
+            ->where('team_id', $this->teamId)
+            ->where('employer_id', $employerId)
+            ->where('is_active', true)
+            ->orderBy('employee_number')
+            ->get();
+
+        $lines = [];
+        $row1 = $this->getInfoniqaBankRow1();
+        $row1[0] = (string)($employer->employer_number ?? '');
+        $lines[] = $this->escapeCsvRow($row1);
+        $lines[] = $this->escapeCsvRow($this->getInfoniqaBankRow2());
+        $lines[] = $this->escapeCsvRow($this->getInfoniqaBankRow3());
+        $lines[] = $this->escapeCsvRow($this->getInfoniqaBankRow4());
+        $lines[] = $this->escapeCsvRow($this->getInfoniqaBankHeaders());
+
+        $blankRow = $this->escapeCsvRow(array_fill(0, 10, ''));
+
+        foreach ($employees as $employee) {
+            if (empty($employee->employee_number)) {
+                continue;
+            }
+
+            $rows = $this->buildInfoniqaBankRowsForEmployee($employee, $employer);
+            if (empty($rows)) {
+                continue;
+            }
+
+            foreach ($rows as $row) {
+                $lines[] = $this->escapeCsvRow($row);
+            }
+
+            $lines[] = $blankRow;
+        }
+
+        if (!empty($lines) && end($lines) === $blankRow) {
+            array_pop($lines);
+        }
+
+        $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
+        Storage::disk('local')->put($filepath, $csvData);
+
+        return $filepath;
+    }
+
+    private function getInfoniqaBankRow1(): array
+    {
+        return ['5484811', 'Konv Sonstige Bankverbindung', '', '', '', '', '', '', '', ''];
+    }
+
+    private function getInfoniqaBankRow2(): array
+    {
+        return ['Bankverbindung', 'Bankverbindung', '', 'Bankverbindung', 'Bankverbindung', 'Bankverbindung', 'Bankverbindung', '', 'spezielle Felder', ''];
+    }
+
+    private function getInfoniqaBankRow3(): array
+    {
+        return ['3', '4', '5', '10', '14', '46', '45', '15', '5485000', ''];
+    }
+
+    private function getInfoniqaBankRow4(): array
+    {
+        return ['Code20', 'Code20', 'Date', 'Option', 'Text70', 'Code44', 'Code11', 'Text140', 'Text30', ''];
+    }
+
+    private function getInfoniqaBankHeaders(): array
+    {
+        return ['Mitarbeiternr', 'Bankvorgangscode', 'gültig ab', 'Zahlungsweg', 'Empfänger', 'IBAN', 'BIC/Swift-Code', 'Verwendungszweck', 'Von Mandant', 'Hinweise'];
+    }
+
+    private function buildInfoniqaBankRowsForEmployee(HcmEmployee $employee, HcmEmployer $employer): array
+    {
+        $rows = [];
+        $mandant = $this->formatBankMandant($employer);
+        $employeeNumber = (string) $employee->employee_number;
+
+        $contracts = $employee->relationLoaded('contracts') ? $employee->contracts : $employee->contracts()->get();
+        $contract = $employee->activeContract();
+        if (!$contract && $contracts->count()) {
+            $contract = $contracts->sortByDesc('start_date')->first();
+        }
+
+        $contractStart = $contract?->start_date ? Carbon::parse($contract->start_date) : null;
+
+        $recipient = $this->determineEmployeeRecipient($employee);
+        $iban = $this->formatIban($employee->bank_iban);
+        $bic = $employee->bank_swift ? strtoupper(trim($employee->bank_swift)) : '';
+
+        $salaryHints = [];
+        if ($iban === '') {
+            $salaryHints[] = 'IBAN fehlt';
+        }
+
+        if ($recipient !== '' || $iban !== '' || $bic !== '') {
+            $rows[] = $this->makeInfoniqaBankRow(
+                $employeeNumber,
+                'AUSZAHLUNG',
+                $this->formatBankDate($contractStart),
+                'Überweisung',
+                $recipient,
+                $iban,
+                $bic,
+                '',
+                $mandant,
+                $this->composeHint($salaryHints)
+            );
+        }
+
+        $benefits = $employee->relationLoaded('benefits')
+            ? $employee->benefits
+            : $employee->benefits()->where('is_active', true)->get();
+
+        $benefitsByType = $benefits->groupBy('benefit_type');
+
+        $vwlIndex = 1;
+        foreach ($benefitsByType->get('vwl', collect()) as $benefit) {
+            $data = $benefit->benefit_specific_data ?? [];
+            $benefitIban = $this->formatIban($data['account_number'] ?? $data['iban'] ?? null);
+            $benefitDate = $benefit->start_date ? Carbon::parse($benefit->start_date) : $contractStart;
+            $amount = $this->parseMonetary($benefit->monthly_contribution_employee);
+
+            $purposeParts = [];
+            if (!empty($benefit->contract_number)) {
+                $purposeParts[] = 'Vertrag ' . $benefit->contract_number;
+            }
+            if ($amount !== null) {
+                $purposeParts[] = 'Rate ' . $this->formatEuro($amount);
+            }
+
+            $vwlHints = [];
+            if ($benefitIban === '') {
+                $vwlHints[] = 'IBAN fehlt';
+            }
+
+            $rows[] = $this->makeInfoniqaBankRow(
+                $employeeNumber,
+                'VWL' . $vwlIndex,
+                $this->formatBankDate($benefitDate),
+                'Überweisung',
+                $this->truncate($benefit->insurance_company ?: ($benefit->name ?: 'VWL'), 70),
+                $benefitIban,
+                '',
+                $this->composePurpose($purposeParts),
+                $mandant,
+                $this->composeHint($vwlHints)
+            );
+
+            $vwlIndex++;
+        }
+
+        $jobradIndex = 1;
+        foreach ($benefitsByType->get('jobrad', collect()) as $benefit) {
+            $data = $benefit->benefit_specific_data ?? [];
+            $benefitDate = $benefit->start_date ? Carbon::parse($benefit->start_date) : $contractStart;
+            $amount = $this->parseMonetary($benefit->monthly_contribution_employee);
+
+            $purposeParts = [];
+            if (!empty($benefit->contract_number)) {
+                $purposeParts[] = 'Vertrag ' . $benefit->contract_number;
+            }
+            if ($amount !== null) {
+                $purposeParts[] = 'Rate ' . $this->formatEuro($amount);
+            }
+
+            $hintParts = [];
+            if (!empty($data['cost_center'])) {
+                $hintParts[] = 'KST ' . $data['cost_center'];
+            }
+
+            $rows[] = $this->makeInfoniqaBankRow(
+                $employeeNumber,
+                'JOBRAD' . ($jobradIndex > 1 ? $jobradIndex : ''),
+                $this->formatBankDate($benefitDate),
+                'Einzug',
+                $this->truncate($benefit->name ?: 'JobRad Leasing', 70),
+                '',
+                '',
+                $this->composePurpose($purposeParts),
+                $mandant,
+                $this->composeHint($hintParts)
+            );
+
+            $jobradIndex++;
+        }
+
+        $bavIndex = 1;
+        foreach ($benefitsByType->get('bav', collect()) as $benefit) {
+            $benefitDate = $benefit->start_date ? Carbon::parse($benefit->start_date) : $contractStart;
+
+            $purposeParts = [];
+            if (!empty($benefit->contract_number)) {
+                $purposeParts[] = 'Vertrag ' . $benefit->contract_number;
+            }
+            if (!empty($benefit->description) && $benefit->description !== '[leer]') {
+                $purposeParts[] = $benefit->description;
+            }
+
+            $rows[] = $this->makeInfoniqaBankRow(
+                $employeeNumber,
+                'BAV' . ($bavIndex > 1 ? $bavIndex : ''),
+                $this->formatBankDate($benefitDate),
+                'Überweisung',
+                $this->truncate($benefit->insurance_company ?: 'Betriebliche Altersvorsorge', 70),
+                '',
+                '',
+                $this->composePurpose($purposeParts),
+                $mandant,
+                $this->composeHint(['IBAN fehlt'])
+            );
+
+            $bavIndex++;
+        }
+
+        return $rows;
+    }
+
+    private function makeInfoniqaBankRow(
+        string $employeeNumber,
+        string $bankCode,
+        string $validFrom,
+        string $paymentMethod,
+        string $recipient,
+        string $iban,
+        string $bic,
+        string $purpose,
+        string $mandant,
+        string $hint
+    ): array {
+        return [
+            $employeeNumber,
+            $bankCode,
+            $validFrom,
+            $paymentMethod,
+            $this->truncate($recipient, 70),
+            $this->truncate($iban, 35),
+            $this->truncate($bic, 11),
+            $this->truncate($purpose, 140),
+            $this->truncate($mandant, 30),
+            $this->truncate($hint, 30),
+        ];
     }
 
     /**
@@ -1063,6 +1333,138 @@ class HcmExportService
         return 'Haupt SV-pflichtig';
     }
 
+    private function formatBankMandant(HcmEmployer $employer): string
+    {
+        $number = $employer->employer_number;
+        $label = trim((string)($employer->display_name ?? ''));
+
+        if ($number !== null && $number !== '') {
+            $prefix = str_pad((string)$number, 2, '0', STR_PAD_LEFT);
+            return trim($prefix . ' ' . $label);
+        }
+
+        return $label;
+    }
+
+    private function determineEmployeeRecipient(HcmEmployee $employee): string
+    {
+        if (!empty($employee->bank_account_holder)) {
+            return trim($employee->bank_account_holder);
+        }
+
+        $contactLink = $employee->crmContactLinks->first();
+        $contact = $contactLink?->contact;
+
+        if ($contact) {
+            $fullName = trim(($contact->first_name ? $contact->first_name . ' ' : '') . ($contact->last_name ?? ''));
+            if ($fullName !== '') {
+                return $fullName;
+            }
+        }
+
+        if (!empty($employee->alias)) {
+            return trim($employee->alias);
+        }
+
+        return (string) $employee->employee_number;
+    }
+
+    private function formatBankDate($value): string
+    {
+        if (!$value) {
+            return '';
+        }
+
+        if ($value instanceof Carbon) {
+            return $value->format('d.m.Y');
+        }
+
+        try {
+            return Carbon::parse($value)->format('d.m.Y');
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    private function formatIban(?string $iban): string
+    {
+        if (!$iban) {
+            return '';
+        }
+
+        $normalized = preg_replace('/[^A-Za-z0-9]/', '', strtoupper($iban));
+        if (!$normalized) {
+            return '';
+        }
+
+        return trim(implode(' ', str_split($normalized, 4)));
+    }
+
+    private function parseMonetary(?string $value): ?float
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string)$value);
+        if ($value === '' || $value === '[leer]') {
+            return null;
+        }
+
+        $normalized = str_replace(["€", "EUR", "eur", "Â", " a"], '', $value);
+        $normalized = preg_replace('/\s+/', '', $normalized);
+
+        if (str_contains($normalized, ',') && str_contains($normalized, '.')) {
+            $normalized = str_replace('.', '', $normalized);
+            $normalized = str_replace(',', '.', $normalized);
+        } elseif (str_contains($normalized, ',')) {
+            $normalized = str_replace(',', '.', $normalized);
+        }
+
+        if (!is_numeric($normalized)) {
+            return null;
+        }
+
+        return (float) $normalized;
+    }
+
+    private function formatEuro(float $amount): string
+    {
+        return number_format($amount, 2, ',', '.') . ' EUR';
+    }
+
+    private function composePurpose(array $parts): string
+    {
+        $filtered = array_filter(array_map(function ($part) {
+            return $part === null ? '' : trim((string)$part);
+        }, $parts));
+
+        return implode(' | ', $filtered);
+    }
+
+    private function composeHint(array $parts): string
+    {
+        $filtered = array_filter(array_map(function ($part) {
+            return $part === null ? '' : trim((string)$part);
+        }, $parts));
+
+        return implode(' | ', $filtered);
+    }
+
+    private function truncate(?string $value, int $limit): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $value = trim($value);
+        if (mb_strlen($value) <= $limit) {
+            return $value;
+        }
+
+        return rtrim(mb_substr($value, 0, $limit - 1)) . '…';
+    }
+
     /**
      * Liefert den Kostenstellencode für einen Vertrag zu einem Stichtag
      */
@@ -1168,6 +1570,7 @@ class HcmExportService
             'infoniqa-ma' => max(0, $lineCount - 6),
             'payroll', 'employees' => max(0, $lineCount - 1),
             'infoniqa-dimensions' => $lineCount,
+            'infoniqa-bank' => max(0, $lineCount - 5),
             default => max(0, $lineCount),
         };
     }

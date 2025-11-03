@@ -194,7 +194,7 @@
                     @enderror
                 </div>
 
-                @if(in_array($selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions'], true))
+                @if(in_array($selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank'], true))
                     <div>
                         <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
                             Arbeitgeber <span class="text-red-600">*</span>
@@ -231,7 +231,7 @@
                     <x-ui-button 
                         variant="primary" 
                         wire:click="executeExport"
-                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions'], true) && !$selectedEmployerId)"
+                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions','infoniqa-bank'], true) && !$selectedEmployerId)"
                     >
                         @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
                         Export starten
@@ -281,6 +281,10 @@
                         <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa-ma')" class="w-full justify-start">
                             @svg('heroicon-o-document-text', 'w-4 h-4')
                             <span class="ml-2">INFONIQA MA</span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa-bank')" class="w-full justify-start">
+                            @svg('heroicon-o-banknotes', 'w-4 h-4')
+                            <span class="ml-2">INFONIQA Bank</span>
                         </x-ui-button>
                         <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa-dimensions')" class="w-full justify-start">
                             @svg('heroicon-o-rectangle-group', 'w-4 h-4')
