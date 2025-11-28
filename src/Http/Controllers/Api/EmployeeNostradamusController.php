@@ -40,6 +40,7 @@ class EmployeeNostradamusController extends ApiController
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
             'crmContactLinks.contact.postalAddresses',
+            'crmContactLinks.contact.gender',
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
             },
@@ -108,8 +109,11 @@ class EmployeeNostradamusController extends ApiController
             $contact?->last_name ?? ''
         );
         
-        // Gender mapping
-        $gender = $this->mapGender($employee->gender);
+        // Gender mapping - Priorität: Contact Gender > Employee Gender
+        $genderValue = $contact?->gender?->code 
+            ?? $contact?->gender?->name 
+            ?? $employee->gender;
+        $gender = $this->mapGender($genderValue);
         
         // Job Code aus aktuellem Vertrag
         $jobCode = null;
@@ -146,6 +150,18 @@ class EmployeeNostradamusController extends ApiController
             ?? $activeContract?->contract_type
             ?? null;
 
+        // Stammkostenstelle aus aktuellem Contract
+        $costCenter = null;
+        if ($activeContract) {
+            $costCenterObj = $activeContract->getCostCenter();
+            if ($costCenterObj) {
+                $costCenter = $costCenterObj->code ?? $costCenterObj->name;
+            } else {
+                // Fallback auf cost_center String-Feld
+                $costCenter = $activeContract->cost_center;
+            }
+        }
+
         return [
             // Employee Profile
             'employee_number' => $employee->employee_number ?? '',
@@ -179,6 +195,7 @@ class EmployeeNostradamusController extends ApiController
             'contract_end_date' => $activeContract?->end_date?->format('Y-m-d'),
             'contract_hours_per_week' => $contractHoursPerWeek,
             'employee_profile_code' => $employeeProfileCode,
+            'cost_center' => $costCenter,
         ];
     }
 
@@ -214,14 +231,29 @@ class EmployeeNostradamusController extends ApiController
             return 'Male'; // Default
         }
         
-        $gender = strtolower($gender);
+        $genderLower = strtolower(trim($gender));
         
-        if (in_array($gender, ['male', 'm', 'mann', 'männlich'])) {
+        // Gender Codes (MALE, FEMALE, DIVERSE, NOT_SPECIFIED)
+        if (in_array($genderLower, ['male', 'männlich'])) {
             return 'Male';
         }
         
-        if (in_array($gender, ['female', 'f', 'frau', 'weiblich'])) {
+        if (in_array($genderLower, ['female', 'weiblich'])) {
             return 'Female';
+        }
+        
+        // Abkürzungen
+        if (in_array($genderLower, ['m', 'mann', 'herr'])) {
+            return 'Male';
+        }
+        
+        if (in_array($genderLower, ['f', 'w', 'frau'])) {
+            return 'Female';
+        }
+        
+        // Diverse/Not Specified werden als Male gemappt (Nostradamus erwartet nur Male/Female)
+        if (in_array($genderLower, ['diverse', 'divers', 'd', 'not_specified', 'nicht angegeben', 'x unbestimmt', 'unbestimmt'])) {
+            return 'Male'; // Fallback für Diverse/Not Specified
         }
         
         return 'Male'; // Default fallback
