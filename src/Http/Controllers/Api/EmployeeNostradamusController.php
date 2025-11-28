@@ -39,7 +39,7 @@ class EmployeeNostradamusController extends ApiController
         $query = HcmEmployee::with([
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
-            'crmContactLinks.contact.postalAddresses',
+            'crmContactLinks.contact.postalAddresses.country', // Eager load country for code
             'crmContactLinks.contact.gender',
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
@@ -98,10 +98,10 @@ class EmployeeNostradamusController extends ApiController
             return in_array(strtolower($phone['type'] ?? ''), ['mobile', 'handy', 'mobil']);
         });
         
-        // Adressen
-        $addresses = $employee->getPostalAddresses();
-        $primaryAddress = collect($addresses)->firstWhere('is_primary') 
-            ?? collect($addresses)->first();
+        // Adressen - direkt vom Contact holen für besseren Zugriff auf Country-Code
+        $postalAddresses = $contact?->postalAddresses ?? collect();
+        $primaryAddress = $postalAddresses->firstWhere('is_primary') 
+            ?? $postalAddresses->first();
         
         // Initials aus Vor- und Nachname
         $initials = $this->extractInitials(
@@ -176,12 +176,12 @@ class EmployeeNostradamusController extends ApiController
             'phone_mobile' => $phoneMobile['number'] ?? null,
             
             // Address
-            'street' => $primaryAddress['street'] ?? '',
-            'house_number' => $primaryAddress['house_number'] ?? '',
+            'street' => $primaryAddress?->street ?? '',
+            'house_number' => $primaryAddress?->house_number ?? '',
             'house_number_addition' => null, // Wird nicht aus CRM geholt
-            'postal_code' => $primaryAddress['postal_code'] ?? '',
-            'city' => $primaryAddress['city'] ?? '',
-            'country' => $primaryAddress['country'] ?? 'NL',
+            'postal_code' => $primaryAddress?->postal_code ?? '',
+            'city' => $primaryAddress?->city ?? '',
+            'country' => $primaryAddress?->country?->code ?? null, // Verwende Country-Code statt Name, kein Fallback
             
             // Job
             'job_code' => (string) $jobCode ?? '',
