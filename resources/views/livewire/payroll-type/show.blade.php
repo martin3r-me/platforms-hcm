@@ -15,9 +15,9 @@
     <x-ui-page-container>
         <x-ui-panel title="Stammdaten" subtitle="Lohnart bearbeiten">
             @if(session()->has('message'))
-                <x-ui-alert variant="success" class="mb-4">
+                <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
                     {{ session('message') }}
-                </x-ui-alert>
+                </div>
             @endif
 
             <form wire:submit.prevent="save" class="space-y-6">
