@@ -148,6 +148,7 @@ class EmployeeNostradamusController extends ApiController
 
         return [
             // Employee Profile
+            'employee_number' => $employee->employee_number ?? '',
             'initials' => $initials,
             'first_name' => $contact?->first_name,
             'last_name' => $contact?->last_name ?? '',
