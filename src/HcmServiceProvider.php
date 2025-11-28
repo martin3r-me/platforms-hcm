@@ -87,6 +87,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\AssignAllianzBkvBenefit::class,
                 \Platform\Hcm\Console\Commands\ImportJobRadBenefits::class,
                 \Platform\Hcm\Console\Commands\UpdatePayrollTypesSuccessors::class,
+                \Platform\Hcm\Console\Commands\DeactivateExpiredContracts::class,
             ]);
         }
     }

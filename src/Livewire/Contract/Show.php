@@ -26,6 +26,10 @@ class Show extends Component
     public $minimum_wage_monthly_hours;
     public $minimum_wage_notes;
 
+    // Vertragsdatum-Felder
+    public $start_date;
+    public $end_date;
+    
     // Arbeitszeit-Felder
     public $hours_per_week;
     public $hours_per_month;
@@ -100,6 +104,10 @@ class Show extends Component
         $this->is_temp_agency = (bool) $this->contract->is_temp_agency;
         $this->contract_form = $this->contract->contract_form;
         
+        // Vertragsdatum-Felder
+        $this->start_date = $this->contract->start_date?->format('Y-m-d');
+        $this->end_date = $this->contract->end_date?->format('Y-m-d');
+        
         // Arbeitszeit-Felder
         $this->hours_per_week = $this->contract->hours_per_week;
         $this->hours_per_month = $this->contract->hours_per_month;
@@ -146,6 +154,8 @@ class Show extends Component
             'vocational_training_level' => 'nullable|in:1,2,3,4,5,6,9',
             'is_temp_agency' => 'boolean',
             'contract_form' => 'nullable|in:1,2,3,4,5,6,7,8,9',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
             'hours_per_week' => 'nullable|numeric|min:0|max:168',
             'hours_per_month' => 'nullable|numeric|min:0|max:744',
             'work_days_per_week' => 'nullable|numeric|min:0|max:7',
@@ -177,6 +187,8 @@ class Show extends Component
             'vocational_training_level' => $this->vocational_training_level,
             'is_temp_agency' => $this->is_temp_agency,
             'contract_form' => $this->contract_form,
+            'start_date' => $this->start_date,
+            'end_date' => $this->end_date,
             'hours_per_week' => $this->hours_per_week,
             'hours_per_month' => $this->hours_per_month,
             'work_days_per_week' => $this->work_days_per_week,
