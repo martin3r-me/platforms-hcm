@@ -86,19 +86,47 @@ class EmployeeNostradamusController extends ApiController
         $contact = $employee->getContact();
         $activeContract = $employee->activeContract();
         
-        // Email-Adressen
+        // Email-Adressen: Primäre bevorzugen (unabhängig vom Typ), sonst erste
         $emailAddresses = $employee->getEmailAddresses();
         $primaryEmail = collect($emailAddresses)->firstWhere('is_primary') 
             ?? collect($emailAddresses)->first();
         
-        // Telefonnummern
+        // Telefonnummern: Primäre bevorzugen (unabhängig vom Typ), sonst erste
         $phoneNumbers = $employee->getPhoneNumbers();
-        $phoneLandline = collect($phoneNumbers)->first(function ($phone) {
-            return in_array(strtolower($phone['type'] ?? ''), ['landline', 'festnetz', 'telefon']);
-        });
-        $phoneMobile = collect($phoneNumbers)->first(function ($phone) {
-            return in_array(strtolower($phone['type'] ?? ''), ['mobile', 'handy', 'mobil']);
-        });
+        
+        // Primäre Telefonnummer (unabhängig vom Typ)
+        $primaryPhone = collect($phoneNumbers)->firstWhere('is_primary')
+            ?? collect($phoneNumbers)->first();
+        
+        // Prüfe ob primäre Telefonnummer Landline oder Mobile ist
+        $phoneLandline = null;
+        $phoneMobile = null;
+        
+        if ($primaryPhone) {
+            $phoneType = strtolower($primaryPhone['type'] ?? '');
+            if (in_array($phoneType, ['landline', 'festnetz', 'telefon'])) {
+                $phoneLandline = $primaryPhone;
+            } elseif (in_array($phoneType, ['mobile', 'handy', 'mobil'])) {
+                $phoneMobile = $primaryPhone;
+            }
+        }
+        
+        // Falls keine primäre gefunden oder Typ nicht erkannt, nach Typ suchen
+        if (!$phoneLandline) {
+            $phoneLandline = collect($phoneNumbers)
+                ->filter(function ($phone) {
+                    return in_array(strtolower($phone['type'] ?? ''), ['landline', 'festnetz', 'telefon']);
+                })
+                ->first();
+        }
+        
+        if (!$phoneMobile) {
+            $phoneMobile = collect($phoneNumbers)
+                ->filter(function ($phone) {
+                    return in_array(strtolower($phone['type'] ?? ''), ['mobile', 'handy', 'mobil']);
+                })
+                ->first();
+        }
         
         // Adressen - direkt vom Contact holen für besseren Zugriff auf Country-Code
         // Nur aktive Adressen verwenden
