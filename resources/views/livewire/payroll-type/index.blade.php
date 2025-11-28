@@ -5,9 +5,9 @@
 
     <x-ui-page-container>
         <x-ui-panel title="Übersicht" subtitle="Lohnarten verwalten">
-            <div class="flex justify-between items-center mb-4">
+            <div class="flex flex-wrap gap-3 justify-between items-center mb-4">
                 <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" class="max-w-xs" />
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     <a href="{{ route('hcm.payroll-types.export-csv') }}" 
                        class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                         @svg('heroicon-o-document-arrow-down', 'w-4 h-4') CSV Download
@@ -17,9 +17,14 @@
                         @svg('heroicon-o-document-text', 'w-4 h-4') HTML Export
                     </a>
                 </div>
-                <x-ui-button variant="primary" size="sm" wire:click="openCreateModal">
-                    @svg('heroicon-o-plus', 'w-4 h-4') Neu
-                </x-ui-button>
+                <div class="flex gap-2">
+                    <x-ui-button variant="secondary-outline" size="sm" wire:click="openCreateModal">
+                        @svg('heroicon-o-plus', 'w-4 h-4') Quick Add
+                    </x-ui-button>
+                    <x-ui-button variant="primary" size="sm" wire:navigate href="{{ route('hcm.payroll-types.create') }}">
+                        @svg('heroicon-o-pencil-square', 'w-4 h-4') Manuell anlegen
+                    </x-ui-button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full table-auto border-collapse text-sm">
@@ -38,7 +43,11 @@
                     <tbody class="divide-y divide-[var(--ui-border)]/60">
                         @forelse($payrollTypes as $type)
                             <tr>
-                                <td class="px-4 py-2 font-medium text-[var(--ui-secondary)]">{{ $type->code }}</td>
+                                <td class="px-4 py-2 font-medium text-[var(--ui-secondary)]">
+                                    <a wire:navigate href="{{ route('hcm.payroll-types.show', $type) }}" class="hover:underline">
+                                        {{ $type->code }}
+                                    </a>
+                                </td>
                                 <td class="px-4 py-2">
                                     @if($type->lanr)
                                         <span class="text-[var(--ui-muted)]">{{ $type->lanr }}</span>
@@ -48,7 +57,16 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <div>
-                                        <div class="font-medium">{{ $type->name }}</div>
+                                        <div class="font-medium flex items-center gap-2">
+                                            <a wire:navigate href="{{ route('hcm.payroll-types.show', $type) }}" class="hover:underline">
+                                                {{ $type->name }}
+                                            </a>
+                                            @if($type->is_active)
+                                                <x-ui-badge variant="success" size="2xs">Aktiv</x-ui-badge>
+                                            @else
+                                                <x-ui-badge variant="secondary" size="2xs">Inaktiv</x-ui-badge>
+                                            @endif
+                                        </div>
                                         @if($type->short_name)
                                             <div class="text-xs text-[var(--ui-muted)]">{{ $type->short_name }}</div>
                                         @endif

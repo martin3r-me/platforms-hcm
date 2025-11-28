@@ -43,7 +43,6 @@ class HcmServiceProvider extends ServiceProvider
                 'routing'    => config('hcm.routing'),
                 'guard'      => config('hcm.guard'),
                 'navigation' => config('hcm.navigation'),
-                'sidebar'    => config('hcm.sidebar'),
             ]);
         }
 

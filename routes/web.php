@@ -68,6 +68,8 @@ Route::get('/job-activities', JobActivityIndex::class)->name('hcm.job-activities
 Route::get('/payroll-types', PayrollTypeIndex::class)->name('hcm.payroll-types.index');
 Route::get('/payroll-types/export/csv', [PayrollTypeIndex::class, 'exportCsv'])->name('hcm.payroll-types.export-csv');
 Route::get('/payroll-types/export/pdf', [PayrollTypeIndex::class, 'exportPdf'])->name('hcm.payroll-types.export-pdf');
+Route::get('/payroll-types/create', \Platform\Hcm\Livewire\PayrollType\Create::class)->name('hcm.payroll-types.create');
+Route::get('/payroll-types/{payrollType}', \Platform\Hcm\Livewire\PayrollType\Show::class)->name('hcm.payroll-types.show');
 
 // Personengruppenschlüssel (Lookup)
 Route::get('/person-groups', PersonGroupIndex::class)->name('hcm.person-groups.index');
