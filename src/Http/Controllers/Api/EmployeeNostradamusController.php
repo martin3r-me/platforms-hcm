@@ -39,7 +39,9 @@ class EmployeeNostradamusController extends ApiController
         $query = HcmEmployee::with([
             'crmContactLinks.contact.emailAddresses',
             'crmContactLinks.contact.phoneNumbers',
-            'crmContactLinks.contact.postalAddresses.country', // Eager load country for code
+            'crmContactLinks.contact.postalAddresses' => function ($q) {
+                $q->where('is_active', true)->with('country'); // Nur aktive Adressen mit Country
+            },
             'crmContactLinks.contact.gender',
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
@@ -99,7 +101,10 @@ class EmployeeNostradamusController extends ApiController
         });
         
         // Adressen - direkt vom Contact holen für besseren Zugriff auf Country-Code
-        $postalAddresses = $contact?->postalAddresses ?? collect();
+        // Nur aktive Adressen verwenden
+        $postalAddresses = $contact?->postalAddresses 
+            ? $contact->postalAddresses->where('is_active', true) 
+            : collect();
         $primaryAddress = $postalAddresses->firstWhere('is_primary') 
             ?? $postalAddresses->first();
         
