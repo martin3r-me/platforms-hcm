@@ -55,19 +55,49 @@ class ImportSollstundenFromCsv extends Command
             return 1;
         }
 
+        // BOM-Zeichen entfernen (falls vorhanden)
+        if (!empty($header[0])) {
+            $header[0] = preg_replace('/^\xEF\xBB\xBF/', '', $header[0]); // UTF-8 BOM entfernen
+        }
+
         $this->info("CSV Header: " . implode(' | ', $header));
         $this->newLine();
 
         // Zeilen verarbeiten
+        $lineNumber = 1; // Start bei 1, da Header bereits gelesen
+        $processedInBatch = 0;
+        
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
-            if (empty($row[0])) {
+            $lineNumber++;
+            
+            // BOM-Zeichen entfernen (falls vorhanden)
+            if (!empty($row[0])) {
+                $row[0] = preg_replace('/^\xEF\xBB\xBF/', '', $row[0]);
+            }
+
+            // Prüfe ob Zeile leer ist
+            if (empty($row) || (count($row) === 1 && empty(trim($row[0])))) {
                 continue; // Leere Zeilen überspringen
             }
 
+            // Debug: Zeige erste paar Zeilen
+            if ($lineNumber <= 3) {
+                $this->line("  [Debug] Zeile {$lineNumber}: " . implode(' | ', array_slice($row, 0, 3)) . '...');
+            }
+
             $this->processRow($row, $employerId, $dryRun);
+            $processedInBatch++;
+
+            // Progress-Anzeige alle 10 Zeilen
+            if ($processedInBatch % 10 === 0) {
+                $this->line("  ... {$processedInBatch} Zeilen verarbeitet ...");
+            }
         }
 
         fclose($handle);
+        
+        $this->newLine();
+        $this->info("CSV-Datei vollständig gelesen ({$lineNumber} Zeilen insgesamt)");
 
         // Zusammenfassung
         $this->newLine();
@@ -106,7 +136,12 @@ class ImportSollstundenFromCsv extends Command
                 return; // Keine Employee Number, überspringen
             }
 
-            if (empty($sollstunden)) {
+            // Prüfe ob Zeile nur aus leeren Feldern besteht
+            if (count(array_filter($row, function($val) { return !empty(trim($val)); })) === 0) {
+                return; // Leere Zeile
+            }
+
+            if (empty($sollstunden) || $sollstunden === '') {
                 $this->warn("  Zeile ohne Sollstunden übersprungen: Employee {$employeeNumber}");
                 return;
             }
