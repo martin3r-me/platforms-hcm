@@ -81,6 +81,18 @@
                 />
 
                 <x-ui-input-select
+                    name="employee.employer_id"
+                    label="Arbeitgeber"
+                    :options="$this->availableEmployers"
+                    optionValue="id"
+                    optionLabel="display_name"
+                    :nullable="true"
+                    nullLabel="Kein Arbeitgeber"
+                    wire:model.live="employee.employer_id"
+                    placeholder="Arbeitgeber wählen..."
+                />
+
+                <x-ui-input-select
                     name="employee.schooling_level"
                     label="Höchster Schulabschluss (Stelle 6)"
                     :options="[1=>'Ohne Schulabschluss',2=>'Haupt-/Volksschule',3=>'Mittlere Reife',4=>'Abitur/Fachabitur',9=>'Unbekannt']"
@@ -94,6 +106,22 @@
                     :options="[1=>'Ohne beruflichen Abschluss',2=>'Anerkannte Berufsausbildung',3=>'Meister/Techniker/Fachschule',4=>'Bachelor',5=>'Diplom/Master/Staatsexamen',6=>'Promotion',9=>'Unbekannt']"
                     wire:model.live="employee.vocational_training_level"
                     placeholder="Auswahl..."
+                />
+
+                <x-ui-input-text 
+                    name="employee.children_count"
+                    label="Anzahl Kinder"
+                    wire:model.live.debounce.500ms="employee.children_count"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                />
+
+                <x-ui-input-checkbox 
+                    model="employee.is_active"
+                    name="employee.is_active" 
+                    label="Aktiv"
+                    wire:model.live="employee.is_active"
                 />
             </div>
         </div>

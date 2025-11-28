@@ -650,81 +650,164 @@
                 {{-- Arbeitszeit --}}
                 <div class="space-y-4">
                     <h3 class="text-lg font-medium text-[var(--ui-secondary)]">Arbeitszeit</h3>
-                    <div class="space-y-3">
-                        @if($contract->hours_per_month)
-                            <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
-                                <span class="text-sm font-medium text-indigo-700">Monatsstunden</span>
-                                <span class="text-lg font-bold text-indigo-600">{{ $contract->hours_per_month }}h</span>
-                            </div>
-                        @endif
-                        @if($contract->work_days_per_week)
-                            <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
-                                <span class="text-sm font-medium text-indigo-700">Tage/Woche</span>
-                                <span class="text-lg font-bold text-indigo-600">{{ $contract->work_days_per_week }}</span>
-                            </div>
-                        @endif
-                        @if($contract->calendar_work_days)
-                            <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
-                                <span class="text-sm font-medium text-indigo-700">Kalendarische Tage</span>
-                                <span class="text-sm font-medium text-indigo-600">{{ $contract->calendar_work_days }}</span>
-                            </div>
-                        @endif
-                        @if($contract->wage_base_type)
-                            <div class="p-3 bg-gray-50 rounded-lg">
-                                <div class="text-xs text-[var(--ui-muted)] mb-1">Lohngrundart</div>
-                                <div class="text-sm font-medium">{{ $contract->wage_base_type }}</div>
-                            </div>
-                        @endif
-                    </div>
+                    @if($editMode)
+                        <div class="space-y-4">
+                            <x-ui-input-text 
+                                name="hours_per_week" 
+                                label="Wochenstunden"
+                                wire:model="hours_per_week"
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 40"
+                            />
+                            <x-ui-input-text 
+                                name="hours_per_month" 
+                                label="Monatsstunden"
+                                wire:model="hours_per_month"
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 173.33"
+                            />
+                            <x-ui-input-text 
+                                name="work_days_per_week" 
+                                label="Arbeitstage/Woche"
+                                wire:model="work_days_per_week"
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 5"
+                            />
+                            <x-ui-input-text 
+                                name="calendar_work_days" 
+                                label="Kalendarische Arbeitstage"
+                                wire:model="calendar_work_days"
+                                type="number"
+                                placeholder="z.B. 260"
+                            />
+                            <x-ui-input-text 
+                                name="wage_base_type" 
+                                label="Lohngrundart"
+                                wire:model="wage_base_type"
+                                placeholder="z.B. Monat, Stunde"
+                            />
+                        </div>
+                    @else
+                        <div class="space-y-3">
+                            @if($contract->hours_per_week)
+                                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                                    <span class="text-sm font-medium text-indigo-700">Wochenstunden</span>
+                                    <span class="text-lg font-bold text-indigo-600">{{ $contract->hours_per_week }}h</span>
+                                </div>
+                            @endif
+                            @if($contract->hours_per_month)
+                                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                                    <span class="text-sm font-medium text-indigo-700">Monatsstunden</span>
+                                    <span class="text-lg font-bold text-indigo-600">{{ $contract->hours_per_month }}h</span>
+                                </div>
+                            @endif
+                            @if($contract->work_days_per_week)
+                                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                                    <span class="text-sm font-medium text-indigo-700">Tage/Woche</span>
+                                    <span class="text-lg font-bold text-indigo-600">{{ $contract->work_days_per_week }}</span>
+                                </div>
+                            @endif
+                            @if($contract->calendar_work_days)
+                                <div class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
+                                    <span class="text-sm font-medium text-indigo-700">Kalendarische Tage</span>
+                                    <span class="text-sm font-medium text-indigo-600">{{ $contract->calendar_work_days }}</span>
+                                </div>
+                            @endif
+                            @if($contract->wage_base_type)
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="text-xs text-[var(--ui-muted)] mb-1">Lohngrundart</div>
+                                    <div class="text-sm font-medium">{{ $contract->wage_base_type }}</div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
                 
                 {{-- Urlaub --}}
                 <div class="space-y-4">
                     <h3 class="text-lg font-medium text-[var(--ui-secondary)]">Urlaub</h3>
-                    <div class="space-y-3">
-                        @if($contract->vacation_entitlement !== null)
-                            <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                <span class="text-sm font-medium text-green-700">Ansprüche</span>
-                                <span class="text-lg font-bold text-green-600">{{ $contract->vacation_entitlement }} Tage</span>
-                            </div>
-                        @endif
-                        @if($contract->vacation_taken !== null)
-                            <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                                <span class="text-sm font-medium text-yellow-700">Genommen</span>
-                                <span class="text-lg font-bold text-yellow-600">{{ $contract->vacation_taken }} Tage</span>
-                            </div>
-                        @endif
-                        @if($contract->vacation_entitlement !== null && $contract->vacation_taken !== null)
-                            @php
-                                $remaining = $contract->vacation_entitlement - $contract->vacation_taken;
-                                $percentage = $contract->vacation_entitlement > 0 
-                                    ? ($contract->vacation_taken / $contract->vacation_entitlement) * 100 
-                                    : 0;
-                            @endphp
-                            <div class="p-3 bg-blue-50 rounded-lg">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-sm font-medium text-blue-700">Verbleibend</span>
-                                    <span class="text-lg font-bold text-blue-600">{{ $remaining }} Tage</span>
+                    @if($editMode)
+                        <div class="space-y-4">
+                            <x-ui-input-text 
+                                name="vacation_entitlement" 
+                                label="Urlaubsanspruch (Tage)"
+                                wire:model="vacation_entitlement"
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 30"
+                            />
+                            <x-ui-input-text 
+                                name="vacation_taken" 
+                                label="Urlaub genommen (Tage)"
+                                wire:model="vacation_taken"
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 5"
+                            />
+                            <x-ui-input-text 
+                                name="vacation_prev_year" 
+                                label="Urlaub Vorjahr (Tage)"
+                                wire:model="vacation_prev_year"
+                                type="number"
+                                step="0.5"
+                                placeholder="z.B. 2"
+                            />
+                            <x-ui-input-text 
+                                name="vacation_expiry_date" 
+                                label="Urlaub verfällt am"
+                                wire:model="vacation_expiry_date"
+                                type="date"
+                            />
+                        </div>
+                    @else
+                        <div class="space-y-3">
+                            @if($contract->vacation_entitlement !== null)
+                                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                                    <span class="text-sm font-medium text-green-700">Ansprüche</span>
+                                    <span class="text-lg font-bold text-green-600">{{ $contract->vacation_entitlement }} Tage</span>
                                 </div>
-                                <div class="w-full bg-blue-200 rounded-full h-2">
-                                    <div class="bg-blue-600 h-2 rounded-full transition-all" style="width: {{ min($percentage, 100) }}%"></div>
+                            @endif
+                            @if($contract->vacation_taken !== null)
+                                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                                    <span class="text-sm font-medium text-yellow-700">Genommen</span>
+                                    <span class="text-lg font-bold text-yellow-600">{{ $contract->vacation_taken }} Tage</span>
                                 </div>
-                                <div class="text-xs text-blue-600 mt-1">{{ number_format($percentage, 1) }}% genommen</div>
-                            </div>
-                        @endif
-                        @if($contract->vacation_prev_year !== null)
-                            <div class="p-3 bg-gray-50 rounded-lg">
-                                <div class="text-xs text-[var(--ui-muted)] mb-1">Vorjahr</div>
-                                <div class="text-sm font-medium">{{ $contract->vacation_prev_year }} Tage</div>
-                            </div>
-                        @endif
-                        @if($contract->vacation_expiry_date)
-                            <div class="p-3 bg-orange-50 rounded-lg">
-                                <div class="text-xs text-orange-700 mb-1">Verfällt am</div>
-                                <div class="text-sm font-medium text-orange-600">{{ $contract->vacation_expiry_date->format('d.m.Y') }}</div>
-                            </div>
-                        @endif
-                    </div>
+                            @endif
+                            @if($contract->vacation_entitlement !== null && $contract->vacation_taken !== null)
+                                @php
+                                    $remaining = $contract->vacation_entitlement - $contract->vacation_taken;
+                                    $percentage = $contract->vacation_entitlement > 0 
+                                        ? ($contract->vacation_taken / $contract->vacation_entitlement) * 100 
+                                        : 0;
+                                @endphp
+                                <div class="p-3 bg-blue-50 rounded-lg">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-sm font-medium text-blue-700">Verbleibend</span>
+                                        <span class="text-lg font-bold text-blue-600">{{ $remaining }} Tage</span>
+                                    </div>
+                                    <div class="w-full bg-blue-200 rounded-full h-2">
+                                        <div class="bg-blue-600 h-2 rounded-full transition-all" style="width: {{ min($percentage, 100) }}%"></div>
+                                    </div>
+                                    <div class="text-xs text-blue-600 mt-1">{{ number_format($percentage, 1) }}% genommen</div>
+                                </div>
+                            @endif
+                            @if($contract->vacation_prev_year !== null)
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="text-xs text-[var(--ui-muted)] mb-1">Vorjahr</div>
+                                    <div class="text-sm font-medium">{{ $contract->vacation_prev_year }} Tage</div>
+                                </div>
+                            @endif
+                            @if($contract->vacation_expiry_date)
+                                <div class="p-3 bg-orange-50 rounded-lg">
+                                    <div class="text-xs text-orange-700 mb-1">Verfällt am</div>
+                                    <div class="text-sm font-medium text-orange-600">{{ $contract->vacation_expiry_date->format('d.m.Y') }}</div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
                 </div>
                 
                 {{-- Zusatzinfos --}}

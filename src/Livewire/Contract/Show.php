@@ -25,6 +25,19 @@ class Show extends Component
     public $minimum_wage_hourly_rate;
     public $minimum_wage_monthly_hours;
     public $minimum_wage_notes;
+    
+    // Arbeitszeit-Felder
+    public $hours_per_week;
+    public $hours_per_month;
+    public $work_days_per_week;
+    public $calendar_work_days;
+    public $wage_base_type;
+    
+    // Urlaub-Felder
+    public $vacation_entitlement;
+    public $vacation_taken;
+    public $vacation_prev_year;
+    public $vacation_expiry_date;
 
     // SV/Steuer-Zuordnungen
     public $insurance_status_id;
@@ -86,6 +99,19 @@ class Show extends Component
         $this->vocational_training_level = $this->contract->vocational_training_level;
         $this->is_temp_agency = (bool) $this->contract->is_temp_agency;
         $this->contract_form = $this->contract->contract_form;
+        
+        // Arbeitszeit-Felder
+        $this->hours_per_week = $this->contract->hours_per_week;
+        $this->hours_per_month = $this->contract->hours_per_month;
+        $this->work_days_per_week = $this->contract->work_days_per_week;
+        $this->calendar_work_days = $this->contract->calendar_work_days;
+        $this->wage_base_type = $this->contract->wage_base_type;
+        
+        // Urlaub-Felder
+        $this->vacation_entitlement = $this->contract->vacation_entitlement;
+        $this->vacation_taken = $this->contract->vacation_taken;
+        $this->vacation_prev_year = $this->contract->vacation_prev_year;
+        $this->vacation_expiry_date = $this->contract->vacation_expiry_date?->format('Y-m-d');
     }
 
     public function toggleEdit()
@@ -120,6 +146,15 @@ class Show extends Component
             'vocational_training_level' => 'nullable|in:1,2,3,4,5,6,9',
             'is_temp_agency' => 'boolean',
             'contract_form' => 'nullable|in:1,2,3,4,5,6,7,8,9',
+            'hours_per_week' => 'nullable|numeric|min:0|max:168',
+            'hours_per_month' => 'nullable|numeric|min:0|max:744',
+            'work_days_per_week' => 'nullable|numeric|min:0|max:7',
+            'calendar_work_days' => 'nullable|integer|min:0',
+            'wage_base_type' => 'nullable|string|max:50',
+            'vacation_entitlement' => 'nullable|numeric|min:0',
+            'vacation_taken' => 'nullable|numeric|min:0',
+            'vacation_prev_year' => 'nullable|numeric|min:0',
+            'vacation_expiry_date' => 'nullable|date',
         ]);
 
         $this->contract->update([
@@ -142,6 +177,15 @@ class Show extends Component
             'vocational_training_level' => $this->vocational_training_level,
             'is_temp_agency' => $this->is_temp_agency,
             'contract_form' => $this->contract_form,
+            'hours_per_week' => $this->hours_per_week,
+            'hours_per_month' => $this->hours_per_month,
+            'work_days_per_week' => $this->work_days_per_week,
+            'calendar_work_days' => $this->calendar_work_days,
+            'wage_base_type' => $this->wage_base_type,
+            'vacation_entitlement' => $this->vacation_entitlement,
+            'vacation_taken' => $this->vacation_taken,
+            'vacation_prev_year' => $this->vacation_prev_year,
+            'vacation_expiry_date' => $this->vacation_expiry_date,
         ]);
 
         $this->contract->levyTypes()->sync($this->selected_levy_type_ids ?? []);

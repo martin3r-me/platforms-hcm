@@ -243,6 +243,14 @@
         @endif
     </x-ui-page-container>
 
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-6 space-y-3 text-sm">
+                <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
     <x-ui-modal wire:model="modalShow" size="lg">
         <x-slot name="header">Neue Lohnart</x-slot>
         <div class="space-y-4">

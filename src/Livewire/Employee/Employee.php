@@ -74,6 +74,9 @@ class Employee extends Component
     {
         return [
             'employee.employee_number' => 'required|string|max:255|unique:hcm_employees,employee_number,' . $this->employee->id,
+            'employee.employer_id' => 'nullable|exists:hcm_employers,id',
+            'employee.children_count' => 'nullable|integer|min:0',
+            'employee.is_active' => 'boolean',
         ];
     }
 
@@ -269,6 +272,15 @@ class Employee extends Component
             ->orderBy('name')
             ->get()
             ->mapWithKeys(fn($item) => [$item->id => $item->name]);
+    }
+
+    #[Computed]
+    public function availableEmployers()
+    {
+        return \Platform\Hcm\Models\HcmEmployer::where('team_id', auth()->user()->currentTeam->id)
+            ->where('is_active', true)
+            ->orderBy('display_name')
+            ->get();
     }
 
     public function render()
