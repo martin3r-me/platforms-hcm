@@ -4,11 +4,13 @@ namespace Platform\Hcm\Livewire\PayrollType;
 
 use Livewire\Component;
 use Platform\Hcm\Models\HcmPayrollType;
+use Platform\Hcm\Services\FinanceAccountService;
 
 class Show extends Component
 {
     public HcmPayrollType $payrollType;
     public array $form = [];
+    public array $financeAccounts = [];
 
     public function mount(HcmPayrollType $payrollType): void
     {
@@ -16,6 +18,8 @@ class Show extends Component
         abort_unless($teamId && $payrollType->team_id === $teamId, 403);
 
         $this->payrollType = $payrollType;
+        $this->financeAccounts = FinanceAccountService::getAccountsForTeam($teamId);
+        
         $this->form = [
             'code' => $payrollType->code,
             'lanr' => $payrollType->lanr,
@@ -33,8 +37,9 @@ class Show extends Component
             'valid_to' => optional($payrollType->valid_to)->format('Y-m-d'),
             'is_active' => (bool) $payrollType->is_active,
             'display_group' => $payrollType->display_group,
-            'sort_order' => $payrollType->sort_order,
             'description' => $payrollType->description,
+            'debit_finance_account_id' => $payrollType->debit_finance_account_id,
+            'credit_finance_account_id' => $payrollType->credit_finance_account_id,
         ];
     }
 
@@ -57,8 +62,9 @@ class Show extends Component
             'form.valid_to' => 'nullable|date|after_or_equal:form.valid_from',
             'form.is_active' => 'boolean',
             'form.display_group' => 'nullable|string|max:100',
-            'form.sort_order' => 'nullable|integer|min:0',
             'form.description' => 'nullable|string',
+            'form.debit_finance_account_id' => 'nullable|exists:finance_accounts,id',
+            'form.credit_finance_account_id' => 'nullable|exists:finance_accounts,id',
         ];
     }
 
@@ -83,8 +89,9 @@ class Show extends Component
             'valid_to' => $this->form['valid_to'],
             'is_active' => (bool) $this->form['is_active'],
             'display_group' => $this->form['display_group'],
-            'sort_order' => $this->form['sort_order'],
             'description' => $this->form['description'],
+            'debit_finance_account_id' => $this->form['debit_finance_account_id'] ?: null,
+            'credit_finance_account_id' => $this->form['credit_finance_account_id'] ?: null,
         ]);
 
         session()->flash('message', 'Lohnart aktualisiert.');

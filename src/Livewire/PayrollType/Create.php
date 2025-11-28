@@ -4,13 +4,18 @@ namespace Platform\Hcm\Livewire\PayrollType;
 
 use Livewire\Component;
 use Platform\Hcm\Models\HcmPayrollType;
+use Platform\Hcm\Services\FinanceAccountService;
 
 class Create extends Component
 {
     public array $form = [];
+    public array $financeAccounts = [];
 
     public function mount(): void
     {
+        $teamId = auth()->user()->currentTeam->id ?? null;
+        $this->financeAccounts = FinanceAccountService::getAccountsForTeam($teamId);
+        
         $this->form = [
             'code' => '',
             'lanr' => '',
@@ -28,8 +33,9 @@ class Create extends Component
             'valid_to' => null,
             'is_active' => true,
             'display_group' => '',
-            'sort_order' => null,
             'description' => '',
+            'debit_finance_account_id' => null,
+            'credit_finance_account_id' => null,
         ];
     }
 
@@ -52,8 +58,9 @@ class Create extends Component
             'form.valid_to' => 'nullable|date|after_or_equal:form.valid_from',
             'form.is_active' => 'boolean',
             'form.display_group' => 'nullable|string|max:100',
-            'form.sort_order' => 'nullable|integer|min:0',
             'form.description' => 'nullable|string',
+            'form.debit_finance_account_id' => 'nullable|exists:finance_accounts,id',
+            'form.credit_finance_account_id' => 'nullable|exists:finance_accounts,id',
         ];
     }
 
@@ -82,8 +89,9 @@ class Create extends Component
             'valid_to' => $this->form['valid_to'],
             'is_active' => (bool) $this->form['is_active'],
             'display_group' => $this->form['display_group'],
-            'sort_order' => $this->form['sort_order'],
             'description' => $this->form['description'],
+            'debit_finance_account_id' => $this->form['debit_finance_account_id'] ?: null,
+            'credit_finance_account_id' => $this->form['credit_finance_account_id'] ?: null,
         ]);
 
         session()->flash('message', 'Lohnart erstellt.');
