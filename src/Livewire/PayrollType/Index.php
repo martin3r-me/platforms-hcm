@@ -13,6 +13,7 @@ class Index extends Component
 
     public $modalShow = false;
     public $search = '';
+    public $showInactive = false; // Filter für inaktive Lohnarten
     public $form = [
         'code' => '',
         'lanr' => '',
@@ -131,7 +132,7 @@ class Index extends Component
 
     public function render()
     {
-        $payrollTypes = HcmPayrollType::query()
+        $query = HcmPayrollType::query()
             ->with(['debitFinanceAccount', 'creditFinanceAccount'])
             ->where('team_id', auth()->user()->currentTeam->id)
             ->when($this->search !== '', function ($q) {
@@ -140,12 +141,27 @@ class Index extends Component
                        ->orWhere('name', 'like', '%'.$this->search.'%')
                        ->orWhere('category', 'like', '%'.$this->search.'%');
                 });
-            })
+            });
+
+        // Filter nach aktiv/inaktiv
+        if (!$this->showInactive) {
+            $query->where('is_active', true);
+        }
+
+        // Getrennt nach aktiv/inaktiv laden
+        $activePayrollTypes = (clone $query)
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get();
+
+        $inactivePayrollTypes = (clone $query)
+            ->where('is_active', false)
             ->orderBy('code')
             ->get();
 
         return view('hcm::livewire.payroll-type.index', [
-            'payrollTypes' => $payrollTypes,
+            'activePayrollTypes' => $activePayrollTypes,
+            'inactivePayrollTypes' => $inactivePayrollTypes,
         ])->layout('platform::layouts.app');
     }
 }
