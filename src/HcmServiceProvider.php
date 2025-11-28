@@ -55,6 +55,11 @@ class HcmServiceProvider extends ServiceProvider
             ModuleRouter::group('hcm', function () {
                 $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
             });
+
+            // API-Routen registrieren
+            ModuleRouter::apiGroup('hcm', function () {
+                $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
+            });
         }
 
         // Schritt 4: Migrationen laden
