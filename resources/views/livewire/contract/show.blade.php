@@ -5,12 +5,42 @@
                 <a href="{{ route('hcm.employees.show', $contract->employee) }}" class="text-sm text-[var(--ui-muted)] hover:text-[var(--ui-secondary)]" wire:navigate>
                     ← {{ $contract->employee->full_name ?? $contract->employee->employee_number }}
                 </a>
-                <x-ui-button variant="secondary" wire:click="toggleEdit">
-                    @svg('heroicon-o-pencil', 'w-4 h-4')
-                    {{ $editMode ? 'Abbrechen' : 'Bearbeiten' }}
-                </x-ui-button>
             </div>
         </x-ui-page-navbar>
+    </x-slot>
+
+    <x-slot name="sidebar">
+        <x-ui-page-sidebar title="Aktionen" width="w-80" :defaultOpen="true" side="left">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Aktionen</h3>
+                    <div class="space-y-2">
+                        <x-ui-button variant="primary" size="sm" wire:click="toggleEdit" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-pencil', 'w-4 h-4')
+                                {{ $editMode ? 'Abbrechen' : 'Bearbeiten' }}
+                            </span>
+                        </x-ui-button>
+                        @if($editMode)
+                            <x-ui-button variant="primary" size="sm" wire:click="save" class="w-full">
+                                <span class="inline-flex items-center gap-2">
+                                    @svg('heroicon-o-check', 'w-4 h-4')
+                                    Speichern
+                                </span>
+                            </x-ui-button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </x-ui-page-sidebar>
+    </x-slot>
+
+    <x-slot name="activity">
+        <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
+            <div class="p-6 space-y-3 text-sm">
+                <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
+            </div>
+        </x-ui-page-sidebar>
     </x-slot>
 
     <x-ui-page-container spacing="space-y-8">
@@ -893,17 +923,5 @@
             </div>
         @endif
 
-        {{-- Save Button --}}
-        @if($editMode)
-            <div class="flex justify-end gap-3">
-                <x-ui-button variant="secondary" wire:click="toggleEdit">
-                    Abbrechen
-                </x-ui-button>
-                <x-ui-button variant="primary" wire:click="save">
-                    @svg('heroicon-o-check', 'w-4 h-4')
-                    Speichern
-                </x-ui-button>
-            </div>
-        @endif
     </x-ui-page-container>
 </x-ui-page>

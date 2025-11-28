@@ -684,7 +684,7 @@
     </x-ui-page-container>
 
     <x-slot name="sidebar">
-        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true">
+        <x-ui-page-sidebar title="Übersicht" width="w-80" :defaultOpen="true" side="left">
             <div class="p-6 space-y-6">
                 {{-- Aktionen --}}
                 <div>
