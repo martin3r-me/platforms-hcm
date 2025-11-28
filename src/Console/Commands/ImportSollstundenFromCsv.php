@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ImportSollstundenFromCsv extends Command
 {
@@ -158,7 +159,6 @@ class ImportSollstundenFromCsv extends Command
             $weeklyHours = round($monthlyHours / 4.4, 2);
 
             // Finde Employee
-            $this->line("  [Debug] Suche Employee {$employeeNumber}...");
             $employee = HcmEmployee::where('employee_number', $employeeNumber)
                 ->where('employer_id', $employerId)
                 ->first();
@@ -170,9 +170,7 @@ class ImportSollstundenFromCsv extends Command
                 return;
             }
 
-            $this->line("  [Debug] Employee gefunden (ID: {$employee->id}), suche Contract...");
-
-            // Finde aktiven Contract - direkt über Query statt über Methode
+            // Finde aktiven Contract - direkt über Query statt über Methode (schneller)
             $today = now()->toDateString();
             $contract = HcmEmployeeContract::where('employee_id', $employee->id)
                 ->where('is_active', true)
@@ -192,13 +190,9 @@ class ImportSollstundenFromCsv extends Command
                 return;
             }
 
-            $this->line("  [Debug] Contract gefunden (ID: {$contract->id})");
-
             // Prüfe ob Werte sich geändert haben
             $currentMonthlyHours = $contract->hours_per_month;
             $currentWeeklyHours = $contract->hours_per_week;
-
-            $this->line("  [Debug] Aktuelle Werte - Monat: {$currentMonthlyHours}, Woche: {$currentWeeklyHours}");
 
             if ($currentMonthlyHours == $monthlyHours && $currentWeeklyHours == $weeklyHours) {
                 $this->line("  - Employee {$employeeNumber}: Werte bereits korrekt (Monat: {$monthlyHours}h, Woche: {$weeklyHours}h)");
@@ -208,12 +202,11 @@ class ImportSollstundenFromCsv extends Command
                 $oldWeekly = $currentWeeklyHours ?? 'nicht gesetzt';
 
                 if (!$dryRun) {
-                    $this->line("  [Debug] Starte Update...");
+                    // Update über Model - Encryptable Trait verarbeitet jetzt nur geänderte Felder
                     $contract->update([
                         'hours_per_month' => $monthlyHours,
                         'hours_per_week' => $weeklyHours,
                     ]);
-                    $this->line("  [Debug] Update abgeschlossen");
                 }
 
                 $this->info("  ✓ Employee {$employeeNumber}: Contract aktualisiert");
@@ -221,6 +214,9 @@ class ImportSollstundenFromCsv extends Command
                 $this->info("     Wochenstunden: {$oldWeekly} → {$weeklyHours} (berechnet: {$monthlyHours} / 4.4)");
                 $this->updatedCount++;
             }
+
+            // Memory-Management: Objekte freigeben
+            unset($contract, $employee);
 
             $this->processedCount++;
 
