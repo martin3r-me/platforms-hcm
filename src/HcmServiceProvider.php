@@ -94,6 +94,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\UpdatePayrollTypesSuccessors::class,
                 \Platform\Hcm\Console\Commands\DeactivateExpiredContracts::class,
                 \Platform\Hcm\Console\Commands\UpdateEmployeeEmailsFromCsv::class,
+                \Platform\Hcm\Console\Commands\ImportSollstundenFromCsv::class,
             ]);
         }
     }
