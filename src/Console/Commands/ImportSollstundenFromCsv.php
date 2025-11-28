@@ -202,11 +202,15 @@ class ImportSollstundenFromCsv extends Command
                 $oldWeekly = $currentWeeklyHours ?? 'nicht gesetzt';
 
                 if (!$dryRun) {
-                    // Update über Model - Encryptable Trait verarbeitet jetzt nur geänderte Felder
-                    $contract->update([
-                        'hours_per_month' => $monthlyHours,
-                        'hours_per_week' => $weeklyHours,
-                    ]);
+                    // Direktes DB-Update um Memory-Leak zu vermeiden
+                    // Das umgeht Model-Events und Encryptable Trait komplett
+                    DB::table('hcm_employee_contracts')
+                        ->where('id', $contract->id)
+                        ->update([
+                            'hours_per_month' => $monthlyHours,
+                            'hours_per_week' => $weeklyHours,
+                            'updated_at' => now(),
+                        ]);
                 }
 
                 $this->info("  ✓ Employee {$employeeNumber}: Contract aktualisiert");
