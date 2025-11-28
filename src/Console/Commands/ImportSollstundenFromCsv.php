@@ -158,6 +158,7 @@ class ImportSollstundenFromCsv extends Command
             $weeklyHours = round($monthlyHours / 4.4, 2);
 
             // Finde Employee
+            $this->line("  [Debug] Suche Employee {$employeeNumber}...");
             $employee = HcmEmployee::where('employee_number', $employeeNumber)
                 ->where('employer_id', $employerId)
                 ->first();
@@ -169,8 +170,20 @@ class ImportSollstundenFromCsv extends Command
                 return;
             }
 
-            // Finde aktiven Contract
-            $contract = $employee->activeContract();
+            $this->line("  [Debug] Employee gefunden (ID: {$employee->id}), suche Contract...");
+
+            // Finde aktiven Contract - direkt über Query statt über Methode
+            $today = now()->toDateString();
+            $contract = HcmEmployeeContract::where('employee_id', $employee->id)
+                ->where('is_active', true)
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('start_date')->orWhere('start_date', '<=', $today);
+                })
+                ->where(function ($q) use ($today) {
+                    $q->whereNull('end_date')->orWhere('end_date', '>=', $today);
+                })
+                ->orderByDesc('start_date')
+                ->first();
 
             if (!$contract) {
                 $this->warn("  Kein aktiver Contract für Employee {$employeeNumber} gefunden");
@@ -179,23 +192,29 @@ class ImportSollstundenFromCsv extends Command
                 return;
             }
 
+            $this->line("  [Debug] Contract gefunden (ID: {$contract->id})");
+
             // Prüfe ob Werte sich geändert haben
             $currentMonthlyHours = $contract->hours_per_month;
             $currentWeeklyHours = $contract->hours_per_week;
+
+            $this->line("  [Debug] Aktuelle Werte - Monat: {$currentMonthlyHours}, Woche: {$currentWeeklyHours}");
 
             if ($currentMonthlyHours == $monthlyHours && $currentWeeklyHours == $weeklyHours) {
                 $this->line("  - Employee {$employeeNumber}: Werte bereits korrekt (Monat: {$monthlyHours}h, Woche: {$weeklyHours}h)");
                 $this->skippedCount++;
             } else {
+                $oldMonthly = $currentMonthlyHours ?? 'nicht gesetzt';
+                $oldWeekly = $currentWeeklyHours ?? 'nicht gesetzt';
+
                 if (!$dryRun) {
+                    $this->line("  [Debug] Starte Update...");
                     $contract->update([
                         'hours_per_month' => $monthlyHours,
                         'hours_per_week' => $weeklyHours,
                     ]);
+                    $this->line("  [Debug] Update abgeschlossen");
                 }
-
-                $oldMonthly = $currentMonthlyHours ?? 'nicht gesetzt';
-                $oldWeekly = $currentWeeklyHours ?? 'nicht gesetzt';
 
                 $this->info("  ✓ Employee {$employeeNumber}: Contract aktualisiert");
                 $this->info("     Monatsstunden: {$oldMonthly} → {$monthlyHours}");
