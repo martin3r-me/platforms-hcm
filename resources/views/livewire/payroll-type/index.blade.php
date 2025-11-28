@@ -48,15 +48,15 @@
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Export</h3>
                     <div class="space-y-2">
-                        <a href="{{ route('hcm.payroll-types.export-csv') }}" 
+                    <a href="{{ route('hcm.payroll-types.export-csv') }}" 
                            class="inline-flex items-center gap-2 w-full justify-start px-3 py-2 text-sm font-medium text-[var(--ui-secondary)] bg-[var(--ui-surface)] border border-[var(--ui-border)]/60 rounded-md hover:bg-[var(--ui-muted-5)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--ui-primary)]">
-                            @svg('heroicon-o-document-arrow-down', 'w-4 h-4') CSV Download
-                        </a>
-                        <a href="{{ route('hcm.payroll-types.export-pdf') }}" 
+                        @svg('heroicon-o-document-arrow-down', 'w-4 h-4') CSV Download
+                    </a>
+                    <a href="{{ route('hcm.payroll-types.export-pdf') }}" 
                            class="inline-flex items-center gap-2 w-full justify-start px-3 py-2 text-sm font-medium text-[var(--ui-secondary)] bg-[var(--ui-surface)] border border-[var(--ui-border)]/60 rounded-md hover:bg-[var(--ui-muted-5)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--ui-primary)]">
-                            @svg('heroicon-o-document-text', 'w-4 h-4') HTML Export
-                        </a>
-                    </div>
+                        @svg('heroicon-o-document-text', 'w-4 h-4') HTML Export
+                    </a>
+                </div>
                 </div>
             </div>
         </x-ui-page-sidebar>

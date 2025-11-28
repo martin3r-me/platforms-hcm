@@ -279,7 +279,7 @@ class Employee extends Component
     {
         return \Platform\Hcm\Models\HcmEmployer::where('team_id', auth()->user()->currentTeam->id)
             ->where('is_active', true)
-            ->orderBy('display_name')
+            ->orderBy('employer_number')
             ->get();
     }
 

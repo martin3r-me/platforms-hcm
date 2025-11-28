@@ -25,7 +25,7 @@ class Show extends Component
     public $minimum_wage_hourly_rate;
     public $minimum_wage_monthly_hours;
     public $minimum_wage_notes;
-    
+
     // Arbeitszeit-Felder
     public $hours_per_week;
     public $hours_per_month;
