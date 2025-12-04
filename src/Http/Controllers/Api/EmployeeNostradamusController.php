@@ -191,7 +191,7 @@ class EmployeeNostradamusController extends ApiController
         $contractHoursPerWeek = $activeContract?->hours_per_week ?? 0;
         
         // Employee Profile Code (kann aus Contract oder anderen Feldern kommen)
-        // Priorität: Code aus employmentRelationship > contract_type (wenn nicht "1" oder "2")
+        // Priorität: Code aus employmentRelationship > Mapping für "1"/"2" > contract_type
         $employeeProfileCode = null;
         if ($activeContract) {
             // Prüfe zuerst, ob die Beziehung bereits geladen ist
@@ -205,11 +205,20 @@ class EmployeeNostradamusController extends ApiController
                 }
             }
             
-            // Fallback: Wenn contract_type "1" oder "2" ist, versuche die Beziehung über diese ID zu laden
-            if (!$employeeProfileCode && $activeContract->contract_type && in_array($activeContract->contract_type, ['1', '2'])) {
-                $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find((int)$activeContract->contract_type);
-                if ($employmentRelationship && $employmentRelationship->code) {
-                    $employeeProfileCode = $employmentRelationship->code;
+            // Fallback: Mapping für alte IDs "1" und "2" (wie im Import-Service)
+            if (!$employeeProfileCode) {
+                $employmentMapping = [
+                    '1' => 'FT',
+                    '2' => 'PT',
+                ];
+                
+                // Prüfe contract_type
+                if ($activeContract->contract_type && isset($employmentMapping[$activeContract->contract_type])) {
+                    $employeeProfileCode = $employmentMapping[$activeContract->contract_type];
+                }
+                // Prüfe employment_relationship_id (falls als String "1" oder "2" gespeichert)
+                elseif ($activeContract->employment_relationship_id && isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
+                    $employeeProfileCode = $employmentMapping[(string)$activeContract->employment_relationship_id];
                 }
             }
             
