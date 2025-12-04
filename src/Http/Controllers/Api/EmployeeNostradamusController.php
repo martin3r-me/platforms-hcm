@@ -191,7 +191,7 @@ class EmployeeNostradamusController extends ApiController
         $contractHoursPerWeek = $activeContract?->hours_per_week ?? 0;
         
         // Employee Profile Code (kann aus Contract oder anderen Feldern kommen)
-        // Priorität: Code aus employmentRelationship > contract_type
+        // Priorität: Code aus employmentRelationship > contract_type (wenn nicht "1" oder "2")
         $employeeProfileCode = null;
         if ($activeContract) {
             // Prüfe zuerst, ob die Beziehung bereits geladen ist
@@ -199,16 +199,22 @@ class EmployeeNostradamusController extends ApiController
                 $employeeProfileCode = $activeContract->employmentRelationship->code;
             } elseif ($activeContract->employment_relationship_id) {
                 // Falls die Beziehung nicht geladen wurde, lade sie direkt über die ID
-                // Die Beziehung sollte über die ID eindeutig sein, auch ohne team_id Filter
                 $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
                 if ($employmentRelationship && $employmentRelationship->code) {
                     $employeeProfileCode = $employmentRelationship->code;
-                } elseif ($activeContract->contract_type && $activeContract->contract_type !== '1' && $activeContract->contract_type !== '2') {
-                    // Nur contract_type verwenden, wenn es nicht "1" oder "2" ist (vermutlich IDs)
-                    $employeeProfileCode = $activeContract->contract_type;
                 }
-            } elseif ($activeContract->contract_type && $activeContract->contract_type !== '1' && $activeContract->contract_type !== '2') {
-                // Nur contract_type verwenden, wenn es nicht "1" oder "2" ist (vermutlich IDs)
+            }
+            
+            // Fallback: Wenn contract_type "1" oder "2" ist, versuche die Beziehung über diese ID zu laden
+            if (!$employeeProfileCode && $activeContract->contract_type && in_array($activeContract->contract_type, ['1', '2'])) {
+                $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find((int)$activeContract->contract_type);
+                if ($employmentRelationship && $employmentRelationship->code) {
+                    $employeeProfileCode = $employmentRelationship->code;
+                }
+            }
+            
+            // Letzter Fallback: contract_type verwenden, wenn es nicht "1" oder "2" ist
+            if (!$employeeProfileCode && $activeContract->contract_type && $activeContract->contract_type !== '1' && $activeContract->contract_type !== '2') {
                 $employeeProfileCode = $activeContract->contract_type;
             }
         }
