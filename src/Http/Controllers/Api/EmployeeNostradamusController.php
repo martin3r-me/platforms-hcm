@@ -194,8 +194,17 @@ class EmployeeNostradamusController extends ApiController
         // Priorität: Code aus employmentRelationship > contract_type
         $employeeProfileCode = null;
         if ($activeContract) {
+            // Prüfe zuerst, ob die Beziehung bereits geladen ist
             if ($activeContract->employmentRelationship) {
                 $employeeProfileCode = $activeContract->employmentRelationship->code;
+            } elseif ($activeContract->employment_relationship_id) {
+                // Falls die Beziehung nicht geladen wurde, lade sie manuell
+                $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
+                if ($employmentRelationship && $employmentRelationship->code) {
+                    $employeeProfileCode = $employmentRelationship->code;
+                } elseif ($activeContract->contract_type) {
+                    $employeeProfileCode = $activeContract->contract_type;
+                }
             } elseif ($activeContract->contract_type) {
                 $employeeProfileCode = $activeContract->contract_type;
             }
