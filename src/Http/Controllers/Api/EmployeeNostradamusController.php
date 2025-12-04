@@ -190,17 +190,11 @@ class EmployeeNostradamusController extends ApiController
         // Contract Hours per Week
         $contractHoursPerWeek = $activeContract?->hours_per_week ?? 0;
         
-        // Employee Profile Code (kann aus Contract oder anderen Feldern kommen)
-        // Priorität: Code aus employmentRelationship > Mapping für "1"/"2" > contract_type
+        // Employee Profile Code aus employmentRelationship
+        // Einfach: employment_relationship_id auflösen und Code zurückgeben
         $employeeProfileCode = null;
         if ($activeContract) {
-            // Mapping für alte IDs "1" und "2" (wie im Import-Service)
-            $employmentMapping = [
-                '1' => 'FT',
-                '2' => 'PT',
-            ];
-            
-            // Prüfe zuerst, ob die Beziehung bereits geladen ist
+            // Prüfe zuerst, ob die Beziehung bereits eager geladen ist
             if ($activeContract->employmentRelationship && $activeContract->employmentRelationship->code) {
                 $employeeProfileCode = $activeContract->employmentRelationship->code;
             } elseif ($activeContract->employment_relationship_id) {
@@ -208,27 +202,7 @@ class EmployeeNostradamusController extends ApiController
                 $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
                 if ($employmentRelationship && $employmentRelationship->code) {
                     $employeeProfileCode = $employmentRelationship->code;
-                } elseif (isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
-                    // Wenn die Beziehung existiert, aber keinen Code hat, und employment_relationship_id ist 1 oder 2, verwende Mapping
-                    $employeeProfileCode = $employmentMapping[(string)$activeContract->employment_relationship_id];
                 }
-            }
-            
-            // Fallback: Mapping für alte IDs "1" und "2" anwenden
-            if (!$employeeProfileCode) {
-                // Prüfe employment_relationship_id zuerst (höhere Priorität)
-                if ($activeContract->employment_relationship_id && isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
-                    $employeeProfileCode = $employmentMapping[(string)$activeContract->employment_relationship_id];
-                }
-                // Prüfe contract_type
-                elseif ($activeContract->contract_type && isset($employmentMapping[$activeContract->contract_type])) {
-                    $employeeProfileCode = $employmentMapping[$activeContract->contract_type];
-                }
-            }
-            
-            // Letzter Fallback: contract_type verwenden, wenn es nicht "1" oder "2" ist
-            if (!$employeeProfileCode && $activeContract->contract_type && $activeContract->contract_type !== '1' && $activeContract->contract_type !== '2') {
-                $employeeProfileCode = $activeContract->contract_type;
             }
         }
 
