@@ -6,6 +6,7 @@ use Platform\Core\Http\Controllers\ApiController;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Nostradamus API Controller für Employees
@@ -191,11 +192,13 @@ class EmployeeNostradamusController extends ApiController
         $contractHoursPerWeek = $activeContract?->hours_per_week ?? 0;
         
         // Employee Profile Code aus employmentRelationship
-        // Einfach: employment_relationship_id auflösen und Code zurückgeben
+        // Manuell: employment_relationship_id auflösen und Code aus Tabelle holen
         $employeeProfileCode = null;
         if ($activeContract && $activeContract->employment_relationship_id) {
-            // Lade die Beziehung immer direkt über die ID (ignoriere eager loading)
-            $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
+            // Gehe manuell in die Tabelle hcm_employment_relationships und hole den Code
+            $employmentRelationship = DB::table('hcm_employment_relationships')
+                ->where('id', $activeContract->employment_relationship_id)
+                ->first();
             
             if ($employmentRelationship && !empty($employmentRelationship->code)) {
                 $employeeProfileCode = $employmentRelationship->code;
