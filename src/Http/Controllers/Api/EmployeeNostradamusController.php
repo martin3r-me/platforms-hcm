@@ -194,6 +194,12 @@ class EmployeeNostradamusController extends ApiController
         // Priorität: Code aus employmentRelationship > Mapping für "1"/"2" > contract_type
         $employeeProfileCode = null;
         if ($activeContract) {
+            // Mapping für alte IDs "1" und "2" (wie im Import-Service)
+            $employmentMapping = [
+                '1' => 'FT',
+                '2' => 'PT',
+            ];
+            
             // Prüfe zuerst, ob die Beziehung bereits geladen ist
             if ($activeContract->employmentRelationship && $activeContract->employmentRelationship->code) {
                 $employeeProfileCode = $activeContract->employmentRelationship->code;
@@ -202,17 +208,14 @@ class EmployeeNostradamusController extends ApiController
                 $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
                 if ($employmentRelationship && $employmentRelationship->code) {
                     $employeeProfileCode = $employmentRelationship->code;
+                } elseif (isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
+                    // Wenn die Beziehung existiert, aber keinen Code hat, und employment_relationship_id ist 1 oder 2, verwende Mapping
+                    $employeeProfileCode = $employmentMapping[(string)$activeContract->employment_relationship_id];
                 }
             }
             
-            // Fallback: Mapping für alte IDs "1" und "2" (wie im Import-Service)
-            // Wird angewendet, wenn kein Code gefunden wurde ODER wenn employment_relationship_id 1 oder 2 ist
+            // Fallback: Mapping für alte IDs "1" und "2" anwenden
             if (!$employeeProfileCode) {
-                $employmentMapping = [
-                    '1' => 'FT',
-                    '2' => 'PT',
-                ];
-                
                 // Prüfe employment_relationship_id zuerst (höhere Priorität)
                 if ($activeContract->employment_relationship_id && isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
                     $employeeProfileCode = $employmentMapping[(string)$activeContract->employment_relationship_id];
