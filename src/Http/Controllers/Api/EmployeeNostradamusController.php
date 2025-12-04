@@ -46,8 +46,10 @@ class EmployeeNostradamusController extends ApiController
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
             },
+            'contracts.primaryJobActivity',
             'contracts.jobActivities',
             'contracts.jobTitles',
+            'contracts.employmentRelationship',
         ])
         ->where('employer_id', $employer->id)
         ->where('is_active', true);
@@ -179,9 +181,15 @@ class EmployeeNostradamusController extends ApiController
         $contractHoursPerWeek = $activeContract?->hours_per_week ?? 0;
         
         // Employee Profile Code (kann aus Contract oder anderen Feldern kommen)
-        $employeeProfileCode = $activeContract?->employment_relationship_id 
-            ?? $activeContract?->contract_type
-            ?? null;
+        // Priorität: Code aus employmentRelationship > contract_type
+        $employeeProfileCode = null;
+        if ($activeContract) {
+            if ($activeContract->employmentRelationship) {
+                $employeeProfileCode = $activeContract->employmentRelationship->code;
+            } elseif ($activeContract->contract_type) {
+                $employeeProfileCode = $activeContract->contract_type;
+            }
+        }
 
         // Stammkostenstelle aus aktuellem Contract
         $costCenter = null;
