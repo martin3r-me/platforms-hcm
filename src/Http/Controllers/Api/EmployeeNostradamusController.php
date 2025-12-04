@@ -193,10 +193,16 @@ class EmployeeNostradamusController extends ApiController
         // Employee Profile Code aus employmentRelationship
         // Einfach: employment_relationship_id auflösen und Code zurückgeben
         $employeeProfileCode = null;
-        if ($activeContract && $activeContract->employment_relationship_id) {
-            // Lade die Beziehung (nutzt eager loading falls vorhanden, sonst lädt es nach)
-            $employmentRelationship = $activeContract->employmentRelationship 
-                ?: \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
+        if ($activeContract) {
+            // Prüfe zuerst, ob die Beziehung bereits eager geladen ist
+            if ($activeContract->relationLoaded('employmentRelationship') && $activeContract->employmentRelationship) {
+                $employmentRelationship = $activeContract->employmentRelationship;
+            } elseif ($activeContract->employment_relationship_id) {
+                // Falls die Beziehung nicht geladen wurde, lade sie direkt über die ID
+                $employmentRelationship = \Platform\Hcm\Models\HcmEmploymentRelationship::find($activeContract->employment_relationship_id);
+            } else {
+                $employmentRelationship = null;
+            }
             
             if ($employmentRelationship && $employmentRelationship->code) {
                 $employeeProfileCode = $employmentRelationship->code;
