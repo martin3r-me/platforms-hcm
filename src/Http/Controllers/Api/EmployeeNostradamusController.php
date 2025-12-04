@@ -206,19 +206,20 @@ class EmployeeNostradamusController extends ApiController
             }
             
             // Fallback: Mapping für alte IDs "1" und "2" (wie im Import-Service)
+            // Wird angewendet, wenn kein Code gefunden wurde ODER wenn employment_relationship_id 1 oder 2 ist
             if (!$employeeProfileCode) {
                 $employmentMapping = [
                     '1' => 'FT',
                     '2' => 'PT',
                 ];
                 
-                // Prüfe contract_type
-                if ($activeContract->contract_type && isset($employmentMapping[$activeContract->contract_type])) {
-                    $employeeProfileCode = $employmentMapping[$activeContract->contract_type];
-                }
-                // Prüfe employment_relationship_id (falls als String "1" oder "2" gespeichert)
-                elseif ($activeContract->employment_relationship_id && isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
+                // Prüfe employment_relationship_id zuerst (höhere Priorität)
+                if ($activeContract->employment_relationship_id && isset($employmentMapping[(string)$activeContract->employment_relationship_id])) {
                     $employeeProfileCode = $employmentMapping[(string)$activeContract->employment_relationship_id];
+                }
+                // Prüfe contract_type
+                elseif ($activeContract->contract_type && isset($employmentMapping[$activeContract->contract_type])) {
+                    $employeeProfileCode = $employmentMapping[$activeContract->contract_type];
                 }
             }
             
