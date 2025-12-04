@@ -86,7 +86,17 @@ class EmployeeNostradamusController extends ApiController
     protected function formatEmployeeForNostradamus(HcmEmployee $employee): array
     {
         $contact = $employee->getContact();
-        $activeContract = $employee->activeContract();
+        
+        // Verwende die bereits eager geladenen Contracts statt activeContract() (macht neue Query)
+        $today = now()->toDateString();
+        $activeContract = $employee->contracts
+            ->filter(function ($contract) use ($today) {
+                $startOk = !$contract->start_date || $contract->start_date->toDateString() <= $today;
+                $endOk = !$contract->end_date || $contract->end_date->toDateString() >= $today;
+                return $startOk && $endOk;
+            })
+            ->sortByDesc('start_date')
+            ->first();
         
         // Email-Adressen: Primäre bevorzugen (unabhängig vom Typ), sonst erste
         $emailAddresses = $employee->getEmailAddresses();
