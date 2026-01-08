@@ -46,8 +46,16 @@ class Employee extends Component
     public function mount(HcmEmployee $employee)
     {
         $this->employee = $employee->load([
-            'crmContactLinks.contact.emailAddresses',
-            'crmContactLinks.contact.phoneNumbers',
+            'crmContactLinks.contact.emailAddresses' => function ($q) {
+                $q->active()
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id');
+            },
+            'crmContactLinks.contact.phoneNumbers' => function ($q) {
+                $q->active()
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id');
+            },
             'employer',
             'payoutMethod',
             'activities',

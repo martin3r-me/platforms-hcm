@@ -38,8 +38,17 @@ class EmployeeNostradamusController extends ApiController
 
         // Query für Employees
         $query = HcmEmployee::with([
-            'crmContactLinks.contact.emailAddresses',
-            'crmContactLinks.contact.phoneNumbers',
+            'crmContactLinks.contact.emailAddresses' => function ($q) {
+                $q->active()
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id');
+            },
+            'crmContactLinks.contact.phoneNumbers' => function ($q) {
+                $q->active()
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id');
+            },
+            'crmContactLinks.contact.phoneNumbers.phoneType',
             'crmContactLinks.contact.postalAddresses' => function ($q) {
                 $q->where('is_active', true)->with('country'); // Nur aktive Adressen mit Country
             },
@@ -99,13 +108,21 @@ class EmployeeNostradamusController extends ApiController
             ->sortByDesc('start_date')
             ->first();
         
-        // Email-Adressen: Primäre bevorzugen (unabhängig vom Typ), sonst erste
-        $emailAddresses = $employee->getEmailAddresses();
-        $primaryEmail = collect($emailAddresses)->firstWhere('is_primary') 
-            ?? collect($emailAddresses)->first();
+        // Email-Adresse: aktive/primäre bevorzugen (Eager-Load ist bereits gefiltert & sortiert)
+        // Fallback: wenn nichts da ist, leerer String
+        $primaryEmailAddress = $contact?->emailAddresses?->first()?->email_address;
         
-        // Telefonnummern: Primäre bevorzugen (unabhängig vom Typ), sonst erste
-        $phoneNumbers = $employee->getPhoneNumbers();
+        // Telefonnummern: aktive/primäre bevorzugen (Eager-Load ist bereits gefiltert & sortiert)
+        $phoneNumbers = ($contact?->phoneNumbers ?? collect())
+            ->map(function ($phone) {
+                return [
+                    'number' => $phone->international,
+                    'type' => $phone->phoneType?->name,
+                    'is_primary' => (bool) $phone->is_primary,
+                ];
+            })
+            ->values()
+            ->all();
         
         // Primäre Telefonnummer (unabhängig vom Typ)
         $primaryPhone = collect($phoneNumbers)->firstWhere('is_primary')
@@ -226,7 +243,7 @@ class EmployeeNostradamusController extends ApiController
             'full_first_names' => $contact?->first_name,
             'date_of_birth' => $employee->birth_date?->format('Y-m-d'),
             'gender' => $gender,
-            'email' => $primaryEmail['email'] ?? '',
+            'email' => $primaryEmailAddress ?? '',
             'phone_landline' => $phoneLandline['number'] ?? null,
             'phone_mobile' => $phoneMobile['number'] ?? null,
             

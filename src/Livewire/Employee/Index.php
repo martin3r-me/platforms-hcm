@@ -37,8 +37,16 @@ class Index extends Component
     {
         $query = HcmEmployee::with([
             'employer', 
-            'crmContactLinks.contact.emailAddresses',
-            'crmContactLinks.contact.phoneNumbers',
+            'crmContactLinks.contact.emailAddresses' => function ($q) {
+                $q->active()
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id');
+            },
+            'crmContactLinks.contact.phoneNumbers' => function ($q) {
+                $q->active()
+                    ->orderByDesc('is_primary')
+                    ->orderBy('id');
+            },
             'contracts' => function ($q) {
                 $q->orderBy('start_date', 'desc');
             },
