@@ -1,0 +1,177 @@
+<?php
+
+namespace Platform\Hcm\Tools;
+
+use Platform\Core\Contracts\ToolContract;
+use Platform\Core\Contracts\ToolContext;
+use Platform\Core\Contracts\ToolMetadataContract;
+use Platform\Core\Contracts\ToolResult;
+use Platform\Core\Tools\Concerns\HasStandardGetOperations;
+use Platform\Hcm\Models\HcmEmployee;
+use Platform\Hcm\Tools\Concerns\ResolvesHcmTeam;
+
+class ListEmployeesTool implements ToolContract, ToolMetadataContract
+{
+    use HasStandardGetOperations;
+    use ResolvesHcmTeam;
+
+    public function getName(): string
+    {
+        return 'hcm.employees.GET';
+    }
+
+    public function getDescription(): string
+    {
+        return 'GET /hcm/employees - Listet Mitarbeiter. Parameter: team_id (optional), employer_id (optional), is_active (optional), include_contacts (optional, bool), filters/search/sort/limit/offset (optional).';
+    }
+
+    public function getSchema(): array
+    {
+        return $this->mergeSchemas(
+            $this->getStandardGetSchema(),
+            [
+                'properties' => [
+                    'team_id' => [
+                        'type' => 'integer',
+                        'description' => 'Optional: Team-ID. Default: aktuelles Team aus Kontext. Nutze "core.teams.GET".',
+                    ],
+                    'employer_id' => [
+                        'type' => 'integer',
+                        'description' => 'Optional: Filter nach Arbeitgeber (hcm_employers.id).',
+                    ],
+                    'is_active' => [
+                        'type' => 'boolean',
+                        'description' => 'Optional: nur aktive/inaktive Mitarbeiter.',
+                    ],
+                    'include_contacts' => [
+                        'type' => 'boolean',
+                        'description' => 'Optional: CRM-Kontaktdaten (über crm_contact_links) mitladen. Default: true.',
+                        'default' => true,
+                    ],
+                    'include_contracts' => [
+                        'type' => 'boolean',
+                        'description' => 'Optional: Contracts mitladen. Default: false.',
+                        'default' => false,
+                    ],
+                ],
+            ]
+        );
+    }
+
+    public function execute(array $arguments, ToolContext $context): ToolResult
+    {
+        try {
+            $resolved = $this->resolveTeam($arguments, $context);
+            if ($resolved['error']) {
+                return $resolved['error'];
+            }
+
+            $teamId = (int)$resolved['team_id'];
+
+            $includeContacts = (bool)($arguments['include_contacts'] ?? true);
+            $includeContracts = (bool)($arguments['include_contracts'] ?? false);
+
+            $with = ['employer'];
+            if ($includeContacts) {
+                $with[] = 'crmContactLinks.contact';
+                $with[] = 'crmContactLinks.contact.emailAddresses';
+                $with[] = 'crmContactLinks.contact.phoneNumbers';
+            }
+            if ($includeContracts) {
+                $with[] = 'contracts';
+            }
+
+            $query = HcmEmployee::query()
+                ->with($with)
+                ->forTeam($teamId);
+
+            if (isset($arguments['employer_id'])) {
+                $query->where('employer_id', (int)$arguments['employer_id']);
+            }
+            if (isset($arguments['is_active'])) {
+                $query->where('is_active', (bool)$arguments['is_active']);
+            }
+
+            $this->applyStandardFilters($query, $arguments, [
+                'employee_number',
+                'employer_id',
+                'is_active',
+                'created_at',
+            ]);
+            $this->applyStandardSearch($query, $arguments, ['employee_number']);
+            $this->applyStandardSort($query, $arguments, [
+                'employee_number',
+                'created_at',
+                'updated_at',
+            ], 'employee_number', 'asc');
+
+            // Pagination + result
+            $result = $this->applyStandardPaginationResult($query, $arguments);
+
+            $data = collect($result['data'])->map(function (HcmEmployee $e) use ($includeContacts, $includeContracts) {
+                $contacts = [];
+                if ($includeContacts) {
+                    $contacts = $e->crmContactLinks->map(function ($link) {
+                        $c = $link->contact;
+                        return [
+                            'contact_id' => $c?->id,
+                            'full_name' => $c?->full_name,
+                            'display_name' => $c?->display_name,
+                            'email' => $c?->emailAddresses?->first()?->email_address,
+                            'phone' => $c?->phoneNumbers?->first()?->international,
+                        ];
+                    })->filter(fn ($x) => $x['contact_id'])->values()->toArray();
+                }
+
+                $contracts = null;
+                if ($includeContracts) {
+                    $contracts = $e->contracts->map(fn ($c) => [
+                        'id' => $c->id,
+                        'start_date' => $c->start_date?->toDateString(),
+                        'end_date' => $c->end_date?->toDateString(),
+                        'is_active' => (bool)$c->is_active,
+                        'hours_per_week' => $c->hours_per_week,
+                        'employment_status' => $c->employment_status,
+                    ])->toArray();
+                }
+
+                return [
+                    'id' => $e->id,
+                    'uuid' => $e->uuid,
+                    'employee_number' => $e->employee_number,
+                    'employer_id' => $e->employer_id,
+                    'employer_name' => $e->employer?->display_name,
+                    'team_id' => $e->team_id,
+                    'is_active' => (bool)$e->is_active,
+                    'crm_contacts' => $contacts,
+                    'contracts' => $contracts,
+                    'created_at' => $e->created_at?->toISOString(),
+                    'updated_at' => $e->updated_at?->toISOString(),
+                ];
+            })->values()->toArray();
+
+            return ToolResult::success([
+                'data' => $data,
+                'pagination' => $result['pagination'] ?? null,
+                'team_id' => $teamId,
+            ]);
+        } catch (\Throwable $e) {
+            return ToolResult::error('EXECUTION_ERROR', 'Fehler beim Laden der Mitarbeiter: ' . $e->getMessage());
+        }
+    }
+
+    public function getMetadata(): array
+    {
+        return [
+            'read_only' => true,
+            'category' => 'read',
+            'tags' => ['hcm', 'employees', 'list'],
+            'risk_level' => 'safe',
+            'requires_auth' => true,
+            'requires_team' => true,
+            'idempotent' => true,
+        ];
+    }
+}
+
+

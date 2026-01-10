@@ -97,6 +97,9 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\ImportSollstundenFromCsv::class,
             ]);
         }
+
+        // Tools registrieren (loose gekoppelt - für AI/Chat)
+        $this->registerTools();
     }
 
     protected function registerLivewireComponents(): void
@@ -134,6 +137,43 @@ class HcmServiceProvider extends ServiceProvider
             \Log::info("Registering Livewire component: {$alias} -> {$class}");
 
             Livewire::component($alias, $class);
+        }
+    }
+
+    /**
+     * Registriert HCM-Tools für die AI/Chat-Funktionalität.
+     */
+    protected function registerTools(): void
+    {
+        try {
+            $registry = resolve(\Platform\Core\Tools\ToolRegistry::class);
+
+            $registry->register(new \Platform\Hcm\Tools\HcmOverviewTool());
+            // Lookups (Read) - deterministische ID-Auflösung (IDs nie raten)
+            $registry->register(new \Platform\Hcm\Tools\HcmLookupsTool());
+            $registry->register(new \Platform\Hcm\Tools\GetHcmLookupTool());
+            // Employers (Read)
+            $registry->register(new \Platform\Hcm\Tools\ListEmployersTool());
+            $registry->register(new \Platform\Hcm\Tools\GetEmployerTool());
+
+            // Employees (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListEmployeesTool());
+            $registry->register(new \Platform\Hcm\Tools\GetEmployeeTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateEmployeeTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateEmployeeTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteEmployeeTool());
+
+            // Employee ↔ CRM Contact Links
+            $registry->register(new \Platform\Hcm\Tools\LinkEmployeeContactTool());
+            $registry->register(new \Platform\Hcm\Tools\UnlinkEmployeeContactTool());
+
+            // Contracts (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListContractsTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateContractTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateContractTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteContractTool());
+        } catch (\Throwable $e) {
+            \Log::warning('HCM: Tool-Registrierung fehlgeschlagen', ['error' => $e->getMessage()]);
         }
     }
 }
