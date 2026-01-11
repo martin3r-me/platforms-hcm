@@ -194,14 +194,31 @@ class HcmExportService
             throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
         }
 
-        // Zeitraum berechnen: 15. des letzten Monats bis 14. des aktuellen Monats
+        // Zeitraum berechnen basierend auf aktuellem Datum
+        // Ab dem 15. eines Monats: Abrechnungszeitraum für aktuellen Monat
+        // Vor dem 15.: Abrechnungszeitraum für letzten Monat
         $now = Carbon::now();
-        $lastMonth = $now->copy()->subMonth();
-        $fromDate = Carbon::create($lastMonth->year, $lastMonth->month, 15);
-        $toDate = Carbon::create($now->year, $now->month, 14);
         
-        // Monat für Anzeige: aktueller Monat (z.B. "01.2026" für Januar, wenn Zeitraum 15.12.2025-14.01.2026)
-        $monthDisplay = $now->format('m.Y');
+        if ($now->day >= 15) {
+            // Ab dem 15.: Abrechnungszeitraum für aktuellen Monat
+            // Monat: aktueller Monat (z.B. "01.2026")
+            // Start: 15. des letzten Monats (z.B. 15.12.2025)
+            // Ende: 14. des aktuellen Monats (z.B. 14.01.2026)
+            $lastMonth = $now->copy()->subMonth();
+            $monthDisplay = $now->format('m.Y');
+            $fromDate = Carbon::create($lastMonth->year, $lastMonth->month, 15);
+            $toDate = Carbon::create($now->year, $now->month, 14);
+        } else {
+            // Vor dem 15.: Abrechnungszeitraum für letzten Monat
+            // Monat: letzter Monat (z.B. "12.2025")
+            // Start: 15. des vorletzten Monats (z.B. 15.11.2025)
+            // Ende: 14. des letzten Monats (z.B. 14.12.2025)
+            $lastMonth = $now->copy()->subMonth();
+            $monthBeforeLast = $lastMonth->copy()->subMonth();
+            $monthDisplay = $lastMonth->format('m.Y');
+            $fromDate = Carbon::create($monthBeforeLast->year, $monthBeforeLast->month, 15);
+            $toDate = Carbon::create($lastMonth->year, $lastMonth->month, 14);
+        }
 
         // Headlines definieren
         $headers = [
