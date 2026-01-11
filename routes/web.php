@@ -86,6 +86,9 @@ Route::get('/employment-relationships', EmploymentRelationshipIndex::class)->nam
 // Umlagearten (Lookup)
 Route::get('/levy-types', LevyTypeIndex::class)->name('hcm.levy-types.index');
 
+// Abwesenheitsgründe (Lookup)
+Route::get('/absence-reasons', \Platform\Hcm\Livewire\AbsenceReason\Index::class)->name('hcm.absence-reasons.index');
+
 // Arbeitgeber-spezifische Mitarbeiter
 Route::get('/employers/{employer}/employees', EmployeeIndex::class)->name('hcm.employers.employees.index');
 Route::get('/employers/{employer}/employees/{employee}', EmployeeShow::class)->name('hcm.employers.employees.show');

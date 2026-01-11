@@ -63,6 +63,11 @@ class HcmLookupsTool implements ToolContract, ToolMetadataContract
                     'tool' => 'hcm.lookup.GET',
                 ],
                 [
+                    'key' => 'absence_reasons',
+                    'description' => 'Abwesenheitsgründe (team-scoped) – code/name/category/requires_sick_note/is_paid',
+                    'tool' => 'hcm.lookup.GET',
+                ],
+                [
                     'key' => 'health_insurance_companies',
                     'description' => 'Krankenkassen (team-scoped) – code/ik_number/short_name',
                     'tool' => 'hcm.lookup.GET',

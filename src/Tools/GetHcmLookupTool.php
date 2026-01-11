@@ -18,6 +18,7 @@ use Platform\Hcm\Models\HcmJobActivity;
 use Platform\Hcm\Models\HcmJobActivityAlias;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmLevyType;
+use Platform\Hcm\Models\HcmAbsenceReason;
 use Platform\Hcm\Models\HcmPayrollProvider;
 use Platform\Hcm\Models\HcmPayrollType;
 use Platform\Hcm\Models\HcmPayoutMethod;
@@ -117,6 +118,7 @@ class GetHcmLookupTool implements ToolContract, ToolMetadataContract
         'employment_relationships',
         'person_groups',
         'levy_types',
+        'absence_reasons',
         'health_insurance_companies',
         'payout_methods',
         'employee_issue_types',
@@ -292,6 +294,15 @@ class GetHcmLookupTool implements ToolContract, ToolMetadataContract
                 'search_fields' => ['name', 'code', 'description'],
                 'sort_fields' => ['name', 'code', 'created_at'],
                 'default_sort_field' => 'name',
+                'default_sort_dir' => 'asc',
+            ],
+            'absence_reasons' => [
+                'model' => HcmAbsenceReason::class,
+                'team_scoped' => true,
+                'scope' => 'team_id',
+                'search_fields' => ['name', 'code', 'short_name', 'description', 'category'],
+                'sort_fields' => ['sort_order', 'name', 'code', 'created_at'],
+                'default_sort_field' => 'sort_order',
                 'default_sort_dir' => 'asc',
             ],
             'health_insurance_companies' => [
@@ -487,6 +498,14 @@ class GetHcmLookupTool implements ToolContract, ToolMetadataContract
             ],
             'tax_factors' => $base + [
                 'value' => $m->value ?? null,
+            ],
+            'absence_reasons' => $base + [
+                'short_name' => $m->short_name ?? null,
+                'description' => $m->description ?? null,
+                'category' => $m->category ?? null,
+                'requires_sick_note' => property_exists($m, 'requires_sick_note') ? (bool)($m->requires_sick_note ?? false) : null,
+                'is_paid' => property_exists($m, 'is_paid') ? (bool)($m->is_paid ?? true) : null,
+                'sort_order' => $m->sort_order ?? null,
             ],
             'payroll_providers' => [
                 'id' => $m->id ?? null,

@@ -334,6 +334,21 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         return $this->hasMany(HcmEmployeeTraining::class, 'contract_id');
     }
 
+    public function timeRecords(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmContractTimeRecord::class, 'contract_id');
+    }
+
+    public function vacationDays(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmContractVacationDay::class, 'contract_id');
+    }
+
+    public function absenceDays(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(HcmContractAbsenceDay::class, 'contract_id');
+    }
+
     /**
      * Get current tariff rate for this contract
      */
