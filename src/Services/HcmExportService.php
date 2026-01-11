@@ -200,8 +200,8 @@ class HcmExportService
         $fromDate = Carbon::create($lastMonth->year, $lastMonth->month, 15);
         $toDate = Carbon::create($now->year, $now->month, 14);
         
-        // Monat für Anzeige: letzter Monat (z.B. "12.2024" für Dezember)
-        $monthDisplay = $lastMonth->format('m.Y');
+        // Monat für Anzeige: aktueller Monat (z.B. "01.2026" für Januar, wenn Zeitraum 15.12.2025-14.01.2026)
+        $monthDisplay = $now->format('m.Y');
 
         // Headlines definieren
         $headers = [

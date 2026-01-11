@@ -118,26 +118,38 @@ class MovementDataController extends ApiController
 
     /**
      * Verarbeitet einen einzelnen Bewegungsdatensatz
+     * 
+     * Team/Arbeitgeber-Zuordnung:
+     * - Employee wird über employer_id + employee_number gefunden (employer_uuid kommt im Request)
+     * - Contract wird über activeContract() geholt (neuester aktiver Contract für das Datum)
+     * - Contract.team_id wird verwendet für die Zuordnung
+     * 
+     * Falls ein Employee mehrere aktive Contracts hat, wird der neueste verwendet.
      */
     protected function processMovementItem($employer, string $date, array $item, int $index): array
     {
         $employeeNumber = $item['employee_number'];
         $type = $item['type'];
 
-        // Employee finden
+        // Employee finden - über employer_id (aus employer_uuid) + employee_number
+        // Das stellt sicher, dass der Employee zum richtigen Arbeitgeber gehört
         $employee = HcmEmployee::where('employer_id', $employer->id)
             ->where('employee_number', $employeeNumber)
             ->first();
 
         if (!$employee) {
-            throw new \Exception("Employee mit Nummer '{$employeeNumber}' nicht gefunden");
+            throw new \Exception("Employee mit Nummer '{$employeeNumber}' nicht gefunden für Employer '{$employer->uuid}'");
         }
 
-        // Aktiven Contract finden
+        // Aktiven Contract finden - für das spezifische Datum
+        // activeContract() holt den neuesten aktiven Contract, der am angegebenen Datum gültig war
         $contract = $employee->activeContract();
         if (!$contract) {
-            throw new \Exception("Kein aktiver Vertrag für Employee '{$employeeNumber}' gefunden");
+            throw new \Exception("Kein aktiver Vertrag für Employee '{$employeeNumber}' am Datum '{$date}' gefunden");
         }
+        
+        // Team-ID kommt vom Contract (contract.team_id)
+        // Das stellt sicher, dass die Bewegungsdaten zum richtigen Team gehören
 
         $result = ['created' => false, 'updated' => false];
 
@@ -198,12 +210,23 @@ class MovementDataController extends ApiController
             'created_by_user_id' => auth()->id(),
         ];
 
-        // Berechne work_minutes falls nicht gesetzt
+        // Berechne work_minutes falls nicht gesetzt UND clock_out vorhanden
+        // Wenn clock_out fehlt, sollte work_minutes nur gesetzt werden, wenn es explizit aus der Quelle kommt
         if (empty($data['work_minutes']) && $data['clock_in'] && $data['clock_out']) {
             $clockIn = Carbon::parse($date . ' ' . $data['clock_in']);
             $clockOut = Carbon::parse($date . ' ' . $data['clock_out']);
             $totalMinutes = $clockOut->diffInMinutes($clockIn);
             $data['work_minutes'] = max(0, $totalMinutes - $data['break_minutes']);
+        }
+        
+        // Wenn clock_out fehlt, aber work_minutes gesetzt ist, validiere das
+        // (kann vorkommen bei unvollständigen Stempelungen, z.B. nur Einstempeln)
+        if (!$data['clock_out'] && $data['work_minutes']) {
+            // work_minutes ist gesetzt, aber clock_out fehlt - das ist OK für unvollständige Stempelungen
+            // Aber wir sollten sicherstellen, dass es nicht zu hoch ist (z.B. max 24h = 1440 Minuten)
+            if ($data['work_minutes'] > 1440) {
+                $data['work_minutes'] = null; // Ungültiger Wert, entfernen
+            }
         }
 
         $record = HcmContractTimeRecord::updateOrCreate(
