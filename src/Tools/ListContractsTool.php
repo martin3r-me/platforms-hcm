@@ -22,7 +22,7 @@ class ListContractsTool implements ToolContract, ToolMetadataContract
 
     public function getDescription(): string
     {
-        return 'GET /hcm/contracts - Listet Mitarbeiter-Verträge. Parameter: team_id (optional), employee_id (optional), is_active (optional), wage_base_type (optional), include_employee (optional, bool), filters/search/sort/limit/offset (optional). Hinweis: payroll_types (Lohnarten) sind NICHT direkt am Vertrag verknüpft; für Vertragsvergütung nutze wage_base_type.';
+        return 'GET /hcm/contracts - Listet Mitarbeiter-Verträge. Parameter: team_id (optional), employee_id (optional), is_active (optional), wage_base_type (optional), include_employee (optional, bool), filters/search/sort/limit/offset (optional). Tipp: Für "Stundenlöhner" nutze wage_base_type (exakt wie im Vertrag gespeichert; oft "Stundenlohn" oder "Monatslohn") + include_employee=true, damit du NICHT pro Mitarbeiter hcm.employee.GET callen musst. Hinweis: payroll_types (Lohnarten) sind NICHT direkt am Vertrag verknüpft; für Vertragsvergütung nutze wage_base_type.';
     }
 
     public function getSchema(): array
@@ -60,7 +60,7 @@ class ListContractsTool implements ToolContract, ToolMetadataContract
                     ],
                     'wage_base_type' => [
                         'type' => 'string',
-                        'description' => 'Optional: Filter nach Lohngrundart/Vergütungsbasis (z.B. "Stundenvergütung").',
+                        'description' => 'Optional: Filter nach Lohngrundart/Vergütungsbasis (exakt wie im Vertrag gespeichert; z.B. "Stundenlohn" oder "Monatslohn").',
                     ],
                 ],
             ]

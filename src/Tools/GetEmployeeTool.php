@@ -20,7 +20,7 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
 
     public function getDescription(): string
     {
-        return 'GET /hcm/employees/{id} - Ruft einen einzelnen Mitarbeiter ab (inkl. Arbeitgeber, Verträge, CRM-Verknüpfungen). Parameter: employee_id (required), team_id (optional).';
+        return 'GET /hcm/employees/{id} - Ruft einen einzelnen Mitarbeiter ab (inkl. Arbeitgeber, Verträge, CRM-Verknüpfungen). Parameter: employee_id (required), team_id (optional). Hinweis: Für Listen/Filter (z.B. "Stundenlöhner") nutze hcm.contracts.GET bzw. hcm.employees.GET statt viele einzelne hcm.employee.GET Calls.';
     }
 
     public function getSchema(): array

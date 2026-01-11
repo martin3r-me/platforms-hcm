@@ -22,7 +22,7 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
 
     public function getDescription(): string
     {
-        return 'GET /hcm/employees - Listet Mitarbeiter. Parameter: team_id (optional), employer_id (optional), is_active (optional), include_contacts (optional, bool), filters/search/sort/limit/offset (optional).';
+        return 'GET /hcm/employees - Listet Mitarbeiter. Parameter: team_id (optional), employer_id (optional), is_active (optional), include_contacts (optional, bool), include_contracts (optional, bool), contract_wage_base_type (optional), include_contracts_compensation (optional), filters/search/sort/limit/offset (optional). Hinweis: Für "Stundenlöhner" reicht i.d.R. ein Call: entweder hcm.contracts.GET mit wage_base_type + include_employee=true (empfohlen) oder hcm.employees.GET mit contract_wage_base_type + include_contracts=true.';
     }
 
     public function getSchema(): array
@@ -53,11 +53,15 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
                         'description' => 'Optional: Contracts mitladen. Default: false.',
                         'default' => false,
                     ],
-                'include_contracts_compensation' => [
-                    'type' => 'boolean',
-                    'description' => 'Optional: In contracts zusätzlich wage_base_type/hourly_wage/base_salary ausgeben. Default: false. Hinweis: sensible Daten.',
-                    'default' => false,
-                ],
+                    'include_contracts_compensation' => [
+                        'type' => 'boolean',
+                        'description' => 'Optional: In contracts zusätzlich wage_base_type/hourly_wage/base_salary ausgeben. Default: false. Hinweis: sensible Daten.',
+                        'default' => false,
+                    ],
+                    'contract_wage_base_type' => [
+                        'type' => 'string',
+                        'description' => 'Optional: Filter Mitarbeiter, die mindestens einen Vertrag mit wage_base_type = diesem Wert haben (exakter Match; z.B. "Stundenlohn" oder "Monatslohn"). Tipp: Alternativ hcm.contracts.GET nutzen.',
+                    ],
                 ],
             ]
         );
@@ -97,6 +101,12 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
             if (isset($arguments['is_active'])) {
                 $query->where('is_active', (bool)$arguments['is_active']);
             }
+            if (isset($arguments['contract_wage_base_type']) && (string)$arguments['contract_wage_base_type'] !== '') {
+                $wbt = (string)$arguments['contract_wage_base_type'];
+                $query->whereHas('contracts', function ($q) use ($wbt) {
+                    $q->where('wage_base_type', $wbt);
+                });
+            }
 
             $this->applyStandardFilters($query, $arguments, [
                 'employee_number',
@@ -114,7 +124,7 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
             // Pagination + result
             $result = $this->applyStandardPaginationResult($query, $arguments);
 
-            $data = collect($result['data'])->map(function (HcmEmployee $e) use ($includeContacts, $includeContracts) {
+            $data = collect($result['data'])->map(function (HcmEmployee $e) use ($includeContacts, $includeContracts, $includeContractsComp) {
                 $contacts = [];
                 if ($includeContacts) {
                     $contacts = $e->crmContactLinks->map(function ($link) {
