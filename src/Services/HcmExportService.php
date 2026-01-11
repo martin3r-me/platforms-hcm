@@ -476,11 +476,19 @@ class HcmExportService
             throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
         }
 
-        // Zeitraum: 1. des aktuellen Monats bis heute
+        // Zeitraum für Stundenlöhner: Abrechnungszeitraum (15. des letzten Monats bis 14. des aktuellen Monats)
+        // Zeitraum für Abwesenheitstage: 1. des aktuellen Monats bis heute
         $now = Carbon::now();
-        $fromDate = Carbon::create($now->year, $now->month, 1);
-        $toDate = $now->copy()->startOfDay();
+        
+        // Abrechnungszeitraum für Stundenlöhner
+        $lastMonth = $now->copy()->subMonth();
+        $hoursFromDate = Carbon::create($lastMonth->year, $lastMonth->month, 15);
+        $hoursToDate = Carbon::create($now->year, $now->month, 14);
         $monthDisplay = $now->format('m.Y');
+        
+        // Zeitraum für Abwesenheitstage (1. des Monats bis heute)
+        $absenceFromDate = Carbon::create($now->year, $now->month, 1);
+        $absenceToDate = $now->copy()->startOfDay();
 
         // Headlines definieren
         $headers = [
@@ -542,9 +550,9 @@ class HcmExportService
                 $tariffGroup = $contract->tariffGroup?->code ?? '';
                 $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
 
-                // Zeiterfassungsdaten für den Zeitraum abfragen (1. des Monats bis heute)
+                // Zeiterfassungsdaten für den Abrechnungszeitraum abfragen (15.12.2025 bis 14.01.2026)
                 $timeRecords = HcmContractTimeRecord::where('contract_id', $contract->id)
-                    ->whereBetween('record_date', [$fromDate->toDateString(), $toDate->toDateString()])
+                    ->whereBetween('record_date', [$hoursFromDate->toDateString(), $hoursToDate->toDateString()])
                     ->whereNotNull('work_minutes')
                     ->get();
 
@@ -561,8 +569,8 @@ class HcmExportService
                 // Zeile erstellen
                 $row = [
                     $monthDisplay,                                    // Monat
-                    $fromDate->format('d.m.Y'),                       // Von Datum (F: (1. des Monats)
-                    $toDate->format('d.m.Y'),                          // Bis Datum (FZ) (heute)
+                    $hoursFromDate->format('d.m.Y'),                  // Von Datum (F: (15. des letzten Monats)
+                    $hoursToDate->format('d.m.Y'),                     // Bis Datum (FZ) (14. des aktuellen Monats)
                     $firstName,                                       // Vorname
                     $lastName,                                        // Name
                     $employeeNumber,                                  // MA Code ZW
@@ -596,7 +604,7 @@ class HcmExportService
             ->whereHas('contract', function ($query) {
                 $query->where('is_active', true);
             })
-            ->whereBetween('absence_date', [$fromDate->toDateString(), $toDate->toDateString()])
+            ->whereBetween('absence_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
             ->orderBy('absence_date')
             ->get();
 
