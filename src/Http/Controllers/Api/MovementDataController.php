@@ -175,7 +175,34 @@ class MovementDataController extends ApiController
      */
     protected function processTimeRecord($contract, $employee, string $date, array $item): array
     {
-        $validator = Validator::make($item, [
+        // Normalisiere work_minutes VOR der Validierung
+        $normalizedItem = $item;
+        if (isset($normalizedItem['work_minutes'])) {
+            $wm = $normalizedItem['work_minutes'];
+            if ($wm === '' || $wm === null || $wm === 'null') {
+                $normalizedItem['work_minutes'] = null;
+            } else {
+                $wm = (int) $wm;
+                if ($wm < 0) {
+                    $normalizedItem['work_minutes'] = null; // Negative Werte → null
+                } else {
+                    $normalizedItem['work_minutes'] = $wm;
+                }
+            }
+        }
+        
+        // Normalisiere break_minutes VOR der Validierung
+        if (isset($normalizedItem['break_minutes'])) {
+            $bm = $normalizedItem['break_minutes'];
+            if ($bm === '' || $bm === null || $bm === 'null') {
+                $normalizedItem['break_minutes'] = 0;
+            } else {
+                $bm = max(0, (int) $bm); // Mindestens 0
+                $normalizedItem['break_minutes'] = $bm;
+            }
+        }
+        
+        $validator = Validator::make($normalizedItem, [
             'clock_in' => 'nullable|date_format:H:i',
             'clock_out' => 'nullable|date_format:H:i',
             'break_start' => 'nullable|date_format:H:i',
@@ -196,12 +223,12 @@ class MovementDataController extends ApiController
             'employee_id' => $employee->id,
             'team_id' => $contract->team_id,
             'record_date' => $date,
-            'clock_in' => $item['clock_in'] ?? null,
-            'clock_out' => $item['clock_out'] ?? null,
-            'break_start' => $item['break_start'] ?? null,
-            'break_end' => $item['break_end'] ?? null,
-            'break_minutes' => $item['break_minutes'] ?? 0,
-            'work_minutes' => $item['work_minutes'] ?? null,
+            'clock_in' => $normalizedItem['clock_in'] ?? null,
+            'clock_out' => $normalizedItem['clock_out'] ?? null,
+            'break_start' => $normalizedItem['break_start'] ?? null,
+            'break_end' => $normalizedItem['break_end'] ?? null,
+            'break_minutes' => $normalizedItem['break_minutes'] ?? 0,
+            'work_minutes' => $normalizedItem['work_minutes'] ?? null,
             'status' => $item['status'] ?? 'confirmed',
             'source' => 'push',
             'source_reference' => $item['source_reference'] ?? null,
@@ -213,18 +240,25 @@ class MovementDataController extends ApiController
         // Berechne work_minutes falls nicht gesetzt UND clock_out vorhanden
         // Wenn clock_out fehlt, sollte work_minutes nur gesetzt werden, wenn es explizit aus der Quelle kommt
         if (empty($data['work_minutes']) && $data['clock_in'] && $data['clock_out']) {
-            $clockIn = Carbon::parse($date . ' ' . $data['clock_in']);
-            $clockOut = Carbon::parse($date . ' ' . $data['clock_out']);
-            $totalMinutes = $clockOut->diffInMinutes($clockIn);
-            $data['work_minutes'] = max(0, $totalMinutes - $data['break_minutes']);
+            try {
+                $clockIn = Carbon::parse($date . ' ' . $data['clock_in']);
+                $clockOut = Carbon::parse($date . ' ' . $data['clock_out']);
+                $totalMinutes = $clockOut->diffInMinutes($clockIn);
+                $calculatedMinutes = max(0, $totalMinutes - $data['break_minutes']);
+                // Nur setzen wenn > 0, sonst null
+                $data['work_minutes'] = $calculatedMinutes > 0 ? $calculatedMinutes : null;
+            } catch (\Exception $e) {
+                // Bei Parse-Fehlern: work_minutes auf null setzen
+                $data['work_minutes'] = null;
+            }
         }
         
         // Wenn clock_out fehlt, aber work_minutes gesetzt ist, validiere das
         // (kann vorkommen bei unvollständigen Stempelungen, z.B. nur Einstempeln)
-        if (!$data['clock_out'] && $data['work_minutes']) {
+        if (!$data['clock_out'] && $data['work_minutes'] !== null) {
             // work_minutes ist gesetzt, aber clock_out fehlt - das ist OK für unvollständige Stempelungen
             // Aber wir sollten sicherstellen, dass es nicht zu hoch ist (z.B. max 24h = 1440 Minuten)
-            if ($data['work_minutes'] > 1440) {
+            if ($data['work_minutes'] > 1440 || $data['work_minutes'] < 0) {
                 $data['work_minutes'] = null; // Ungültiger Wert, entfernen
             }
         }
@@ -335,6 +369,14 @@ class MovementDataController extends ApiController
                 'DOCTOR' => 'personal',
                 default => 'other',
             };
+            
+            // Logge die Erstellung für Debugging
+            \Log::info('HCM: Erstelle neuen Abwesenheitsgrund automatisch', [
+                'team_id' => $contract->team_id,
+                'code' => $code,
+                'name' => $defaultName,
+                'category' => $defaultCategory,
+            ]);
             
             $absenceReason = HcmAbsenceReason::create([
                 'team_id' => $contract->team_id,

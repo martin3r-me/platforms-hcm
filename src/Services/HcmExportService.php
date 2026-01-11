@@ -350,7 +350,7 @@ class HcmExportService
             ->orderBy('absence_date')
             ->get();
 
-        // Gruppiere nach Vertrag und Grund, dann konsolidiere
+        // Gruppiere nach Vertrag und Grund, dann konsolidiere zusammenhängende Tage
         $absenceGroups = $absenceDays->groupBy(function ($absence) {
             return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
         });
@@ -369,14 +369,6 @@ class HcmExportService
             $costCenter = $contract->getCostCenter();
             $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
             
-            // Tarif-Informationen
-            $tariffType = $contract->tariffGroup?->tariffAgreement?->name ?? '';
-            $tariffGroup = $contract->tariffGroup?->code ?? '';
-            $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
-            
-            // Fehlzeitencode (Grund)
-            $absenceReasonCode = $firstAbsence->absenceReason?->code ?? '';
-            
             // Sortiere nach Datum
             $sortedAbsences = $group->sortBy('absence_date')->values();
             
@@ -384,6 +376,7 @@ class HcmExportService
             $consolidated = [];
             $currentStart = null;
             $currentEnd = null;
+            $currentStartAbsence = null;
             
             foreach ($sortedAbsences as $absence) {
                 $absenceDate = Carbon::parse($absence->absence_date);
@@ -392,6 +385,7 @@ class HcmExportService
                     // Erster Tag einer Sequenz
                     $currentStart = $absenceDate;
                     $currentEnd = $absenceDate;
+                    $currentStartAbsence = $absence;
                 } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
                     // Fortsetzung der Sequenz (nächster Tag)
                     $currentEnd = $absenceDate;
@@ -401,9 +395,11 @@ class HcmExportService
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                     ];
                     $currentStart = $absenceDate;
                     $currentEnd = $absenceDate;
+                    $currentStartAbsence = $absence;
                 }
             }
             
@@ -413,6 +409,7 @@ class HcmExportService
                     'start' => $currentStart,
                     'end' => $currentEnd,
                     'days' => $currentStart->diffInDays($currentEnd) + 1,
+                    'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                 ];
             }
             
@@ -431,12 +428,12 @@ class HcmExportService
                     '',                                               // Satz
                     '',                                               // Betrag
                     '',                                               // Prozent
-                    $absenceReasonCode,                               // Fehlzeitencode
+                    $consolidation['reason'],                         // Fehlzeitencode (Grund der ersten Abwesenheit)
                     $costCenterCode,                                  // Kostenstelle
                     '',                                               // Kostenträger
-                    $tariffType,                                      // Tarifart
-                    $tariffGroup,                                     // Tarifgruppe
-                    $tariffLevel,                                     // Tarifstufe
+                    '',                                               // Tarifart (leer für Abwesenheiten)
+                    '',                                               // Tarifgruppe (leer für Abwesenheiten)
+                    '',                                               // Tarifstufe (leer für Abwesenheiten)
                     '',                                               // zu löschen
                     '',                                               // Beschreibung init Text
                 ];
@@ -598,7 +595,7 @@ class HcmExportService
             ->orderBy('absence_date')
             ->get();
 
-        // Gruppiere nach Vertrag und Grund, dann konsolidiere
+        // Gruppiere nach Vertrag und Grund, dann konsolidiere zusammenhängende Tage
         $absenceGroups = $absenceDays->groupBy(function ($absence) {
             return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
         });
@@ -617,14 +614,6 @@ class HcmExportService
             $costCenter = $contract->getCostCenter();
             $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
             
-            // Tarif-Informationen
-            $tariffType = $contract->tariffGroup?->tariffAgreement?->name ?? '';
-            $tariffGroup = $contract->tariffGroup?->code ?? '';
-            $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
-            
-            // Fehlzeitencode (Grund)
-            $absenceReasonCode = $firstAbsence->absenceReason?->code ?? '';
-            
             // Sortiere nach Datum
             $sortedAbsences = $group->sortBy('absence_date')->values();
             
@@ -632,6 +621,7 @@ class HcmExportService
             $consolidated = [];
             $currentStart = null;
             $currentEnd = null;
+            $currentStartAbsence = null;
             
             foreach ($sortedAbsences as $absence) {
                 $absenceDate = Carbon::parse($absence->absence_date);
@@ -640,6 +630,7 @@ class HcmExportService
                     // Erster Tag einer Sequenz
                     $currentStart = $absenceDate;
                     $currentEnd = $absenceDate;
+                    $currentStartAbsence = $absence;
                 } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
                     // Fortsetzung der Sequenz (nächster Tag)
                     $currentEnd = $absenceDate;
@@ -649,9 +640,11 @@ class HcmExportService
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                     ];
                     $currentStart = $absenceDate;
                     $currentEnd = $absenceDate;
+                    $currentStartAbsence = $absence;
                 }
             }
             
@@ -661,6 +654,7 @@ class HcmExportService
                     'start' => $currentStart,
                     'end' => $currentEnd,
                     'days' => $currentStart->diffInDays($currentEnd) + 1,
+                    'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                 ];
             }
             
@@ -679,12 +673,12 @@ class HcmExportService
                     '',                                               // Satz
                     '',                                               // Betrag
                     '',                                               // Prozent
-                    $absenceReasonCode,                               // Fehlzeitencode
+                    $consolidation['reason'],                         // Fehlzeitencode (Grund der ersten Abwesenheit)
                     $costCenterCode,                                  // Kostenstelle
                     '',                                               // Kostenträger
-                    $tariffType,                                      // Tarifart
-                    $tariffGroup,                                     // Tarifgruppe
-                    $tariffLevel,                                     // Tarifstufe
+                    '',                                               // Tarifart (leer für Abwesenheiten)
+                    '',                                               // Tarifgruppe (leer für Abwesenheiten)
+                    '',                                               // Tarifstufe (leer für Abwesenheiten)
                     '',                                               // zu löschen
                     '',                                               // Beschreibung init Text
                 ];
