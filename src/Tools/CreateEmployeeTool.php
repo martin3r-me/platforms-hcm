@@ -8,6 +8,7 @@ use Platform\Core\Contracts\ToolContract;
 use Platform\Core\Contracts\ToolContext;
 use Platform\Core\Contracts\ToolMetadataContract;
 use Platform\Core\Contracts\ToolResult;
+use Platform\Core\Models\Team;
 use Platform\Core\Tools\Concerns\HasStandardizedWriteOperations;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Models\CrmContactLink;
@@ -136,8 +137,23 @@ class CreateEmployeeTool implements ToolContract, ToolMetadataContract
                     // CRM Policy respektieren (mindestens view)
                     Gate::forUser($context->user)->authorize('view', $contact);
 
-                    if ((int)$contact->team_id !== (int)$teamId) {
-                        throw new \RuntimeException("CRM Contact gehört nicht zum Team {$teamId}.");
+                    // Team-Hierarchie prüfen: Gleiches Team ODER Employee-Team ist Kind des Contact-Teams
+                    $contactTeamId = (int)$contact->team_id;
+                    $employeeTeamId = (int)$teamId;
+                    
+                    if ($contactTeamId !== $employeeTeamId) {
+                        // Prüfe, ob Employee-Team ein Kind des Contact-Teams ist (Kindteam kann auf Elternteam-Daten zugreifen)
+                        $contactTeam = Team::find($contactTeamId);
+                        $employeeTeam = Team::find($employeeTeamId);
+                        
+                        if (!$contactTeam || !$employeeTeam) {
+                            throw new \RuntimeException("Team nicht gefunden (Contact: {$contactTeamId}, Employee: {$employeeTeamId}).");
+                        }
+                        
+                        // OK wenn: gleiches Team ODER Employee-Team ist Kind des Contact-Teams
+                        if (!$employeeTeam->isChildOf($contactTeam)) {
+                            throw new \RuntimeException("CRM Contact gehört nicht zum Team {$teamId} oder einem Elternteam davon.");
+                        }
                     }
                 } else {
                     Gate::forUser($context->user)->authorize('create', CrmContact::class);

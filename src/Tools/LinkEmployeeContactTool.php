@@ -7,6 +7,7 @@ use Platform\Core\Contracts\ToolContract;
 use Platform\Core\Contracts\ToolContext;
 use Platform\Core\Contracts\ToolMetadataContract;
 use Platform\Core\Contracts\ToolResult;
+use Platform\Core\Models\Team;
 use Platform\Core\Tools\Concerns\HasStandardizedWriteOperations;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Models\CrmContactLink;
@@ -83,8 +84,23 @@ class LinkEmployeeContactTool implements ToolContract, ToolMetadataContract
             }
             Gate::forUser($context->user)->authorize('view', $contact);
 
-            if ((int)$contact->team_id !== (int)$teamId) {
-                return ToolResult::error('VALIDATION_ERROR', "CRM Contact gehört nicht zum Team {$teamId}.");
+            // Team-Hierarchie prüfen: Gleiches Team ODER Employee-Team ist Kind des Contact-Teams
+            $contactTeamId = (int)$contact->team_id;
+            $employeeTeamId = (int)$teamId;
+            
+            if ($contactTeamId !== $employeeTeamId) {
+                // Prüfe, ob Employee-Team ein Kind des Contact-Teams ist (Kindteam kann auf Elternteam-Daten zugreifen)
+                $contactTeam = Team::find($contactTeamId);
+                $employeeTeam = Team::find($employeeTeamId);
+                
+                if (!$contactTeam || !$employeeTeam) {
+                    return ToolResult::error('VALIDATION_ERROR', "Team nicht gefunden (Contact: {$contactTeamId}, Employee: {$employeeTeamId}).");
+                }
+                
+                // OK wenn: gleiches Team ODER Employee-Team ist Kind des Contact-Teams
+                if (!$employeeTeam->isChildOf($contactTeam)) {
+                    return ToolResult::error('VALIDATION_ERROR', "CRM Contact gehört nicht zum Team {$teamId} oder einem Elternteam davon.");
+                }
             }
 
             $link = CrmContactLink::firstOrCreate(
