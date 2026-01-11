@@ -350,95 +350,100 @@ class HcmExportService
             ->orderBy('absence_date')
             ->get();
 
-        // Gruppiere nach Vertrag und Grund, dann konsolidiere zusammenhängende Tage
-        $absenceGroups = $absenceDays->groupBy(function ($absence) {
-            return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
-        });
-
-        foreach ($absenceGroups as $group) {
-            $firstAbsence = $group->first();
-            $contract = $firstAbsence->contract;
-            $employee = $contract->employee;
-            $contact = $employee->crmContactLinks->first()?->contact;
+        // Gruppiere zuerst nach Person (Employee/Vertrag), dann nach Grund
+        $absenceByEmployee = $absenceDays->groupBy('employee_id');
+        
+        foreach ($absenceByEmployee as $employeeId => $employeeAbsences) {
+            // Für jede Person: Gruppiere nach Vertrag und Grund
+            $absenceByContractAndReason = $employeeAbsences->groupBy(function ($absence) {
+                return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
+            });
             
-            $firstName = $contact?->first_name ?? '';
-            $lastName = $contact?->last_name ?? '';
-            $employeeNumber = (string)($employee->employee_number ?? '');
-            
-            // Kostenstelle vom Vertrag holen
-            $costCenter = $contract->getCostCenter();
-            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
-            
-            // Sortiere nach Datum
-            $sortedAbsences = $group->sortBy('absence_date')->values();
-            
-            // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
-            $consolidated = [];
-            $currentStart = null;
-            $currentEnd = null;
-            $currentStartAbsence = null;
-            
-            foreach ($sortedAbsences as $absence) {
-                $absenceDate = Carbon::parse($absence->absence_date);
+            foreach ($absenceByContractAndReason as $group) {
+                $firstAbsence = $group->first();
+                $contract = $firstAbsence->contract;
+                $employee = $contract->employee;
+                $contact = $employee->crmContactLinks->first()?->contact;
                 
-                if ($currentStart === null) {
-                    // Erster Tag einer Sequenz
-                    $currentStart = $absenceDate;
-                    $currentEnd = $absenceDate;
-                    $currentStartAbsence = $absence;
-                } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
-                    // Fortsetzung der Sequenz (nächster Tag)
-                    $currentEnd = $absenceDate;
-                } else {
-                    // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                $firstName = $contact?->first_name ?? '';
+                $lastName = $contact?->last_name ?? '';
+                $employeeNumber = (string)($employee->employee_number ?? '');
+                
+                // Kostenstelle vom Vertrag holen
+                $costCenter = $contract->getCostCenter();
+                $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+                
+                // Sortiere nach Datum
+                $sortedAbsences = $group->sortBy('absence_date')->values();
+                
+                // Konsolidiere: Wenn mehrere Tage am Stück mit gleichem Grund, dann zusammenfassen
+                $consolidated = [];
+                $currentStart = null;
+                $currentEnd = null;
+                $currentStartAbsence = null;
+                
+                foreach ($sortedAbsences as $absence) {
+                    $absenceDate = Carbon::parse($absence->absence_date);
+                    
+                    if ($currentStart === null) {
+                        // Erster Tag einer Sequenz
+                        $currentStart = $absenceDate;
+                        $currentEnd = $absenceDate;
+                        $currentStartAbsence = $absence;
+                    } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
+                        // Fortsetzung der Sequenz (nächster Tag) - gleicher Grund bereits durch Gruppierung sichergestellt
+                        $currentEnd = $absenceDate;
+                    } else {
+                        // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                        $consolidated[] = [
+                            'start' => $currentStart,
+                            'end' => $currentEnd,
+                            'days' => $currentStart->diffInDays($currentEnd) + 1,
+                            'reason' => $currentStartAbsence->absenceReason?->code ?? '',
+                        ];
+                        $currentStart = $absenceDate;
+                        $currentEnd = $absenceDate;
+                        $currentStartAbsence = $absence;
+                    }
+                }
+                
+                // Letzte Sequenz hinzufügen
+                if ($currentStart !== null) {
                     $consolidated[] = [
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
                         'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                     ];
-                    $currentStart = $absenceDate;
-                    $currentEnd = $absenceDate;
-                    $currentStartAbsence = $absence;
                 }
-            }
-            
-            // Letzte Sequenz hinzufügen
-            if ($currentStart !== null) {
-                $consolidated[] = [
-                    'start' => $currentStart,
-                    'end' => $currentEnd,
-                    'days' => $currentStart->diffInDays($currentEnd) + 1,
-                    'reason' => $currentStartAbsence->absenceReason?->code ?? '',
-                ];
-            }
-            
-            // Erstelle Zeilen für konsolidierte Abwesenheiten
-            foreach ($consolidated as $consolidation) {
-                $row = [
-                    $monthDisplay,                                    // Monat
-                    $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
-                    $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
-                    $firstName,                                       // Vorname
-                    $lastName,                                        // Name
-                    $employeeNumber,                                  // MA Code ZW
-                    '',                                               // LA Code ZW
-                    '',                                               // Einheiten (Std.)
-                    (string)$consolidation['days'],                   // Tage
-                    '',                                               // Satz
-                    '',                                               // Betrag
-                    '',                                               // Prozent
-                    $consolidation['reason'],                         // Fehlzeitencode (Grund der ersten Abwesenheit)
-                    $costCenterCode,                                  // Kostenstelle
-                    '',                                               // Kostenträger
-                    '',                                               // Tarifart (leer für Abwesenheiten)
-                    '',                                               // Tarifgruppe (leer für Abwesenheiten)
-                    '',                                               // Tarifstufe (leer für Abwesenheiten)
-                    '',                                               // zu löschen
-                    '',                                               // Beschreibung init Text
-                ];
                 
-                $lines[] = $this->escapeCsvRow($row);
+                // Erstelle Zeilen für konsolidierte Abwesenheiten
+                foreach ($consolidated as $consolidation) {
+                    $row = [
+                        $monthDisplay,                                    // Monat
+                        $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
+                        $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                        $firstName,                                       // Vorname
+                        $lastName,                                        // Name
+                        $employeeNumber,                                  // MA Code ZW
+                        '',                                               // LA Code ZW
+                        '',                                               // Einheiten (Std.)
+                        (string)$consolidation['days'],                   // Tage
+                        '',                                               // Satz
+                        '',                                               // Betrag
+                        '',                                               // Prozent
+                        $consolidation['reason'],                         // Fehlzeitencode (Grund der ersten Abwesenheit)
+                        $costCenterCode,                                  // Kostenstelle
+                        '',                                               // Kostenträger
+                        '',                                               // Tarifart (leer für Abwesenheiten)
+                        '',                                               // Tarifgruppe (leer für Abwesenheiten)
+                        '',                                               // Tarifstufe (leer für Abwesenheiten)
+                        '',                                               // zu löschen
+                        '',                                               // Beschreibung init Text
+                    ];
+                    
+                    $lines[] = $this->escapeCsvRow($row);
+                }
             }
         }
 
@@ -595,95 +600,100 @@ class HcmExportService
             ->orderBy('absence_date')
             ->get();
 
-        // Gruppiere nach Vertrag und Grund, dann konsolidiere zusammenhängende Tage
-        $absenceGroups = $absenceDays->groupBy(function ($absence) {
-            return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
-        });
-
-        foreach ($absenceGroups as $group) {
-            $firstAbsence = $group->first();
-            $contract = $firstAbsence->contract;
-            $employee = $contract->employee;
-            $contact = $employee->crmContactLinks->first()?->contact;
+        // Gruppiere zuerst nach Person (Employee/Vertrag), dann nach Grund
+        $absenceByEmployee = $absenceDays->groupBy('employee_id');
+        
+        foreach ($absenceByEmployee as $employeeId => $employeeAbsences) {
+            // Für jede Person: Gruppiere nach Vertrag und Grund
+            $absenceByContractAndReason = $employeeAbsences->groupBy(function ($absence) {
+                return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
+            });
             
-            $firstName = $contact?->first_name ?? '';
-            $lastName = $contact?->last_name ?? '';
-            $employeeNumber = (string)($employee->employee_number ?? '');
-            
-            // Kostenstelle vom Vertrag holen
-            $costCenter = $contract->getCostCenter();
-            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
-            
-            // Sortiere nach Datum
-            $sortedAbsences = $group->sortBy('absence_date')->values();
-            
-            // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
-            $consolidated = [];
-            $currentStart = null;
-            $currentEnd = null;
-            $currentStartAbsence = null;
-            
-            foreach ($sortedAbsences as $absence) {
-                $absenceDate = Carbon::parse($absence->absence_date);
+            foreach ($absenceByContractAndReason as $group) {
+                $firstAbsence = $group->first();
+                $contract = $firstAbsence->contract;
+                $employee = $contract->employee;
+                $contact = $employee->crmContactLinks->first()?->contact;
                 
-                if ($currentStart === null) {
-                    // Erster Tag einer Sequenz
-                    $currentStart = $absenceDate;
-                    $currentEnd = $absenceDate;
-                    $currentStartAbsence = $absence;
-                } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
-                    // Fortsetzung der Sequenz (nächster Tag)
-                    $currentEnd = $absenceDate;
-                } else {
-                    // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                $firstName = $contact?->first_name ?? '';
+                $lastName = $contact?->last_name ?? '';
+                $employeeNumber = (string)($employee->employee_number ?? '');
+                
+                // Kostenstelle vom Vertrag holen
+                $costCenter = $contract->getCostCenter();
+                $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+                
+                // Sortiere nach Datum
+                $sortedAbsences = $group->sortBy('absence_date')->values();
+                
+                // Konsolidiere: Wenn mehrere Tage am Stück mit gleichem Grund, dann zusammenfassen
+                $consolidated = [];
+                $currentStart = null;
+                $currentEnd = null;
+                $currentStartAbsence = null;
+                
+                foreach ($sortedAbsences as $absence) {
+                    $absenceDate = Carbon::parse($absence->absence_date);
+                    
+                    if ($currentStart === null) {
+                        // Erster Tag einer Sequenz
+                        $currentStart = $absenceDate;
+                        $currentEnd = $absenceDate;
+                        $currentStartAbsence = $absence;
+                    } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
+                        // Fortsetzung der Sequenz (nächster Tag) - gleicher Grund bereits durch Gruppierung sichergestellt
+                        $currentEnd = $absenceDate;
+                    } else {
+                        // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                        $consolidated[] = [
+                            'start' => $currentStart,
+                            'end' => $currentEnd,
+                            'days' => $currentStart->diffInDays($currentEnd) + 1,
+                            'reason' => $currentStartAbsence->absenceReason?->code ?? '',
+                        ];
+                        $currentStart = $absenceDate;
+                        $currentEnd = $absenceDate;
+                        $currentStartAbsence = $absence;
+                    }
+                }
+                
+                // Letzte Sequenz hinzufügen
+                if ($currentStart !== null) {
                     $consolidated[] = [
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
                         'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                     ];
-                    $currentStart = $absenceDate;
-                    $currentEnd = $absenceDate;
-                    $currentStartAbsence = $absence;
                 }
-            }
-            
-            // Letzte Sequenz hinzufügen
-            if ($currentStart !== null) {
-                $consolidated[] = [
-                    'start' => $currentStart,
-                    'end' => $currentEnd,
-                    'days' => $currentStart->diffInDays($currentEnd) + 1,
-                    'reason' => $currentStartAbsence->absenceReason?->code ?? '',
-                ];
-            }
-            
-            // Erstelle Zeilen für konsolidierte Abwesenheiten
-            foreach ($consolidated as $consolidation) {
-                $row = [
-                    $monthDisplay,                                    // Monat
-                    $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
-                    $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
-                    $firstName,                                       // Vorname
-                    $lastName,                                        // Name
-                    $employeeNumber,                                  // MA Code ZW
-                    '',                                               // LA Code ZW
-                    '',                                               // Einheiten (Std.)
-                    (string)$consolidation['days'],                   // Tage
-                    '',                                               // Satz
-                    '',                                               // Betrag
-                    '',                                               // Prozent
-                    $consolidation['reason'],                         // Fehlzeitencode (Grund der ersten Abwesenheit)
-                    $costCenterCode,                                  // Kostenstelle
-                    '',                                               // Kostenträger
-                    '',                                               // Tarifart (leer für Abwesenheiten)
-                    '',                                               // Tarifgruppe (leer für Abwesenheiten)
-                    '',                                               // Tarifstufe (leer für Abwesenheiten)
-                    '',                                               // zu löschen
-                    '',                                               // Beschreibung init Text
-                ];
                 
-                $lines[] = $this->escapeCsvRow($row);
+                // Erstelle Zeilen für konsolidierte Abwesenheiten
+                foreach ($consolidated as $consolidation) {
+                    $row = [
+                        $monthDisplay,                                    // Monat
+                        $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
+                        $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                        $firstName,                                       // Vorname
+                        $lastName,                                        // Name
+                        $employeeNumber,                                  // MA Code ZW
+                        '',                                               // LA Code ZW
+                        '',                                               // Einheiten (Std.)
+                        (string)$consolidation['days'],                   // Tage
+                        '',                                               // Satz
+                        '',                                               // Betrag
+                        '',                                               // Prozent
+                        $consolidation['reason'],                         // Fehlzeitencode (Grund der ersten Abwesenheit)
+                        $costCenterCode,                                  // Kostenstelle
+                        '',                                               // Kostenträger
+                        '',                                               // Tarifart (leer für Abwesenheiten)
+                        '',                                               // Tarifgruppe (leer für Abwesenheiten)
+                        '',                                               // Tarifstufe (leer für Abwesenheiten)
+                        '',                                               // zu löschen
+                        '',                                               // Beschreibung init Text
+                    ];
+                    
+                    $lines[] = $this->escapeCsvRow($row);
+                }
             }
         }
 
