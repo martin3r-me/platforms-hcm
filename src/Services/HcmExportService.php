@@ -9,6 +9,7 @@ use Platform\Hcm\Models\HcmEmployer;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Models\HcmContractTimeRecord;
+use Platform\Hcm\Models\HcmContractAbsenceDay;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -294,6 +295,9 @@ class HcmExportService
                 // Gesamtstunden berechnen (work_minutes in Stunden umrechnen)
                 $totalMinutes = $timeRecords->sum('work_minutes');
                 $totalHours = $totalMinutes > 0 ? round($totalMinutes / 60, 2) : 0;
+                
+                // Stundenformatierung mit Komma statt Punkt
+                $totalHoursFormatted = $totalHours > 0 ? str_replace('.', ',', number_format($totalHours, 2, '.', '')) : '';
 
                 // Zeile erstellen
                 $row = [
@@ -304,7 +308,7 @@ class HcmExportService
                     $lastName,                                        // Name
                     $employeeNumber,                                  // MA Code ZW
                     '',                                               // LA Code ZW
-                    $totalHours > 0 ? (string)$totalHours : '',      // Einheiten (Std.)
+                    $totalHoursFormatted,                             // Einheiten (Std.) - mit Komma
                     $daysCount > 0 ? (string)$daysCount : '',        // Tage
                     '',                                               // Satz
                     '',                                               // Betrag
@@ -319,6 +323,124 @@ class HcmExportService
                     '',                                               // Beschreibung init Text
                 ];
 
+                $lines[] = $this->escapeCsvRow($row);
+            }
+        }
+
+        // Abwesenheitstage aus dem laufenden Monat hinzufügen (1. des Monats bis heute)
+        $absenceFromDate = Carbon::create($now->year, $now->month, 1);
+        $absenceToDate = $now->copy()->startOfDay();
+        
+        $absenceDays = HcmContractAbsenceDay::with([
+                'contract.employee.crmContactLinks.contact',
+                'contract.costCenterLinks.costCenter',
+                'contract.tariffGroup.tariffAgreement',
+                'contract.tariffLevel',
+                'absenceReason'
+            ])
+            ->where('team_id', $this->teamId)
+            ->whereHas('contract.employee', function ($query) use ($employerId) {
+                $query->where('employer_id', $employerId)
+                      ->where('is_active', true);
+            })
+            ->whereHas('contract', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->whereBetween('absence_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
+            ->orderBy('absence_date')
+            ->get();
+
+        // Gruppiere nach Vertrag und Grund, dann konsolidiere
+        $absenceGroups = $absenceDays->groupBy(function ($absence) {
+            return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
+        });
+
+        foreach ($absenceGroups as $group) {
+            $firstAbsence = $group->first();
+            $contract = $firstAbsence->contract;
+            $employee = $contract->employee;
+            $contact = $employee->crmContactLinks->first()?->contact;
+            
+            $firstName = $contact?->first_name ?? '';
+            $lastName = $contact?->last_name ?? '';
+            $employeeNumber = (string)($employee->employee_number ?? '');
+            
+            // Kostenstelle vom Vertrag holen
+            $costCenter = $contract->getCostCenter();
+            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+            
+            // Tarif-Informationen
+            $tariffType = $contract->tariffGroup?->tariffAgreement?->name ?? '';
+            $tariffGroup = $contract->tariffGroup?->code ?? '';
+            $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
+            
+            // Fehlzeitencode (Grund)
+            $absenceReasonCode = $firstAbsence->absenceReason?->code ?? '';
+            
+            // Sortiere nach Datum
+            $sortedAbsences = $group->sortBy('absence_date')->values();
+            
+            // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
+            $consolidated = [];
+            $currentStart = null;
+            $currentEnd = null;
+            
+            foreach ($sortedAbsences as $absence) {
+                $absenceDate = Carbon::parse($absence->absence_date);
+                
+                if ($currentStart === null) {
+                    // Erster Tag einer Sequenz
+                    $currentStart = $absenceDate;
+                    $currentEnd = $absenceDate;
+                } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
+                    // Fortsetzung der Sequenz (nächster Tag)
+                    $currentEnd = $absenceDate;
+                } else {
+                    // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                    $consolidated[] = [
+                        'start' => $currentStart,
+                        'end' => $currentEnd,
+                        'days' => $currentStart->diffInDays($currentEnd) + 1,
+                    ];
+                    $currentStart = $absenceDate;
+                    $currentEnd = $absenceDate;
+                }
+            }
+            
+            // Letzte Sequenz hinzufügen
+            if ($currentStart !== null) {
+                $consolidated[] = [
+                    'start' => $currentStart,
+                    'end' => $currentEnd,
+                    'days' => $currentStart->diffInDays($currentEnd) + 1,
+                ];
+            }
+            
+            // Erstelle Zeilen für konsolidierte Abwesenheiten
+            foreach ($consolidated as $consolidation) {
+                $row = [
+                    $monthDisplay,                                    // Monat
+                    $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
+                    $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                    $firstName,                                       // Vorname
+                    $lastName,                                        // Name
+                    $employeeNumber,                                  // MA Code ZW
+                    '',                                               // LA Code ZW
+                    '',                                               // Einheiten (Std.)
+                    (string)$consolidation['days'],                   // Tage
+                    '',                                               // Satz
+                    '',                                               // Betrag
+                    '',                                               // Prozent
+                    $absenceReasonCode,                               // Fehlzeitencode
+                    $costCenterCode,                                  // Kostenstelle
+                    '',                                               // Kostenträger
+                    $tariffType,                                      // Tarifart
+                    $tariffGroup,                                     // Tarifgruppe
+                    $tariffLevel,                                     // Tarifstufe
+                    '',                                               // zu löschen
+                    '',                                               // Beschreibung init Text
+                ];
+                
                 $lines[] = $this->escapeCsvRow($row);
             }
         }
@@ -430,6 +552,9 @@ class HcmExportService
                 // Gesamtstunden berechnen (work_minutes in Stunden umrechnen)
                 $totalMinutes = $timeRecords->sum('work_minutes');
                 $totalHours = $totalMinutes > 0 ? round($totalMinutes / 60, 2) : 0;
+                
+                // Stundenformatierung mit Komma statt Punkt
+                $totalHoursFormatted = $totalHours > 0 ? str_replace('.', ',', number_format($totalHours, 2, '.', '')) : '';
 
                 // Zeile erstellen
                 $row = [
@@ -440,7 +565,7 @@ class HcmExportService
                     $lastName,                                        // Name
                     $employeeNumber,                                  // MA Code ZW
                     '',                                               // LA Code ZW
-                    $totalHours > 0 ? (string)$totalHours : '',      // Einheiten (Std.)
+                    $totalHoursFormatted,                             // Einheiten (Std.) - mit Komma
                     $daysCount > 0 ? (string)$daysCount : '',        // Tage
                     '',                                               // Satz
                     '',                                               // Betrag
@@ -455,6 +580,115 @@ class HcmExportService
                     '',                                               // Beschreibung init Text
                 ];
 
+                $lines[] = $this->escapeCsvRow($row);
+            }
+        }
+
+        // Abwesenheitstage aus dem laufenden Monat hinzufügen (1. des Monats bis heute)
+        $absenceDays = HcmContractAbsenceDay::with(['contract.employee.crmContactLinks.contact', 'contract', 'absenceReason'])
+            ->where('team_id', $this->teamId)
+            ->whereHas('contract.employee', function ($query) use ($employerId) {
+                $query->where('employer_id', $employerId)
+                      ->where('is_active', true);
+            })
+            ->whereHas('contract', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->whereBetween('absence_date', [$fromDate->toDateString(), $toDate->toDateString()])
+            ->orderBy('absence_date')
+            ->get();
+
+        // Gruppiere nach Vertrag und Grund, dann konsolidiere
+        $absenceGroups = $absenceDays->groupBy(function ($absence) {
+            return $absence->contract_id . '_' . ($absence->absence_reason_id ?? 'null');
+        });
+
+        foreach ($absenceGroups as $group) {
+            $firstAbsence = $group->first();
+            $contract = $firstAbsence->contract;
+            $employee = $contract->employee;
+            $contact = $employee->crmContactLinks->first()?->contact;
+            
+            $firstName = $contact?->first_name ?? '';
+            $lastName = $contact?->last_name ?? '';
+            $employeeNumber = (string)($employee->employee_number ?? '');
+            
+            // Kostenstelle vom Vertrag holen
+            $costCenter = $contract->getCostCenter();
+            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+            
+            // Tarif-Informationen
+            $tariffType = $contract->tariffGroup?->tariffAgreement?->name ?? '';
+            $tariffGroup = $contract->tariffGroup?->code ?? '';
+            $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
+            
+            // Fehlzeitencode (Grund)
+            $absenceReasonCode = $firstAbsence->absenceReason?->code ?? '';
+            
+            // Sortiere nach Datum
+            $sortedAbsences = $group->sortBy('absence_date')->values();
+            
+            // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
+            $consolidated = [];
+            $currentStart = null;
+            $currentEnd = null;
+            
+            foreach ($sortedAbsences as $absence) {
+                $absenceDate = Carbon::parse($absence->absence_date);
+                
+                if ($currentStart === null) {
+                    // Erster Tag einer Sequenz
+                    $currentStart = $absenceDate;
+                    $currentEnd = $absenceDate;
+                } elseif ($absenceDate->diffInDays($currentEnd) === 1) {
+                    // Fortsetzung der Sequenz (nächster Tag)
+                    $currentEnd = $absenceDate;
+                } else {
+                    // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                    $consolidated[] = [
+                        'start' => $currentStart,
+                        'end' => $currentEnd,
+                        'days' => $currentStart->diffInDays($currentEnd) + 1,
+                    ];
+                    $currentStart = $absenceDate;
+                    $currentEnd = $absenceDate;
+                }
+            }
+            
+            // Letzte Sequenz hinzufügen
+            if ($currentStart !== null) {
+                $consolidated[] = [
+                    'start' => $currentStart,
+                    'end' => $currentEnd,
+                    'days' => $currentStart->diffInDays($currentEnd) + 1,
+                ];
+            }
+            
+            // Erstelle Zeilen für konsolidierte Abwesenheiten
+            foreach ($consolidated as $consolidation) {
+                $row = [
+                    $monthDisplay,                                    // Monat
+                    $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
+                    $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                    $firstName,                                       // Vorname
+                    $lastName,                                        // Name
+                    $employeeNumber,                                  // MA Code ZW
+                    '',                                               // LA Code ZW
+                    '',                                               // Einheiten (Std.)
+                    (string)$consolidation['days'],                   // Tage
+                    '',                                               // Satz
+                    '',                                               // Betrag
+                    '',                                               // Prozent
+                    $absenceReasonCode,                               // Fehlzeitencode
+                    $costCenterCode,                                  // Kostenstelle
+                    '',                                               // Kostenträger
+                    $tariffType,                                      // Tarifart
+                    $tariffGroup,                                     // Tarifgruppe
+                    $tariffLevel,                                     // Tarifstufe
+                    '',                                               // zu löschen
+                    '',                                               // Beschreibung init Text
+                ];
+                
                 $lines[] = $this->escapeCsvRow($row);
             }
         }
