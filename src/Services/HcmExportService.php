@@ -59,6 +59,7 @@ class HcmExportService
                 'infoniqa-dimensions' => $this->exportInfoniqaDimensions($export),
                 'infoniqa-bank' => $this->exportInfoniqaBank($export),
                 'infoniqa-zeitwirtschaft' => $this->exportInfoniqaZeitwirtschaft($export),
+                'infoniqa-zeitwirtschaft-monat' => $this->exportInfoniqaZeitwirtschaftMonat($export),
                 'payroll' => $this->exportPayroll($export),
                 'employees' => $this->exportEmployees($export),
                 'custom' => $this->exportCustom($export),
@@ -299,6 +300,142 @@ class HcmExportService
                     $monthDisplay,                                    // Monat
                     $fromDate->format('d.m.Y'),                       // Von Datum (F:
                     $toDate->format('d.m.Y'),                         // Bis Datum (FZ)
+                    $firstName,                                       // Vorname
+                    $lastName,                                        // Name
+                    $employeeNumber,                                  // MA Code ZW
+                    '',                                               // LA Code ZW
+                    $totalHours > 0 ? (string)$totalHours : '',      // Einheiten (Std.)
+                    $daysCount > 0 ? (string)$daysCount : '',        // Tage
+                    '',                                               // Satz
+                    '',                                               // Betrag
+                    '',                                               // Prozent
+                    '',                                               // Fehlzeitencode
+                    $costCenterCode,                                  // Kostenstelle
+                    '',                                               // Kostenträger
+                    $tariffType,                                      // Tarifart
+                    $tariffGroup,                                     // Tarifgruppe
+                    $tariffLevel,                                     // Tarifstufe
+                    '',                                               // zu löschen
+                    '',                                               // Beschreibung init Text
+                ];
+
+                $lines[] = $this->escapeCsvRow($row);
+            }
+        }
+
+        // UTF-8 BOM für Excel-Kompatibilität
+        $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
+        
+        // Exports in geschütztem Storage-Verzeichnis speichern (nicht public)
+        Storage::disk('local')->put($filepath, $csvData);
+
+        return $filepath;
+    }
+
+    /**
+     * INFONIQA Zeitwirtschaft-Export (Laufender Monat: 1. des Monats bis heute)
+     */
+    private function exportInfoniqaZeitwirtschaftMonat(HcmExport $export): string
+    {
+        $filename = 'infoniqa_zeitwirtschaft_monat_export_' . date('Y-m-d_H-i-s') . '.csv';
+        $filepath = 'exports/hcm/' . $filename;
+
+        $parameters = $export->parameters ?? [];
+        $employerId = $parameters['employer_id'] ?? null;
+
+        if (!$employerId) {
+            throw new \InvalidArgumentException('INFONIQA Zeitwirtschaft Export benötigt employer_id in den Parametern');
+        }
+
+        $employer = HcmEmployer::findOrFail($employerId);
+        if ($employer->team_id !== $this->teamId) {
+            throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
+        }
+
+        // Zeitraum: 1. des aktuellen Monats bis heute
+        $now = Carbon::now();
+        $fromDate = Carbon::create($now->year, $now->month, 1);
+        $toDate = $now->copy()->startOfDay();
+        $monthDisplay = $now->format('m.Y');
+
+        // Headlines definieren
+        $headers = [
+            'Monat',
+            'Von Datum (F:',
+            'Bis Datum (FZ)',
+            'Vorname',
+            'Name',
+            'MA Code ZW',
+            'LA Code ZW',
+            'Einheiten (Std.)',
+            'Tage',
+            'Satz',
+            'Betrag',
+            'Prozent',
+            'Fehlzeitencode',
+            'Kostenstelle',
+            'Kostenträger',
+            'Tarifart',
+            'Tarifgruppe',
+            'Tarifstufe',
+            'zu löschen',
+            'Beschreibung init Text',
+        ];
+
+        $lines = [];
+        $lines[] = $this->escapeCsvRow($headers);
+
+        // Lade alle Mitarbeiter mit aktiven Verträgen (Stundenlohn)
+        $employees = HcmEmployee::with([
+                'crmContactLinks.contact',
+                'contracts' => function ($query) {
+                    $query->where('is_active', true)
+                          ->where('wage_base_type', 'Stundenlohn');
+                },
+                'contracts.costCenterLinks.costCenter',
+                'contracts.tariffGroup.tariffAgreement',
+                'contracts.tariffLevel',
+            ])
+            ->where('team_id', $this->teamId)
+            ->where('employer_id', $employerId)
+            ->where('is_active', true)
+            ->get();
+
+        // Für jeden Vertrag mit Stundenlohn eine Zeile erstellen
+        foreach ($employees as $employee) {
+            $contact = $employee->crmContactLinks->first()?->contact;
+            $firstName = $contact?->first_name ?? '';
+            $lastName = $contact?->last_name ?? '';
+            $employeeNumber = (string)($employee->employee_number ?? '');
+
+            foreach ($employee->contracts as $contract) {
+                // Kostenstelle vom Vertrag holen
+                $costCenter = $contract->getCostCenter();
+                $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+
+                // Tarif-Informationen
+                $tariffType = $contract->tariffGroup?->tariffAgreement?->name ?? '';
+                $tariffGroup = $contract->tariffGroup?->code ?? '';
+                $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
+
+                // Zeiterfassungsdaten für den Zeitraum abfragen (1. des Monats bis heute)
+                $timeRecords = HcmContractTimeRecord::where('contract_id', $contract->id)
+                    ->whereBetween('record_date', [$fromDate->toDateString(), $toDate->toDateString()])
+                    ->whereNotNull('work_minutes')
+                    ->get();
+
+                // Anzahl der Tage (eindeutige Datumsangaben)
+                $daysCount = $timeRecords->pluck('record_date')->unique()->count();
+
+                // Gesamtstunden berechnen (work_minutes in Stunden umrechnen)
+                $totalMinutes = $timeRecords->sum('work_minutes');
+                $totalHours = $totalMinutes > 0 ? round($totalMinutes / 60, 2) : 0;
+
+                // Zeile erstellen
+                $row = [
+                    $monthDisplay,                                    // Monat
+                    $fromDate->format('d.m.Y'),                       // Von Datum (F: (1. des Monats)
+                    $toDate->format('d.m.Y'),                          // Bis Datum (FZ) (heute)
                     $firstName,                                       // Vorname
                     $lastName,                                        // Name
                     $employeeNumber,                                  // MA Code ZW
@@ -1753,7 +1890,7 @@ class HcmExportService
             'payroll', 'employees' => max(0, $lineCount - 1),
             'infoniqa-dimensions' => $lineCount,
             'infoniqa-bank' => max(0, $lineCount - 5),
-            'infoniqa-zeitwirtschaft' => max(0, $lineCount - 1),
+            'infoniqa-zeitwirtschaft', 'infoniqa-zeitwirtschaft-monat' => max(0, $lineCount - 1),
             default => max(0, $lineCount),
         };
     }
