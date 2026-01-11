@@ -1,8 +1,6 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Mitarbeiter" icon="heroicon-o-user-group">
-            <x-ui-input-text name="search" placeholder="Suchen…" wire:model.live.debounce.300ms="search" />
-        </x-ui-page-navbar>
+        <x-ui-page-navbar title="Mitarbeiter" icon="heroicon-o-user-group" />
     </x-slot>
 
     <x-ui-page-container>
@@ -189,6 +187,28 @@
                                     <td class="px-4 py-2"></td>
                                     <td class="px-4 py-2">
                                         <div class="pl-6 space-y-1 text-xs">
+                                            @if($c->wage_base_type || $c->hourly_wage || $c->base_salary)
+                                                <div class="text-[var(--ui-muted)]">
+                                                    <span class="font-medium">Vergütung:</span>
+                                                    @if($c->wage_base_type)
+                                                        <span>{{ $c->wage_base_type }}</span>
+                                                    @endif
+                                                    @php
+                                                        $hourly = $c->hourly_wage;
+                                                        $monthly = $c->base_salary;
+                                                    @endphp
+                                                    @if($hourly !== null && $hourly !== '')
+                                                        <span class="ml-1">
+                                                            ({{ is_numeric($hourly) ? number_format((float)$hourly, 2, ',', '.') : $hourly }} €/h)
+                                                        </span>
+                                                    @endif
+                                                    @if($monthly !== null && $monthly !== '')
+                                                        <span class="ml-1">
+                                                            ({{ is_numeric($monthly) ? number_format((float)$monthly, 2, ',', '.') : $monthly }} €/Monat)
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            @endif
                                             @if($tariffInfo)
                                                 <div class="flex items-center gap-1">
                                                     @svg('heroicon-o-currency-euro', 'w-3 h-3 text-blue-600')
@@ -313,6 +333,11 @@
     <x-slot name="sidebar">
         <x-ui-page-sidebar title="Schnellzugriff" width="w-80" :defaultOpen="true" side="left">
             <div class="p-6 space-y-6">
+                <div>
+                    <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Suchen</h3>
+                    <x-ui-input-text name="search" placeholder="Nachname oder Personalnummer…" wire:model.live.debounce.300ms="search" />
+                </div>
+
                 <div>
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-3">Aktionen</h3>
                     <div class="space-y-2">

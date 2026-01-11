@@ -53,6 +53,11 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
                         'description' => 'Optional: Contracts mitladen. Default: false.',
                         'default' => false,
                     ],
+                'include_contracts_compensation' => [
+                    'type' => 'boolean',
+                    'description' => 'Optional: In contracts zusätzlich wage_base_type/hourly_wage/base_salary ausgeben. Default: false. Hinweis: sensible Daten.',
+                    'default' => false,
+                ],
                 ],
             ]
         );
@@ -70,6 +75,7 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
 
             $includeContacts = (bool)($arguments['include_contacts'] ?? true);
             $includeContracts = (bool)($arguments['include_contracts'] ?? false);
+            $includeContractsComp = (bool)($arguments['include_contracts_compensation'] ?? false);
 
             $with = ['employer'];
             if ($includeContacts) {
@@ -131,6 +137,9 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
                         'end_date' => $c->end_date?->toDateString(),
                         'is_active' => (bool)$c->is_active,
                         'hours_per_week' => $c->hours_per_week,
+                        'wage_base_type' => $c->wage_base_type,
+                        'hourly_wage' => $includeContractsComp ? $c->hourly_wage : null,
+                        'base_salary' => $includeContractsComp ? $c->base_salary : null,
                         'employment_status' => $c->employment_status,
                     ])->toArray();
                 }

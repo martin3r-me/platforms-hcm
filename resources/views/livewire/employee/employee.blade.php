@@ -308,6 +308,29 @@
                                                     {{ $contract->hours_per_month }}h/Monat
                                                 </span>
                                             @endif
+                                            @if($contract->wage_base_type || $contract->hourly_wage || $contract->base_salary)
+                                                <span class="flex items-center gap-1">
+                                                    @svg('heroicon-o-banknotes', 'w-4 h-4')
+                                                    <span class="font-medium">Vergütung:</span>
+                                                    @if($contract->wage_base_type)
+                                                        <span>{{ $contract->wage_base_type }}</span>
+                                                    @endif
+                                                    @php
+                                                        $hourly = $contract->hourly_wage;
+                                                        $monthly = $contract->base_salary;
+                                                    @endphp
+                                                    @if($hourly !== null && $hourly !== '')
+                                                        <span class="ml-1">
+                                                            ({{ is_numeric($hourly) ? number_format((float)$hourly, 2, ',', '.') : $hourly }} €/h)
+                                                        </span>
+                                                    @endif
+                                                    @if($monthly !== null && $monthly !== '')
+                                                        <span class="ml-1">
+                                                            ({{ is_numeric($monthly) ? number_format((float)$monthly, 2, ',', '.') : $monthly }} €/Monat)
+                                                        </span>
+                                                    @endif
+                                                </span>
+                                            @endif
                                             @if($tariffInfo)
                                                 <span class="flex items-center gap-1 text-blue-600 font-medium">
                                                     @svg('heroicon-o-currency-euro', 'w-4 h-4')

@@ -168,6 +168,41 @@
                 @endif
             </div>
 
+            {{-- Vergütungsbasis (Lohngrundart + Stunden-/Monatslohn) --}}
+            @if($contract->wage_base_type || $contract->hourly_wage || $contract->base_salary)
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    @if($contract->wage_base_type)
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                            <div class="text-sm font-medium text-gray-700 mb-2">Lohngrundart</div>
+                            <div class="text-xl font-bold text-gray-900">
+                                {{ $contract->wage_base_type }}
+                            </div>
+                            <div class="text-sm text-gray-600">Basis der Vergütung</div>
+                        </div>
+                    @endif
+
+                    @if($contract->hourly_wage)
+                        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+                            <div class="text-sm font-medium text-indigo-700 mb-2">Stundenlohn</div>
+                            <div class="text-2xl font-bold text-indigo-600">
+                                {{ is_numeric($contract->hourly_wage) ? number_format((float)$contract->hourly_wage, 2, ',', '.') : $contract->hourly_wage }} €
+                            </div>
+                            <div class="text-sm text-indigo-600">pro Stunde</div>
+                        </div>
+                    @endif
+
+                    @if($contract->base_salary)
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                            <div class="text-sm font-medium text-blue-700 mb-2">Monatslohn</div>
+                            <div class="text-2xl font-bold text-blue-600">
+                                {{ is_numeric($contract->base_salary) ? number_format((float)$contract->base_salary, 2, ',', '.') : $contract->base_salary }} €
+                            </div>
+                            <div class="text-sm text-blue-600">Grundgehalt/Monat</div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             {{-- Tarif-Details --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {{-- Tarifliche Zuordnung --}}
@@ -777,6 +812,20 @@
                             <div class="p-3 bg-gray-50 rounded-lg">
                                 <div class="text-xs text-[var(--ui-muted)] mb-1">Lohngrundart</div>
                                 <div class="text-sm font-medium">{{ $contract->wage_base_type }}</div>
+                                @if($contract->hourly_wage || $contract->base_salary)
+                                    <div class="mt-1 text-xs text-[var(--ui-muted)]">
+                                        @if($contract->hourly_wage)
+                                            <span>
+                                                Stundenlohn: {{ is_numeric($contract->hourly_wage) ? number_format((float)$contract->hourly_wage, 2, ',', '.') : $contract->hourly_wage }} €/h
+                                            </span>
+                                        @endif
+                                        @if($contract->base_salary)
+                                            <span class="ml-2">
+                                                Monatslohn: {{ is_numeric($contract->base_salary) ? number_format((float)$contract->base_salary, 2, ',', '.') : $contract->base_salary }} €/Monat
+                                            </span>
+                                        @endif
+                                    </div>
+                                @endif
                             </div>
                         @endif
                     </div>

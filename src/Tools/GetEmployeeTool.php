@@ -41,6 +41,11 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
                     'description' => 'Optional: CRM-Kontaktdaten mitladen. Default: true.',
                     'default' => true,
                 ],
+                'include_contracts_compensation' => [
+                    'type' => 'boolean',
+                    'description' => 'Optional: In contracts zusätzlich wage_base_type/hourly_wage/base_salary ausgeben. Default: false. Hinweis: sensible Daten.',
+                    'default' => false,
+                ],
             ],
             'required' => ['employee_id'],
         ];
@@ -61,6 +66,7 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
             }
 
             $includeContacts = (bool)($arguments['include_contacts'] ?? true);
+            $includeContractsComp = (bool)($arguments['include_contracts_compensation'] ?? false);
 
             $with = [
                 'employer',
@@ -123,6 +129,9 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
                     'employment_status' => $c->employment_status,
                     'contract_type' => $c->contract_type,
                     'hours_per_week' => $c->hours_per_week,
+                    'wage_base_type' => $c->wage_base_type,
+                    'hourly_wage' => $includeContractsComp ? $c->hourly_wage : null,
+                    'base_salary' => $includeContractsComp ? $c->base_salary : null,
                     'cost_center' => $c->cost_center,
                 ])->values()->toArray(),
                 'created_at' => $employee->created_at?->toISOString(),
