@@ -16,6 +16,9 @@ class Index extends Component
     // Modal State
     public $modalShow = false;
     
+    // Search
+    public $search = '';
+    
     // Sorting
     public $sortField = 'employee_number';
     public $sortDirection = 'asc';
@@ -57,6 +60,23 @@ class Index extends Component
             'contracts.jobActivityAlias'
         ])
             ->forTeam(auth()->user()->currentTeam->id);
+
+        // Suche nach Personalnummer oder Nachname
+        if (!empty($this->search)) {
+            $searchTerm = '%' . $this->search . '%';
+            
+            $query->where(function ($q) use ($searchTerm) {
+                // Suche nach Personalnummer (employee_number oder alternative_employee_number)
+                $q->where('employee_number', 'like', $searchTerm)
+                  ->orWhere('alternative_employee_number', 'like', $searchTerm)
+                  // Suche nach Nachname über verknüpfte Kontakte
+                  ->orWhereHas('crmContactLinks.contact', function ($contactQuery) use ($searchTerm) {
+                      $contactQuery->where('last_name', 'like', $searchTerm)
+                                   ->orWhere('first_name', 'like', $searchTerm)
+                                   ->orWhereRaw("CONCAT(first_name, ' ', last_name) LIKE ?", [$searchTerm]);
+                  });
+            });
+        }
 
         if ($this->sortField === 'employee_number') {
             $query->orderBy('employee_number', $this->sortDirection);
