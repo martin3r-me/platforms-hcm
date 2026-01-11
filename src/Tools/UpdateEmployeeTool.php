@@ -42,6 +42,10 @@ class UpdateEmployeeTool implements ToolContract, ToolMetadataContract
                     'type' => 'integer',
                     'description' => 'Optional: neuer Arbeitgeber (muss im selben Team liegen).',
                 ],
+                'employee_number' => [
+                    'type' => 'string',
+                    'description' => 'Optional: Personalnummer (pro Employer eindeutig).',
+                ],
                 'is_active' => [
                     'type' => 'boolean',
                     'description' => 'Optional: Status.',
@@ -103,6 +107,7 @@ class UpdateEmployeeTool implements ToolContract, ToolMetadataContract
             }
 
             $fields = [
+                'employee_number',
                 'is_active',
                 'owned_by_user_id',
                 'birth_date',

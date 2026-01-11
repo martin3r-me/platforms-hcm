@@ -42,6 +42,10 @@ class CreateEmployeeTool implements ToolContract, ToolMetadataContract
                     'type' => 'integer',
                     'description' => 'ID des Arbeitgebers (ERFORDERLICH). Nutze "hcm.employers.GET".',
                 ],
+                'employee_number' => [
+                    'type' => 'string',
+                    'description' => 'Optional: Personalnummer. Wenn nicht gesetzt, wird automatisch generiert (pro Employer eindeutig).',
+                ],
                 'is_active' => [
                     'type' => 'boolean',
                     'description' => 'Optional: Status. Default true.',
@@ -108,8 +112,11 @@ class CreateEmployeeTool implements ToolContract, ToolMetadataContract
             $isActive = (bool)($arguments['is_active'] ?? true);
             $ownedByUserId = isset($arguments['owned_by_user_id']) ? (int)$arguments['owned_by_user_id'] : (int)$context->user->id;
 
-            $result = DB::transaction(function () use ($teamId, $context, $employer, $contactId, $createContact, $isActive, $ownedByUserId) {
-                $employeeNumber = $employer->generateNextEmployeeNumber();
+            $result = DB::transaction(function () use ($teamId, $context, $employer, $contactId, $createContact, $isActive, $ownedByUserId, $arguments) {
+                // Personalnummer: Wenn manuell gesetzt, verwenden; sonst automatisch generieren
+                $employeeNumber = isset($arguments['employee_number']) && trim((string)$arguments['employee_number']) !== ''
+                    ? trim((string)$arguments['employee_number'])
+                    : $employer->generateNextEmployeeNumber();
 
                 $employee = HcmEmployee::create([
                     'employer_id' => $employer->id,
