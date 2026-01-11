@@ -350,6 +350,15 @@ class MovementDataController extends ApiController
 
         // Abwesenheitsgrund finden oder automatisch erstellen
         $code = $item['absence_reason_code'];
+        
+        // Logge den empfangenen Code für Debugging
+        \Log::info('HCM: Verarbeite Abwesenheitstag', [
+            'employee_number' => $employee->employee_number,
+            'date' => $date,
+            'absence_reason_code' => $code,
+            'team_id' => $contract->team_id,
+        ]);
+        
         $absenceReason = HcmAbsenceReason::where('team_id', $contract->team_id)
             ->where('code', $code)
             ->first();
@@ -378,17 +387,39 @@ class MovementDataController extends ApiController
                 'category' => $defaultCategory,
             ]);
             
-            $absenceReason = HcmAbsenceReason::create([
-                'team_id' => $contract->team_id,
-                'code' => $code,
-                'name' => $defaultName,
-                'short_name' => $defaultName,
-                'category' => $defaultCategory,
-                'requires_sick_note' => false,
-                'is_paid' => true,
-                'sort_order' => 999, // Am Ende sortieren, kann in UI angepasst werden
-                'is_active' => true,
-                'created_by_user_id' => auth()->id(),
+            try {
+                $absenceReason = HcmAbsenceReason::create([
+                    'team_id' => $contract->team_id,
+                    'code' => $code,
+                    'name' => $defaultName,
+                    'short_name' => $defaultName,
+                    'category' => $defaultCategory,
+                    'requires_sick_note' => false,
+                    'is_paid' => true,
+                    'sort_order' => 999, // Am Ende sortieren, kann in UI angepasst werden
+                    'is_active' => true,
+                    'created_by_user_id' => auth()->id(),
+                ]);
+                
+                \Log::info('HCM: Abwesenheitsgrund erfolgreich erstellt', [
+                    'id' => $absenceReason->id,
+                    'code' => $absenceReason->code,
+                    'name' => $absenceReason->name,
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('HCM: Fehler beim Erstellen des Abwesenheitsgrunds', [
+                    'code' => $code,
+                    'team_id' => $contract->team_id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                throw $e;
+            }
+        } else {
+            \Log::info('HCM: Abwesenheitsgrund bereits vorhanden', [
+                'id' => $absenceReason->id,
+                'code' => $absenceReason->code,
+                'name' => $absenceReason->name,
             ]);
         }
 
