@@ -314,13 +314,58 @@ class MovementDataController extends ApiController
             throw new \Exception('Validierungsfehler: ' . $validator->errors()->first());
         }
 
-        // Abwesenheitsgrund finden
+        // Abwesenheitsgrund finden oder automatisch erstellen
         $absenceReason = HcmAbsenceReason::where('team_id', $contract->team_id)
             ->where('code', $item['absence_reason_code'])
             ->first();
 
         if (!$absenceReason) {
-            throw new \Exception("Abwesenheitsgrund mit Code '{$item['absence_reason_code']}' nicht gefunden");
+            // Automatisch erstellen für häufige Codes (z.B. 'SICK')
+            $defaultReasons = [
+                'SICK' => [
+                    'name' => 'Krankheit',
+                    'short_name' => 'Krank',
+                    'category' => 'sick',
+                    'requires_sick_note' => false,
+                    'is_paid' => true,
+                    'sort_order' => 10,
+                ],
+                'SICK_CHILD' => [
+                    'name' => 'Kind krank',
+                    'short_name' => 'Kind krank',
+                    'category' => 'sick',
+                    'requires_sick_note' => false,
+                    'is_paid' => true,
+                    'sort_order' => 20,
+                ],
+                'DOCTOR' => [
+                    'name' => 'Arzttermin',
+                    'short_name' => 'Arzt',
+                    'category' => 'personal',
+                    'requires_sick_note' => false,
+                    'is_paid' => true,
+                    'sort_order' => 30,
+                ],
+            ];
+
+            $code = $item['absence_reason_code'];
+            if (isset($defaultReasons[$code])) {
+                $default = $defaultReasons[$code];
+                $absenceReason = HcmAbsenceReason::create([
+                    'team_id' => $contract->team_id,
+                    'code' => $code,
+                    'name' => $default['name'],
+                    'short_name' => $default['short_name'],
+                    'category' => $default['category'],
+                    'requires_sick_note' => $default['requires_sick_note'],
+                    'is_paid' => $default['is_paid'],
+                    'sort_order' => $default['sort_order'],
+                    'is_active' => true,
+                    'created_by_user_id' => auth()->id(),
+                ]);
+            } else {
+                throw new \Exception("Abwesenheitsgrund mit Code '{$code}' nicht gefunden und kann nicht automatisch erstellt werden");
+            }
         }
 
         $data = [
