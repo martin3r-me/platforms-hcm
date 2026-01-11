@@ -8,6 +8,7 @@ use Platform\Hcm\Models\HcmExportTemplate;
 use Platform\Hcm\Models\HcmEmployer;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
+use Platform\Hcm\Models\HcmContractTimeRecord;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -268,6 +269,7 @@ class HcmExportService
             $contact = $employee->crmContactLinks->first()?->contact;
             $firstName = $contact?->first_name ?? '';
             $lastName = $contact?->last_name ?? '';
+            $employeeNumber = (string)($employee->employee_number ?? '');
 
             foreach ($employee->contracts as $contract) {
                 // Kostenstelle vom Vertrag holen
@@ -279,6 +281,19 @@ class HcmExportService
                 $tariffGroup = $contract->tariffGroup?->code ?? '';
                 $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
 
+                // Zeiterfassungsdaten für den Zeitraum abfragen
+                $timeRecords = HcmContractTimeRecord::where('contract_id', $contract->id)
+                    ->whereBetween('record_date', [$fromDate->toDateString(), $toDate->toDateString()])
+                    ->whereNotNull('work_minutes')
+                    ->get();
+
+                // Anzahl der Tage (eindeutige Datumsangaben)
+                $daysCount = $timeRecords->pluck('record_date')->unique()->count();
+
+                // Gesamtstunden berechnen (work_minutes in Stunden umrechnen)
+                $totalMinutes = $timeRecords->sum('work_minutes');
+                $totalHours = $totalMinutes > 0 ? round($totalMinutes / 60, 2) : 0;
+
                 // Zeile erstellen
                 $row = [
                     $monthDisplay,                                    // Monat
@@ -286,10 +301,10 @@ class HcmExportService
                     $toDate->format('d.m.Y'),                         // Bis Datum (FZ)
                     $firstName,                                       // Vorname
                     $lastName,                                        // Name
-                    '',                                               // MA Code ZW
+                    $employeeNumber,                                  // MA Code ZW
                     '',                                               // LA Code ZW
-                    '',                                               // Einheiten (Std.)
-                    '',                                               // Tage
+                    $totalHours > 0 ? (string)$totalHours : '',      // Einheiten (Std.)
+                    $daysCount > 0 ? (string)$daysCount : '',        // Tage
                     '',                                               // Satz
                     '',                                               // Betrag
                     '',                                               // Prozent
