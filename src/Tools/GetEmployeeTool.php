@@ -130,8 +130,9 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
                     'contract_type' => $c->contract_type,
                     'hours_per_week' => $c->hours_per_week,
                     'wage_base_type' => $c->wage_base_type,
-                    'hourly_wage' => $includeContractsComp ? $c->hourly_wage : null,
-                    'base_salary' => $includeContractsComp ? $c->base_salary : null,
+                    // Robust: verhindert Undefined-Variable-Warning bei Scope/Refactor
+                    'hourly_wage' => (($includeContractsComp ?? false) ? $c->hourly_wage : null),
+                    'base_salary' => (($includeContractsComp ?? false) ? $c->base_salary : null),
                     'cost_center' => $c->cost_center,
                 ])->values()->toArray(),
                 'created_at' => $employee->created_at?->toISOString(),

@@ -148,8 +148,9 @@ class ListEmployeesTool implements ToolContract, ToolMetadataContract
                         'is_active' => (bool)$c->is_active,
                         'hours_per_week' => $c->hours_per_week,
                         'wage_base_type' => $c->wage_base_type,
-                        'hourly_wage' => $includeContractsComp ? $c->hourly_wage : null,
-                        'base_salary' => $includeContractsComp ? $c->base_salary : null,
+                        // Robust: falls $includeContractsComp in irgendeinem Scope/Refactor fehlt, verhindert ?? einen Undefined-Variable-Warning
+                        'hourly_wage' => (($includeContractsComp ?? false) ? $c->hourly_wage : null),
+                        'base_salary' => (($includeContractsComp ?? false) ? $c->base_salary : null),
                         'employment_status' => $c->employment_status,
                     ])->toArray();
                 }
