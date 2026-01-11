@@ -194,7 +194,7 @@
                     @enderror
                 </div>
 
-                @if(in_array($selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank'], true))
+                @if(in_array($selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft'], true))
                     <div>
                         <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
                             Arbeitgeber <span class="text-red-600">*</span>
@@ -231,7 +231,7 @@
                     <x-ui-button 
                         variant="primary" 
                         wire:click="executeExport"
-                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions','infoniqa-bank'], true) && !$selectedEmployerId)"
+                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions','infoniqa-bank','infoniqa-zeitwirtschaft'], true) && !$selectedEmployerId)"
                     >
                         @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
                         Export starten
@@ -289,6 +289,10 @@
                         <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa-dimensions')" class="w-full justify-start">
                             @svg('heroicon-o-rectangle-group', 'w-4 h-4')
                             <span class="ml-2">INFONIQA Dimensionen</span>
+                        </x-ui-button>
+                        <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('infoniqa-zeitwirtschaft')" class="w-full justify-start">
+                            @svg('heroicon-o-clock', 'w-4 h-4')
+                            <span class="ml-2">INFONIQA Zeitwirtschaft</span>
                         </x-ui-button>
                         <x-ui-button variant="secondary-outline" size="sm" wire:click="triggerExport('payroll')" class="w-full justify-start">
                             @svg('heroicon-o-currency-euro', 'w-4 h-4')

@@ -57,6 +57,7 @@ class HcmExportService
                 'infoniqa-ma' => $this->exportInfoniqa($export),
                 'infoniqa-dimensions' => $this->exportInfoniqaDimensions($export),
                 'infoniqa-bank' => $this->exportInfoniqaBank($export),
+                'infoniqa-zeitwirtschaft' => $this->exportInfoniqaZeitwirtschaft($export),
                 'payroll' => $this->exportPayroll($export),
                 'employees' => $this->exportEmployees($export),
                 'custom' => $this->exportCustom($export),
@@ -166,6 +167,62 @@ class HcmExportService
 
         // UTF-8 BOM für Excel-Kompatibilität
         $csvData = "\xEF\xBB\xBF" . $csvData;
+        
+        // Exports in geschütztem Storage-Verzeichnis speichern (nicht public)
+        Storage::disk('local')->put($filepath, $csvData);
+
+        return $filepath;
+    }
+
+    /**
+     * INFONIQA Zeitwirtschaft-Export
+     */
+    private function exportInfoniqaZeitwirtschaft(HcmExport $export): string
+    {
+        $filename = 'infoniqa_zeitwirtschaft_export_' . date('Y-m-d_H-i-s') . '.csv';
+        $filepath = 'exports/hcm/' . $filename;
+
+        $parameters = $export->parameters ?? [];
+        $employerId = $parameters['employer_id'] ?? null;
+
+        if (!$employerId) {
+            throw new \InvalidArgumentException('INFONIQA Zeitwirtschaft Export benötigt employer_id in den Parametern');
+        }
+
+        $employer = HcmEmployer::findOrFail($employerId);
+        if ($employer->team_id !== $this->teamId) {
+            throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
+        }
+
+        // Headlines definieren
+        $headers = [
+            'Monat',
+            'Von Datum (F:',
+            'Bis Datum (FZ)',
+            'Vorname',
+            'Name',
+            'MA Code ZW',
+            'LA Code ZW',
+            'Einheiten (Std.)',
+            'Tage',
+            'Satz',
+            'Betrag',
+            'Prozent',
+            'Fehlzeitencode',
+            'Kostenstelle',
+            'Kostenträger',
+            'Tarifart',
+            'Tarifgruppe',
+            'Tarifstufe',
+            'zu löschen',
+            'Beschreibung init Text',
+        ];
+
+        $lines = [];
+        $lines[] = $this->escapeCsvRow($headers);
+
+        // UTF-8 BOM für Excel-Kompatibilität
+        $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
         
         // Exports in geschütztem Storage-Verzeichnis speichern (nicht public)
         Storage::disk('local')->put($filepath, $csvData);
@@ -1595,6 +1652,7 @@ class HcmExportService
             'payroll', 'employees' => max(0, $lineCount - 1),
             'infoniqa-dimensions' => $lineCount,
             'infoniqa-bank' => max(0, $lineCount - 5),
+            'infoniqa-zeitwirtschaft' => max(0, $lineCount - 1),
             default => max(0, $lineCount),
         };
     }

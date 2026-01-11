@@ -66,11 +66,11 @@ class Index extends Component
     public function executeExport(): void
     {
         $rules = [
-            'selectedExportType' => 'required|string|in:infoniqa-ma,infoniqa-dimensions,infoniqa-bank,payroll,employees',
+            'selectedExportType' => 'required|string|in:infoniqa-ma,infoniqa-dimensions,infoniqa-bank,infoniqa-zeitwirtschaft,payroll,employees',
         ];
         
         // Für INFONIQA Exporte ist employer_id erforderlich
-        if (in_array($this->selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank'], true)) {
+        if (in_array($this->selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft'], true)) {
             $rules['selectedEmployerId'] = 'required|exists:hcm_employers,id';
         }
         
@@ -97,6 +97,7 @@ class Index extends Component
                 'infoniqa-ma' => 'INFONIQA MA Export',
                 'infoniqa-dimensions' => 'INFONIQA Dimensionen Export',
                 'infoniqa-bank' => 'INFONIQA Bank Export',
+                'infoniqa-zeitwirtschaft' => 'Export Infoniqua Zeitwirtschaft',
                 'payroll' => 'Lohnarten Export',
                 'employees' => 'Mitarbeiter Export',
                 default => 'Export',
@@ -104,7 +105,7 @@ class Index extends Component
             
             // Parameter für INFONIQA-Exporte
             $parameters = null;
-            if (in_array($exportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank'], true)) {
+            if (in_array($exportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft'], true)) {
                 $parameters = ['employer_id' => $employerId];
             }
             
@@ -260,6 +261,7 @@ class Index extends Component
             'infoniqa-ma' => 'INFONIQA MA Export',
             'infoniqa-dimensions' => 'INFONIQA Dimensionen Export',
             'infoniqa-bank' => 'INFONIQA Bank Export',
+            'infoniqa-zeitwirtschaft' => 'Export Infoniqua Zeitwirtschaft',
             'payroll' => 'Lohnarten Export',
             'employees' => 'Mitarbeiter Export',
         ];
