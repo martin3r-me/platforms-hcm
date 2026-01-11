@@ -235,7 +235,7 @@ class HcmExportService
                 'crmContactLinks.contact',
                 'contracts' => function ($query) {
                     $query->where('is_active', true)
-                          ->where('wage_base_type', 'hourly');
+                          ->where('wage_base_type', 'Stundenlohn');
                 },
                 'contracts.costCenterLinks.costCenter',
                 'contracts.tariffGroup.tariffAgreement',
