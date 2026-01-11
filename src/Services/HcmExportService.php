@@ -194,6 +194,15 @@ class HcmExportService
             throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
         }
 
+        // Zeitraum berechnen: 15. des letzten Monats bis 14. des aktuellen Monats
+        $now = Carbon::now();
+        $lastMonth = $now->copy()->subMonth();
+        $fromDate = Carbon::create($lastMonth->year, $lastMonth->month, 15);
+        $toDate = Carbon::create($now->year, $now->month, 14);
+        
+        // Monat für Anzeige: letzter Monat (z.B. "12.2024" für Dezember)
+        $monthDisplay = $lastMonth->format('m.Y');
+
         // Headlines definieren
         $headers = [
             'Monat',
@@ -220,6 +229,66 @@ class HcmExportService
 
         $lines = [];
         $lines[] = $this->escapeCsvRow($headers);
+
+        // Lade alle Mitarbeiter mit aktiven Verträgen (Stundenlohn)
+        $employees = HcmEmployee::with([
+                'crmContactLinks.contact',
+                'contracts' => function ($query) {
+                    $query->where('is_active', true)
+                          ->where('wage_base_type', 'hourly');
+                },
+                'contracts.costCenterLinks.costCenter',
+                'contracts.tariffGroup.tariffAgreement',
+                'contracts.tariffLevel',
+            ])
+            ->where('team_id', $this->teamId)
+            ->where('employer_id', $employerId)
+            ->where('is_active', true)
+            ->get();
+
+        // Für jeden Vertrag mit Stundenlohn eine Zeile erstellen
+        foreach ($employees as $employee) {
+            $contact = $employee->crmContactLinks->first()?->contact;
+            $firstName = $contact?->first_name ?? '';
+            $lastName = $contact?->last_name ?? '';
+
+            foreach ($employee->contracts as $contract) {
+                // Kostenstelle vom Vertrag holen
+                $costCenter = $contract->getCostCenter();
+                $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+
+                // Tarif-Informationen
+                $tariffType = $contract->tariffGroup?->tariffAgreement?->name ?? '';
+                $tariffGroup = $contract->tariffGroup?->code ?? '';
+                $tariffLevel = $this->formatTariffLevel($contract->tariffLevel);
+
+                // Zeile erstellen
+                $row = [
+                    $monthDisplay,                                    // Monat
+                    $fromDate->format('d.m.Y'),                       // Von Datum (F:
+                    $toDate->format('d.m.Y'),                         // Bis Datum (FZ)
+                    $firstName,                                       // Vorname
+                    $lastName,                                        // Name
+                    '',                                               // MA Code ZW
+                    '',                                               // LA Code ZW
+                    '',                                               // Einheiten (Std.)
+                    '',                                               // Tage
+                    '',                                               // Satz
+                    '',                                               // Betrag
+                    '',                                               // Prozent
+                    '',                                               // Fehlzeitencode
+                    $costCenterCode,                                  // Kostenstelle
+                    '',                                               // Kostenträger
+                    $tariffType,                                      // Tarifart
+                    $tariffGroup,                                     // Tarifgruppe
+                    $tariffLevel,                                     // Tarifstufe
+                    '',                                               // zu löschen
+                    '',                                               // Beschreibung init Text
+                ];
+
+                $lines[] = $this->escapeCsvRow($row);
+            }
+        }
 
         // UTF-8 BOM für Excel-Kompatibilität
         $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
