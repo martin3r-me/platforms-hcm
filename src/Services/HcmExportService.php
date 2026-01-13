@@ -10,6 +10,7 @@ use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Models\HcmContractTimeRecord;
 use Platform\Hcm\Models\HcmContractAbsenceDay;
+use Platform\Hcm\Models\HcmContractVacationDay;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
@@ -296,34 +297,37 @@ class HcmExportService
                 $totalMinutes = $timeRecords->sum('work_minutes');
                 $totalHours = $totalMinutes > 0 ? round($totalMinutes / 60, 2) : 0;
                 
-                // Stundenformatierung mit Komma statt Punkt
-                $totalHoursFormatted = $totalHours > 0 ? str_replace('.', ',', number_format($totalHours, 2, '.', '')) : '';
+                // Nur Zeile erstellen, wenn Stunden angefallen sind
+                if ($totalHours > 0) {
+                    // Stundenformatierung mit Komma statt Punkt
+                    $totalHoursFormatted = str_replace('.', ',', number_format($totalHours, 2, '.', ''));
 
-                // Zeile erstellen
-                $row = [
-                    $monthDisplay,                                    // Monat
-                    $fromDate->format('d.m.Y'),                       // Von Datum (F:
-                    $toDate->format('d.m.Y'),                         // Bis Datum (FZ)
-                    $firstName,                                       // Vorname
-                    $lastName,                                        // Name
-                    $employeeNumber,                                  // MA Code ZW
-                    '',                                               // LA Code ZW
-                    $totalHoursFormatted,                             // Einheiten (Std.) - mit Komma
-                    $daysCount > 0 ? (string)$daysCount : '',        // Tage
-                    '',                                               // Satz
-                    '',                                               // Betrag
-                    '',                                               // Prozent
-                    '',                                               // Fehlzeitencode
-                    $costCenterCode,                                  // Kostenstelle
-                    '',                                               // Kostenträger
-                    $tariffType,                                      // Tarifart
-                    $tariffGroup,                                     // Tarifgruppe
-                    $tariffLevel,                                     // Tarifstufe
-                    '',                                               // zu löschen
-                    '',                                               // Beschreibung init Text
-                ];
-
-                $lines[] = $this->escapeCsvRow($row);
+                    // Zeile erstellen
+                    $row = [
+                        $monthDisplay,                                    // Monat
+                        $fromDate->format('d.m.Y'),                       // Von Datum (F:
+                        $toDate->format('d.m.Y'),                         // Bis Datum (FZ)
+                        $firstName,                                       // Vorname
+                        $lastName,                                        // Name
+                        $employeeNumber,                                  // MA Code ZW
+                        '',                                               // LA Code ZW
+                        $totalHoursFormatted,                             // Einheiten (Std.) - mit Komma
+                        $daysCount > 0 ? (string)$daysCount : '',        // Tage
+                        '',                                               // Satz
+                        '',                                               // Betrag
+                        '',                                               // Prozent
+                        '',                                               // Fehlzeitencode
+                        $costCenterCode,                                  // Kostenstelle
+                        '',                                               // Kostenträger
+                        $tariffType,                                      // Tarifart
+                        $tariffGroup,                                     // Tarifgruppe
+                        $tariffLevel,                                     // Tarifstufe
+                        '',                                               // zu löschen
+                        '',                                               // Beschreibung init Text
+                    ];
+                    
+                    $lines[] = $this->escapeCsvRow($row);
+                }
             }
         }
 
@@ -447,6 +451,71 @@ class HcmExportService
             }
         }
 
+        // Urlaubstage aus dem laufenden Monat hinzufügen (1. des Monats bis heute)
+        $vacationDays = HcmContractVacationDay::with([
+                'contract.employee.crmContactLinks.contact',
+                'contract.costCenterLinks.costCenter',
+                'contract.tariffGroup.tariffAgreement',
+                'contract.tariffLevel',
+            ])
+            ->where('team_id', $this->teamId)
+            ->whereHas('contract.employee', function ($query) use ($employerId) {
+                $query->where('employer_id', $employerId)
+                      ->where('is_active', true);
+            })
+            ->whereHas('contract', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->whereBetween('vacation_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
+            ->orderBy('vacation_date')
+            ->get();
+
+        // Für jeden Urlaubstag eine Zeile erstellen (nicht konsolidieren)
+        foreach ($vacationDays as $vacationDay) {
+            $contract = $vacationDay->contract;
+            $employee = $contract->employee;
+            $contact = $employee->crmContactLinks->first()?->contact;
+            
+            $firstName = $contact?->first_name ?? '';
+            $lastName = $contact?->last_name ?? '';
+            $employeeNumber = (string)($employee->employee_number ?? '');
+            
+            // Kostenstelle vom Vertrag holen
+            $costCenter = $contract->getCostCenter();
+            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+            
+            $vacationDate = Carbon::parse($vacationDay->vacation_date);
+            
+            // Fehlzeitencode für Urlaub (kann leer bleiben oder einen Code haben)
+            $vacationCode = ''; // Urlaub hat keinen speziellen Fehlzeitencode
+            
+            // Zeile für jeden Urlaubstag erstellen
+            $row = [
+                $monthDisplay,                                    // Monat
+                $vacationDate->format('d.m.Y'),                  // Von Datum (F: (Urlaubstag)
+                $vacationDate->format('d.m.Y'),                  // Bis Datum (FZ) (gleicher Tag)
+                $firstName,                                       // Vorname
+                $lastName,                                        // Name
+                $employeeNumber,                                  // MA Code ZW
+                '',                                               // LA Code ZW
+                '',                                               // Einheiten (Std.)
+                '1',                                              // Tage (immer 1 Tag)
+                '',                                               // Satz
+                '',                                               // Betrag
+                '',                                               // Prozent
+                $vacationCode,                                    // Fehlzeitencode (leer für Urlaub)
+                $costCenterCode,                                  // Kostenstelle
+                '',                                               // Kostenträger
+                '',                                               // Tarifart (leer für Urlaub)
+                '',                                               // Tarifgruppe (leer für Urlaub)
+                '',                                               // Tarifstufe (leer für Urlaub)
+                '',                                               // zu löschen
+                '',                                               // Beschreibung init Text
+            ];
+            
+            $lines[] = $this->escapeCsvRow($row);
+        }
+
         // UTF-8 BOM für Excel-Kompatibilität
         $csvData = "\xEF\xBB\xBF" . implode("\n", $lines);
         
@@ -476,14 +545,14 @@ class HcmExportService
             throw new \InvalidArgumentException('Arbeitgeber gehört nicht zum aktuellen Team');
         }
 
-        // Zeitraum für Stundenlöhner: Abrechnungszeitraum (15. des letzten Monats bis 14. des aktuellen Monats)
+        // Zeitraum für Stundenlöhner: Gesamter Vormonat (1. bis letzter Tag des Vormonats)
         // Zeitraum für Abwesenheitstage: 1. des aktuellen Monats bis heute
         $now = Carbon::now();
         
-        // Abrechnungszeitraum für Stundenlöhner
+        // Gesamter Vormonat für Stundenlöhner
         $lastMonth = $now->copy()->subMonth();
-        $hoursFromDate = Carbon::create($lastMonth->year, $lastMonth->month, 15);
-        $hoursToDate = Carbon::create($now->year, $now->month, 14);
+        $hoursFromDate = Carbon::create($lastMonth->year, $lastMonth->month, 1);
+        $hoursToDate = Carbon::create($lastMonth->year, $lastMonth->month, $lastMonth->daysInMonth);
         $monthDisplay = $now->format('m.Y');
         
         // Zeitraum für Abwesenheitstage (1. des Monats bis heute)
@@ -563,34 +632,37 @@ class HcmExportService
                 $totalMinutes = $timeRecords->sum('work_minutes');
                 $totalHours = $totalMinutes > 0 ? round($totalMinutes / 60, 2) : 0;
                 
-                // Stundenformatierung mit Komma statt Punkt
-                $totalHoursFormatted = $totalHours > 0 ? str_replace('.', ',', number_format($totalHours, 2, '.', '')) : '';
+                // Nur Zeile erstellen, wenn Stunden angefallen sind
+                if ($totalHours > 0) {
+                    // Stundenformatierung mit Komma statt Punkt
+                    $totalHoursFormatted = str_replace('.', ',', number_format($totalHours, 2, '.', ''));
 
-                // Zeile erstellen
-                $row = [
-                    $monthDisplay,                                    // Monat
-                    $hoursFromDate->format('d.m.Y'),                  // Von Datum (F: (15. des letzten Monats)
-                    $hoursToDate->format('d.m.Y'),                     // Bis Datum (FZ) (14. des aktuellen Monats)
-                    $firstName,                                       // Vorname
-                    $lastName,                                        // Name
-                    $employeeNumber,                                  // MA Code ZW
-                    '',                                               // LA Code ZW
-                    $totalHoursFormatted,                             // Einheiten (Std.) - mit Komma
-                    $daysCount > 0 ? (string)$daysCount : '',        // Tage
-                    '',                                               // Satz
-                    '',                                               // Betrag
-                    '',                                               // Prozent
-                    '',                                               // Fehlzeitencode
-                    $costCenterCode,                                  // Kostenstelle
-                    '',                                               // Kostenträger
-                    $tariffType,                                      // Tarifart
-                    $tariffGroup,                                     // Tarifgruppe
-                    $tariffLevel,                                     // Tarifstufe
-                    '',                                               // zu löschen
-                    '',                                               // Beschreibung init Text
-                ];
-
-                $lines[] = $this->escapeCsvRow($row);
+                    // Zeile erstellen
+                    $row = [
+                        $monthDisplay,                                    // Monat
+                        $hoursFromDate->format('d.m.Y'),                  // Von Datum (F: (1. des Vormonats)
+                        $hoursToDate->format('d.m.Y'),                     // Bis Datum (FZ) (letzter Tag des Vormonats)
+                        $firstName,                                       // Vorname
+                        $lastName,                                        // Name
+                        $employeeNumber,                                  // MA Code ZW
+                        '',                                               // LA Code ZW
+                        $totalHoursFormatted,                             // Einheiten (Std.) - mit Komma
+                        $daysCount > 0 ? (string)$daysCount : '',        // Tage
+                        '',                                               // Satz
+                        '',                                               // Betrag
+                        '',                                               // Prozent
+                        '',                                               // Fehlzeitencode
+                        $costCenterCode,                                  // Kostenstelle
+                        '',                                               // Kostenträger
+                        $tariffType,                                      // Tarifart
+                        $tariffGroup,                                     // Tarifgruppe
+                        $tariffLevel,                                     // Tarifstufe
+                        '',                                               // zu löschen
+                        '',                                               // Beschreibung init Text
+                    ];
+                    
+                    $lines[] = $this->escapeCsvRow($row);
+                }
             }
         }
 
@@ -703,6 +775,71 @@ class HcmExportService
                     $lines[] = $this->escapeCsvRow($row);
                 }
             }
+        }
+
+        // Urlaubstage aus dem laufenden Monat hinzufügen (1. des Monats bis heute)
+        $vacationDays = HcmContractVacationDay::with([
+                'contract.employee.crmContactLinks.contact',
+                'contract.costCenterLinks.costCenter',
+                'contract.tariffGroup.tariffAgreement',
+                'contract.tariffLevel',
+            ])
+            ->where('team_id', $this->teamId)
+            ->whereHas('contract.employee', function ($query) use ($employerId) {
+                $query->where('employer_id', $employerId)
+                      ->where('is_active', true);
+            })
+            ->whereHas('contract', function ($query) {
+                $query->where('is_active', true);
+            })
+            ->whereBetween('vacation_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
+            ->orderBy('vacation_date')
+            ->get();
+
+        // Für jeden Urlaubstag eine Zeile erstellen (nicht konsolidieren)
+        foreach ($vacationDays as $vacationDay) {
+            $contract = $vacationDay->contract;
+            $employee = $contract->employee;
+            $contact = $employee->crmContactLinks->first()?->contact;
+            
+            $firstName = $contact?->first_name ?? '';
+            $lastName = $contact?->last_name ?? '';
+            $employeeNumber = (string)($employee->employee_number ?? '');
+            
+            // Kostenstelle vom Vertrag holen
+            $costCenter = $contract->getCostCenter();
+            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+            
+            $vacationDate = Carbon::parse($vacationDay->vacation_date);
+            
+            // Fehlzeitencode für Urlaub (kann leer bleiben oder einen Code haben)
+            $vacationCode = ''; // Urlaub hat keinen speziellen Fehlzeitencode
+            
+            // Zeile für jeden Urlaubstag erstellen
+            $row = [
+                $monthDisplay,                                    // Monat
+                $vacationDate->format('d.m.Y'),                  // Von Datum (F: (Urlaubstag)
+                $vacationDate->format('d.m.Y'),                  // Bis Datum (FZ) (gleicher Tag)
+                $firstName,                                       // Vorname
+                $lastName,                                        // Name
+                $employeeNumber,                                  // MA Code ZW
+                '',                                               // LA Code ZW
+                '',                                               // Einheiten (Std.)
+                '1',                                              // Tage (immer 1 Tag)
+                '',                                               // Satz
+                '',                                               // Betrag
+                '',                                               // Prozent
+                $vacationCode,                                    // Fehlzeitencode (leer für Urlaub)
+                $costCenterCode,                                  // Kostenstelle
+                '',                                               // Kostenträger
+                '',                                               // Tarifart (leer für Urlaub)
+                '',                                               // Tarifgruppe (leer für Urlaub)
+                '',                                               // Tarifstufe (leer für Urlaub)
+                '',                                               // zu löschen
+                '',                                               // Beschreibung init Text
+            ];
+            
+            $lines[] = $this->escapeCsvRow($row);
         }
 
         // UTF-8 BOM für Excel-Kompatibilität
