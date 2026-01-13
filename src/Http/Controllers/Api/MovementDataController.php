@@ -289,6 +289,7 @@ class MovementDataController extends ApiController
         $validator = Validator::make($item, [
             'vacation_type' => 'nullable|in:full_day,half_day_morning,half_day_afternoon',
             'vacation_hours' => 'nullable|numeric|min:0',
+            // Nostradamus liefert aktuell Stunden – Tage bleiben bewusst leer (NULL)
             'vacation_days' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:requested,approved,rejected,cancelled',
             'source_reference' => 'nullable|string',
@@ -299,14 +300,23 @@ class MovementDataController extends ApiController
             throw new \Exception('Validierungsfehler: ' . $validator->errors()->first());
         }
 
+        $vacationType = $item['vacation_type'] ?? 'full_day';
+        // Wir speichern bewusst nur Stunden (falls geliefert). Tage bleiben NULL.
+        $vacationHours = array_key_exists('vacation_hours', $item) ? $item['vacation_hours'] : null;
+        if ($vacationHours === '' || $vacationHours === null || $vacationHours === 'null') {
+            $vacationHours = null;
+        } else {
+            $vacationHours = (float) $vacationHours;
+        }
+
         $data = [
             'contract_id' => $contract->id,
             'employee_id' => $employee->id,
             'team_id' => $contract->team_id,
             'vacation_date' => $date,
-            'type' => $item['vacation_type'] ?? 'full_day',
-            'vacation_hours' => array_key_exists('vacation_hours', $item) ? $item['vacation_hours'] : null,
-            'vacation_days' => array_key_exists('vacation_days', $item) ? $item['vacation_days'] : null,
+            'type' => $vacationType,
+            'vacation_hours' => $vacationHours,
+            'vacation_days' => null,
             'status' => $item['status'] ?? 'approved',
             'source' => 'push',
             'source_reference' => $item['source_reference'] ?? null,
@@ -344,6 +354,7 @@ class MovementDataController extends ApiController
             'absence_reason_code' => 'required|string',
             'absence_type' => 'nullable|in:full_day,half_day_morning,half_day_afternoon',
             'absence_hours' => 'nullable|numeric|min:0',
+            // Nostradamus liefert aktuell Stunden – Tage bleiben bewusst leer (NULL)
             'absence_days' => 'nullable|numeric|min:0',
             'has_sick_note' => 'nullable|boolean',
             'sick_note_from' => 'nullable|date',
@@ -433,14 +444,23 @@ class MovementDataController extends ApiController
             ]);
         }
 
+        $absenceType = $item['absence_type'] ?? 'full_day';
+        // Wir speichern bewusst nur Stunden (falls geliefert). Tage bleiben NULL.
+        $absenceHours = array_key_exists('absence_hours', $item) ? $item['absence_hours'] : null;
+        if ($absenceHours === '' || $absenceHours === null || $absenceHours === 'null') {
+            $absenceHours = null;
+        } else {
+            $absenceHours = (float) $absenceHours;
+        }
+
         $data = [
             'contract_id' => $contract->id,
             'employee_id' => $employee->id,
             'team_id' => $contract->team_id,
             'absence_date' => $date,
-            'type' => $item['absence_type'] ?? 'full_day',
-            'absence_hours' => array_key_exists('absence_hours', $item) ? $item['absence_hours'] : null,
-            'absence_days' => array_key_exists('absence_days', $item) ? $item['absence_days'] : null,
+            'type' => $absenceType,
+            'absence_hours' => $absenceHours,
+            'absence_days' => null,
             'absence_reason_id' => $absenceReason->id,
             'reason_custom' => $item['reason_custom'] ?? null,
             'has_sick_note' => $item['has_sick_note'] ?? false,
