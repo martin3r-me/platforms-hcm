@@ -43,9 +43,13 @@ class MovementDataController extends ApiController
      *       "break_end": "13:00",
      *       // Für vacation_day:
      *       "vacation_type": "full_day|half_day_morning|half_day_afternoon",
+ *       "vacation_hours": 7.66,   // optional
+ *       "vacation_days": 0.957,   // optional
      *       // Für absence_day:
      *       "absence_reason_code": "SICK",
      *       "absence_type": "full_day|half_day_morning|half_day_afternoon",
+ *       "absence_hours": 8.00,    // optional
+ *       "absence_days": 1.000,    // optional
      *       "has_sick_note": false,
      *       "sick_note_from": "2025-01-11",
      *       "sick_note_until": "2025-01-13"
@@ -284,6 +288,8 @@ class MovementDataController extends ApiController
     {
         $validator = Validator::make($item, [
             'vacation_type' => 'nullable|in:full_day,half_day_morning,half_day_afternoon',
+            'vacation_hours' => 'nullable|numeric|min:0',
+            'vacation_days' => 'nullable|numeric|min:0',
             'status' => 'nullable|in:requested,approved,rejected,cancelled',
             'source_reference' => 'nullable|string',
             'notes' => 'nullable|string',
@@ -299,6 +305,8 @@ class MovementDataController extends ApiController
             'team_id' => $contract->team_id,
             'vacation_date' => $date,
             'type' => $item['vacation_type'] ?? 'full_day',
+            'vacation_hours' => array_key_exists('vacation_hours', $item) ? $item['vacation_hours'] : null,
+            'vacation_days' => array_key_exists('vacation_days', $item) ? $item['vacation_days'] : null,
             'status' => $item['status'] ?? 'approved',
             'source' => 'push',
             'source_reference' => $item['source_reference'] ?? null,
@@ -335,6 +343,8 @@ class MovementDataController extends ApiController
         $validator = Validator::make($item, [
             'absence_reason_code' => 'required|string',
             'absence_type' => 'nullable|in:full_day,half_day_morning,half_day_afternoon',
+            'absence_hours' => 'nullable|numeric|min:0',
+            'absence_days' => 'nullable|numeric|min:0',
             'has_sick_note' => 'nullable|boolean',
             'sick_note_from' => 'nullable|date',
             'sick_note_until' => 'nullable|date|after_or_equal:sick_note_from',
@@ -429,6 +439,8 @@ class MovementDataController extends ApiController
             'team_id' => $contract->team_id,
             'absence_date' => $date,
             'type' => $item['absence_type'] ?? 'full_day',
+            'absence_hours' => array_key_exists('absence_hours', $item) ? $item['absence_hours'] : null,
+            'absence_days' => array_key_exists('absence_days', $item) ? $item['absence_days'] : null,
             'absence_reason_id' => $absenceReason->id,
             'reason_custom' => $item['reason_custom'] ?? null,
             'has_sick_note' => $item['has_sick_note'] ?? false,

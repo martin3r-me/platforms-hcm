@@ -17,6 +17,8 @@ class HcmContractVacationDay extends Model
         'team_id',
         'vacation_date',
         'type',
+        'vacation_hours',
+        'vacation_days',
         'status',
         'approved_by_user_id',
         'approved_at',
@@ -33,6 +35,8 @@ class HcmContractVacationDay extends Model
         'vacation_date' => 'date',
         'approved_at' => 'datetime',
         'metadata' => 'array',
+        'vacation_hours' => 'decimal:2',
+        'vacation_days' => 'decimal:3',
     ];
 
     protected static function booted(): void

@@ -17,6 +17,8 @@ class HcmContractAbsenceDay extends Model
         'team_id',
         'absence_date',
         'type',
+        'absence_hours',
+        'absence_days',
         'absence_reason_id',
         'reason_custom',
         'has_sick_note',
@@ -44,6 +46,8 @@ class HcmContractAbsenceDay extends Model
         'confirmed_at' => 'datetime',
         'source_synced_at' => 'datetime',
         'metadata' => 'array',
+        'absence_hours' => 'decimal:2',
+        'absence_days' => 'decimal:3',
     ];
 
     protected static function booted(): void

@@ -470,50 +470,94 @@ class HcmExportService
             ->orderBy('vacation_date')
             ->get();
 
-        // Für jeden Urlaubstag eine Zeile erstellen (nicht konsolidieren)
-        foreach ($vacationDays as $vacationDay) {
-            $contract = $vacationDay->contract;
-            $employee = $contract->employee;
-            $contact = $employee->crmContactLinks->first()?->contact;
+        // Gruppiere zuerst nach Person (Employee/Vertrag), dann konsolidiere zusammenhängende Tage
+        $vacationByEmployee = $vacationDays->groupBy('employee_id');
+        
+        foreach ($vacationByEmployee as $employeeId => $employeeVacations) {
+            // Für jede Person: Gruppiere nach Vertrag
+            $vacationByContract = $employeeVacations->groupBy('contract_id');
             
-            $firstName = $contact?->first_name ?? '';
-            $lastName = $contact?->last_name ?? '';
-            $employeeNumber = (string)($employee->employee_number ?? '');
-            
-            // Kostenstelle vom Vertrag holen
-            $costCenter = $contract->getCostCenter();
-            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
-            
-            $vacationDate = Carbon::parse($vacationDay->vacation_date);
-            
-            // Fehlzeitencode für Urlaub (kann leer bleiben oder einen Code haben)
-            $vacationCode = ''; // Urlaub hat keinen speziellen Fehlzeitencode
-            
-            // Zeile für jeden Urlaubstag erstellen
-            $row = [
-                $monthDisplay,                                    // Monat
-                $vacationDate->format('d.m.Y'),                  // Von Datum (F: (Urlaubstag)
-                $vacationDate->format('d.m.Y'),                  // Bis Datum (FZ) (gleicher Tag)
-                $firstName,                                       // Vorname
-                $lastName,                                        // Name
-                $employeeNumber,                                  // MA Code ZW
-                '',                                               // LA Code ZW
-                '',                                               // Einheiten (Std.)
-                '1',                                              // Tage (immer 1 Tag)
-                '',                                               // Satz
-                '',                                               // Betrag
-                '',                                               // Prozent
-                $vacationCode,                                    // Fehlzeitencode (leer für Urlaub)
-                $costCenterCode,                                  // Kostenstelle
-                '',                                               // Kostenträger
-                '',                                               // Tarifart (leer für Urlaub)
-                '',                                               // Tarifgruppe (leer für Urlaub)
-                '',                                               // Tarifstufe (leer für Urlaub)
-                '',                                               // zu löschen
-                '',                                               // Beschreibung init Text
-            ];
-            
-            $lines[] = $this->escapeCsvRow($row);
+            foreach ($vacationByContract as $group) {
+                $firstVacation = $group->first();
+                $contract = $firstVacation->contract;
+                $employee = $contract->employee;
+                $contact = $employee->crmContactLinks->first()?->contact;
+                
+                $firstName = $contact?->first_name ?? '';
+                $lastName = $contact?->last_name ?? '';
+                $employeeNumber = (string)($employee->employee_number ?? '');
+                
+                // Kostenstelle vom Vertrag holen
+                $costCenter = $contract->getCostCenter();
+                $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+                
+                // Sortiere nach Datum
+                $sortedVacations = $group->sortBy('vacation_date')->values();
+                
+                // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
+                $consolidated = [];
+                $currentStart = null;
+                $currentEnd = null;
+                
+                foreach ($sortedVacations as $vacation) {
+                    $vacationDate = Carbon::parse($vacation->vacation_date);
+                    
+                    if ($currentStart === null) {
+                        // Erster Tag einer Sequenz
+                        $currentStart = $vacationDate;
+                        $currentEnd = $vacationDate;
+                    } elseif ($vacationDate->diffInDays($currentEnd) === 1) {
+                        // Fortsetzung der Sequenz (nächster Tag)
+                        $currentEnd = $vacationDate;
+                    } else {
+                        // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                        $consolidated[] = [
+                            'start' => $currentStart,
+                            'end' => $currentEnd,
+                            'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        ];
+                        $currentStart = $vacationDate;
+                        $currentEnd = $vacationDate;
+                    }
+                }
+                
+                // Letzte Sequenz hinzufügen
+                if ($currentStart !== null) {
+                    $consolidated[] = [
+                        'start' => $currentStart,
+                        'end' => $currentEnd,
+                        'days' => $currentStart->diffInDays($currentEnd) + 1,
+                    ];
+                }
+                
+                // Erstelle Zeilen für konsolidierte Urlaubstage
+                foreach ($consolidated as $consolidation) {
+                    $row = [
+                        $monthDisplay,                                    // Monat
+                        $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
+                        $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                        $firstName,                                       // Vorname
+                        $lastName,                                        // Name
+                        $employeeNumber,                                  // MA Code ZW
+                        '',                                               // LA Code ZW
+                        '',                                               // Einheiten (Std.)
+                        (string)$consolidation['days'],                   // Tage
+                        '',                                               // Satz
+                        '',                                               // Betrag
+                        '',                                               // Prozent
+                        'URLAUB',                                         // Fehlzeitencode
+                        $costCenterCode,                                  // Kostenstelle
+                        '',                                               // Kostenträger
+                        '',                                               // Tarifart (leer für Urlaub)
+                        '',                                               // Tarifgruppe (leer für Urlaub)
+                        '',                                               // Tarifstufe (leer für Urlaub)
+                        '',                                               // zu löschen
+                        '',                                               // Beschreibung init Text
+                    ];
+                    
+                    $lines[] = $this->escapeCsvRow($row);
+                }
+            }
         }
 
         // UTF-8 BOM für Excel-Kompatibilität
@@ -796,50 +840,94 @@ class HcmExportService
             ->orderBy('vacation_date')
             ->get();
 
-        // Für jeden Urlaubstag eine Zeile erstellen (nicht konsolidieren)
-        foreach ($vacationDays as $vacationDay) {
-            $contract = $vacationDay->contract;
-            $employee = $contract->employee;
-            $contact = $employee->crmContactLinks->first()?->contact;
+        // Gruppiere zuerst nach Person (Employee/Vertrag), dann konsolidiere zusammenhängende Tage
+        $vacationByEmployee = $vacationDays->groupBy('employee_id');
+        
+        foreach ($vacationByEmployee as $employeeId => $employeeVacations) {
+            // Für jede Person: Gruppiere nach Vertrag
+            $vacationByContract = $employeeVacations->groupBy('contract_id');
             
-            $firstName = $contact?->first_name ?? '';
-            $lastName = $contact?->last_name ?? '';
-            $employeeNumber = (string)($employee->employee_number ?? '');
-            
-            // Kostenstelle vom Vertrag holen
-            $costCenter = $contract->getCostCenter();
-            $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
-            
-            $vacationDate = Carbon::parse($vacationDay->vacation_date);
-            
-            // Fehlzeitencode für Urlaub (kann leer bleiben oder einen Code haben)
-            $vacationCode = ''; // Urlaub hat keinen speziellen Fehlzeitencode
-            
-            // Zeile für jeden Urlaubstag erstellen
-            $row = [
-                $monthDisplay,                                    // Monat
-                $vacationDate->format('d.m.Y'),                  // Von Datum (F: (Urlaubstag)
-                $vacationDate->format('d.m.Y'),                  // Bis Datum (FZ) (gleicher Tag)
-                $firstName,                                       // Vorname
-                $lastName,                                        // Name
-                $employeeNumber,                                  // MA Code ZW
-                '',                                               // LA Code ZW
-                '',                                               // Einheiten (Std.)
-                '1',                                              // Tage (immer 1 Tag)
-                '',                                               // Satz
-                '',                                               // Betrag
-                '',                                               // Prozent
-                $vacationCode,                                    // Fehlzeitencode (leer für Urlaub)
-                $costCenterCode,                                  // Kostenstelle
-                '',                                               // Kostenträger
-                '',                                               // Tarifart (leer für Urlaub)
-                '',                                               // Tarifgruppe (leer für Urlaub)
-                '',                                               // Tarifstufe (leer für Urlaub)
-                '',                                               // zu löschen
-                '',                                               // Beschreibung init Text
-            ];
-            
-            $lines[] = $this->escapeCsvRow($row);
+            foreach ($vacationByContract as $group) {
+                $firstVacation = $group->first();
+                $contract = $firstVacation->contract;
+                $employee = $contract->employee;
+                $contact = $employee->crmContactLinks->first()?->contact;
+                
+                $firstName = $contact?->first_name ?? '';
+                $lastName = $contact?->last_name ?? '';
+                $employeeNumber = (string)($employee->employee_number ?? '');
+                
+                // Kostenstelle vom Vertrag holen
+                $costCenter = $contract->getCostCenter();
+                $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
+                
+                // Sortiere nach Datum
+                $sortedVacations = $group->sortBy('vacation_date')->values();
+                
+                // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
+                $consolidated = [];
+                $currentStart = null;
+                $currentEnd = null;
+                
+                foreach ($sortedVacations as $vacation) {
+                    $vacationDate = Carbon::parse($vacation->vacation_date);
+                    
+                    if ($currentStart === null) {
+                        // Erster Tag einer Sequenz
+                        $currentStart = $vacationDate;
+                        $currentEnd = $vacationDate;
+                    } elseif ($vacationDate->diffInDays($currentEnd) === 1) {
+                        // Fortsetzung der Sequenz (nächster Tag)
+                        $currentEnd = $vacationDate;
+                    } else {
+                        // Unterbrechung: Speichere aktuelle Sequenz und starte neue
+                        $consolidated[] = [
+                            'start' => $currentStart,
+                            'end' => $currentEnd,
+                            'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        ];
+                        $currentStart = $vacationDate;
+                        $currentEnd = $vacationDate;
+                    }
+                }
+                
+                // Letzte Sequenz hinzufügen
+                if ($currentStart !== null) {
+                    $consolidated[] = [
+                        'start' => $currentStart,
+                        'end' => $currentEnd,
+                        'days' => $currentStart->diffInDays($currentEnd) + 1,
+                    ];
+                }
+                
+                // Erstelle Zeilen für konsolidierte Urlaubstage
+                foreach ($consolidated as $consolidation) {
+                    $row = [
+                        $monthDisplay,                                    // Monat
+                        $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
+                        $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                        $firstName,                                       // Vorname
+                        $lastName,                                        // Name
+                        $employeeNumber,                                  // MA Code ZW
+                        '',                                               // LA Code ZW
+                        '',                                               // Einheiten (Std.)
+                        (string)$consolidation['days'],                   // Tage
+                        '',                                               // Satz
+                        '',                                               // Betrag
+                        '',                                               // Prozent
+                        'URLAUB',                                         // Fehlzeitencode
+                        $costCenterCode,                                  // Kostenstelle
+                        '',                                               // Kostenträger
+                        '',                                               // Tarifart (leer für Urlaub)
+                        '',                                               // Tarifgruppe (leer für Urlaub)
+                        '',                                               // Tarifstufe (leer für Urlaub)
+                        '',                                               // zu löschen
+                        '',                                               // Beschreibung init Text
+                    ];
+                    
+                    $lines[] = $this->escapeCsvRow($row);
+                }
+            }
         }
 
         // UTF-8 BOM für Excel-Kompatibilität
