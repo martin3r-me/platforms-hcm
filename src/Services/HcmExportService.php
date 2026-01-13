@@ -385,9 +385,16 @@ class HcmExportService
                 $currentStart = null;
                 $currentEnd = null;
                 $currentStartAbsence = null;
+                $currentHoursSum = 0.0;
+                $currentHoursHasValue = false;
                 
                 foreach ($sortedAbsences as $absence) {
                     $absenceDate = Carbon::parse($absence->absence_date);
+                    $dayHours = $absence->absence_hours;
+                    if ($dayHours !== null && $dayHours !== '') {
+                        $currentHoursSum += (float) $dayHours;
+                        $currentHoursHasValue = true;
+                    }
                     
                     if ($currentStart === null) {
                         // Erster Tag einer Sequenz
@@ -403,11 +410,19 @@ class HcmExportService
                             'start' => $currentStart,
                             'end' => $currentEnd,
                             'days' => $currentStart->diffInDays($currentEnd) + 1,
+                            'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                             'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                         ];
                         $currentStart = $absenceDate;
                         $currentEnd = $absenceDate;
                         $currentStartAbsence = $absence;
+                        $currentHoursSum = 0.0;
+                        $currentHoursHasValue = false;
+                        $dayHours = $absence->absence_hours;
+                        if ($dayHours !== null && $dayHours !== '') {
+                            $currentHoursSum += (float) $dayHours;
+                            $currentHoursHasValue = true;
+                        }
                     }
                 }
                 
@@ -417,12 +432,17 @@ class HcmExportService
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                         'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                     ];
                 }
                 
                 // Erstelle Zeilen für konsolidierte Abwesenheiten
                 foreach ($consolidated as $consolidation) {
+                    $absenceHoursFormatted = '';
+                    if (!empty($consolidation['hours']) && (float) $consolidation['hours'] > 0) {
+                        $absenceHoursFormatted = str_replace('.', ',', number_format((float) $consolidation['hours'], 2, '.', ''));
+                    }
                     $row = [
                         $monthDisplay,                                    // Monat
                         $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
@@ -431,7 +451,7 @@ class HcmExportService
                         $lastName,                                        // Name
                         $employeeNumber,                                  // MA Code ZW
                         '',                                               // LA Code ZW
-                        '',                                               // Einheiten (Std.)
+                        $absenceHoursFormatted,                            // Einheiten (Std.)
                         (string)$consolidation['days'],                   // Tage
                         '',                                               // Satz
                         '',                                               // Betrag
@@ -498,9 +518,16 @@ class HcmExportService
                 $consolidated = [];
                 $currentStart = null;
                 $currentEnd = null;
+                $currentHoursSum = 0.0;
+                $currentHoursHasValue = false;
                 
                 foreach ($sortedVacations as $vacation) {
                     $vacationDate = Carbon::parse($vacation->vacation_date);
+                    $dayHours = $vacation->vacation_hours;
+                    if ($dayHours !== null && $dayHours !== '') {
+                        $currentHoursSum += (float) $dayHours;
+                        $currentHoursHasValue = true;
+                    }
                     
                     if ($currentStart === null) {
                         // Erster Tag einer Sequenz
@@ -515,9 +542,17 @@ class HcmExportService
                             'start' => $currentStart,
                             'end' => $currentEnd,
                             'days' => $currentStart->diffInDays($currentEnd) + 1,
+                            'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                         ];
                         $currentStart = $vacationDate;
                         $currentEnd = $vacationDate;
+                        $currentHoursSum = 0.0;
+                        $currentHoursHasValue = false;
+                        $dayHours = $vacation->vacation_hours;
+                        if ($dayHours !== null && $dayHours !== '') {
+                            $currentHoursSum += (float) $dayHours;
+                            $currentHoursHasValue = true;
+                        }
                     }
                 }
                 
@@ -527,11 +562,16 @@ class HcmExportService
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                     ];
                 }
                 
                 // Erstelle Zeilen für konsolidierte Urlaubstage
                 foreach ($consolidated as $consolidation) {
+                    $vacationHoursFormatted = '';
+                    if (!empty($consolidation['hours']) && (float) $consolidation['hours'] > 0) {
+                        $vacationHoursFormatted = str_replace('.', ',', number_format((float) $consolidation['hours'], 2, '.', ''));
+                    }
                     $row = [
                         $monthDisplay,                                    // Monat
                         $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
@@ -540,7 +580,7 @@ class HcmExportService
                         $lastName,                                        // Name
                         $employeeNumber,                                  // MA Code ZW
                         '',                                               // LA Code ZW
-                        '',                                               // Einheiten (Std.)
+                        $vacationHoursFormatted,                           // Einheiten (Std.)
                         (string)$consolidation['days'],                   // Tage
                         '',                                               // Satz
                         '',                                               // Betrag
@@ -755,9 +795,16 @@ class HcmExportService
                 $currentStart = null;
                 $currentEnd = null;
                 $currentStartAbsence = null;
+                $currentHoursSum = 0.0;
+                $currentHoursHasValue = false;
                 
                 foreach ($sortedAbsences as $absence) {
                     $absenceDate = Carbon::parse($absence->absence_date);
+                    $dayHours = $absence->absence_hours;
+                    if ($dayHours !== null && $dayHours !== '') {
+                        $currentHoursSum += (float) $dayHours;
+                        $currentHoursHasValue = true;
+                    }
                     
                     if ($currentStart === null) {
                         // Erster Tag einer Sequenz
@@ -773,11 +820,19 @@ class HcmExportService
                             'start' => $currentStart,
                             'end' => $currentEnd,
                             'days' => $currentStart->diffInDays($currentEnd) + 1,
+                            'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                             'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                         ];
                         $currentStart = $absenceDate;
                         $currentEnd = $absenceDate;
                         $currentStartAbsence = $absence;
+                        $currentHoursSum = 0.0;
+                        $currentHoursHasValue = false;
+                        $dayHours = $absence->absence_hours;
+                        if ($dayHours !== null && $dayHours !== '') {
+                            $currentHoursSum += (float) $dayHours;
+                            $currentHoursHasValue = true;
+                        }
                     }
                 }
                 
@@ -787,12 +842,17 @@ class HcmExportService
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                         'reason' => $currentStartAbsence->absenceReason?->code ?? '',
                     ];
                 }
                 
                 // Erstelle Zeilen für konsolidierte Abwesenheiten
                 foreach ($consolidated as $consolidation) {
+                    $absenceHoursFormatted = '';
+                    if (!empty($consolidation['hours']) && (float) $consolidation['hours'] > 0) {
+                        $absenceHoursFormatted = str_replace('.', ',', number_format((float) $consolidation['hours'], 2, '.', ''));
+                    }
                     $row = [
                         $monthDisplay,                                    // Monat
                         $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
@@ -801,7 +861,7 @@ class HcmExportService
                         $lastName,                                        // Name
                         $employeeNumber,                                  // MA Code ZW
                         '',                                               // LA Code ZW
-                        '',                                               // Einheiten (Std.)
+                        $absenceHoursFormatted,                            // Einheiten (Std.)
                         (string)$consolidation['days'],                   // Tage
                         '',                                               // Satz
                         '',                                               // Betrag
@@ -868,9 +928,16 @@ class HcmExportService
                 $consolidated = [];
                 $currentStart = null;
                 $currentEnd = null;
+                $currentHoursSum = 0.0;
+                $currentHoursHasValue = false;
                 
                 foreach ($sortedVacations as $vacation) {
                     $vacationDate = Carbon::parse($vacation->vacation_date);
+                    $dayHours = $vacation->vacation_hours;
+                    if ($dayHours !== null && $dayHours !== '') {
+                        $currentHoursSum += (float) $dayHours;
+                        $currentHoursHasValue = true;
+                    }
                     
                     if ($currentStart === null) {
                         // Erster Tag einer Sequenz
@@ -885,9 +952,17 @@ class HcmExportService
                             'start' => $currentStart,
                             'end' => $currentEnd,
                             'days' => $currentStart->diffInDays($currentEnd) + 1,
+                            'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                         ];
                         $currentStart = $vacationDate;
                         $currentEnd = $vacationDate;
+                        $currentHoursSum = 0.0;
+                        $currentHoursHasValue = false;
+                        $dayHours = $vacation->vacation_hours;
+                        if ($dayHours !== null && $dayHours !== '') {
+                            $currentHoursSum += (float) $dayHours;
+                            $currentHoursHasValue = true;
+                        }
                     }
                 }
                 
@@ -897,11 +972,16 @@ class HcmExportService
                         'start' => $currentStart,
                         'end' => $currentEnd,
                         'days' => $currentStart->diffInDays($currentEnd) + 1,
+                        'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
                     ];
                 }
                 
                 // Erstelle Zeilen für konsolidierte Urlaubstage
                 foreach ($consolidated as $consolidation) {
+                    $vacationHoursFormatted = '';
+                    if (!empty($consolidation['hours']) && (float) $consolidation['hours'] > 0) {
+                        $vacationHoursFormatted = str_replace('.', ',', number_format((float) $consolidation['hours'], 2, '.', ''));
+                    }
                     $row = [
                         $monthDisplay,                                    // Monat
                         $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
@@ -910,7 +990,7 @@ class HcmExportService
                         $lastName,                                        // Name
                         $employeeNumber,                                  // MA Code ZW
                         '',                                               // LA Code ZW
-                        '',                                               // Einheiten (Std.)
+                        $vacationHoursFormatted,                           // Einheiten (Std.)
                         (string)$consolidation['days'],                   // Tage
                         '',                                               // Satz
                         '',                                               // Betrag
