@@ -345,11 +345,8 @@ class HcmExportService
             ])
             ->where('team_id', $this->teamId)
             ->whereHas('contract.employee', function ($query) use ($employerId) {
-                $query->where('employer_id', $employerId)
-                      ->where('is_active', true);
-            })
-            ->whereHas('contract', function ($query) {
-                $query->where('is_active', true);
+                // WICHTIG: Auch inaktive Mitarbeiter berücksichtigen (Payroll/Export-Logik)
+                $query->where('employer_id', $employerId);
             })
             ->whereBetween('absence_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
             ->orderBy('absence_date')
@@ -367,7 +364,13 @@ class HcmExportService
             foreach ($absenceByContractAndReason as $group) {
                 $firstAbsence = $group->first();
                 $contract = $firstAbsence->contract;
+                if (!$contract) {
+                    continue;
+                }
                 $employee = $contract->employee;
+                if (!$employee) {
+                    continue;
+                }
                 $contact = $employee->crmContactLinks->first()?->contact;
                 
                 $firstName = $contact?->first_name ?? '';
@@ -481,11 +484,8 @@ class HcmExportService
             ])
             ->where('team_id', $this->teamId)
             ->whereHas('contract.employee', function ($query) use ($employerId) {
-                $query->where('employer_id', $employerId)
-                      ->where('is_active', true);
-            })
-            ->whereHas('contract', function ($query) {
-                $query->where('is_active', true);
+                // WICHTIG: Auch inaktive Mitarbeiter berücksichtigen (Payroll/Export-Logik)
+                $query->where('employer_id', $employerId);
             })
             ->whereBetween('vacation_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
             ->orderBy('vacation_date')
@@ -501,7 +501,13 @@ class HcmExportService
             foreach ($vacationByContract as $group) {
                 $firstVacation = $group->first();
                 $contract = $firstVacation->contract;
+                if (!$contract) {
+                    continue;
+                }
                 $employee = $contract->employee;
+                if (!$employee) {
+                    continue;
+                }
                 $contact = $employee->crmContactLinks->first()?->contact;
 
                 $firstName = $contact?->first_name ?? '';
@@ -703,11 +709,8 @@ class HcmExportService
         $absenceDays = HcmContractAbsenceDay::with(['contract.employee.crmContactLinks.contact', 'contract', 'absenceReason'])
             ->where('team_id', $this->teamId)
             ->whereHas('contract.employee', function ($query) use ($employerId) {
-                $query->where('employer_id', $employerId)
-                      ->where('is_active', true);
-            })
-            ->whereHas('contract', function ($query) {
-                $query->where('is_active', true);
+                // WICHTIG: Auch inaktive Mitarbeiter berücksichtigen (Payroll/Export-Logik)
+                $query->where('employer_id', $employerId);
             })
             ->whereBetween('absence_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
             ->orderBy('absence_date')
@@ -725,7 +728,13 @@ class HcmExportService
             foreach ($absenceByContractAndReason as $group) {
                 $firstAbsence = $group->first();
                 $contract = $firstAbsence->contract;
+                if (!$contract) {
+                    continue;
+                }
                 $employee = $contract->employee;
+                if (!$employee) {
+                    continue;
+                }
                 $contact = $employee->crmContactLinks->first()?->contact;
                 
                 $firstName = $contact?->first_name ?? '';
@@ -839,11 +848,8 @@ class HcmExportService
             ])
             ->where('team_id', $this->teamId)
             ->whereHas('contract.employee', function ($query) use ($employerId) {
-                $query->where('employer_id', $employerId)
-                      ->where('is_active', true);
-            })
-            ->whereHas('contract', function ($query) {
-                $query->where('is_active', true);
+                // WICHTIG: Auch inaktive Mitarbeiter berücksichtigen (Payroll/Export-Logik)
+                $query->where('employer_id', $employerId);
             })
             ->whereBetween('vacation_date', [$absenceFromDate->toDateString(), $absenceToDate->toDateString()])
             ->orderBy('vacation_date')
@@ -859,7 +865,13 @@ class HcmExportService
             foreach ($vacationByContract as $group) {
                 $firstVacation = $group->first();
                 $contract = $firstVacation->contract;
+                if (!$contract) {
+                    continue;
+                }
                 $employee = $contract->employee;
+                if (!$employee) {
+                    continue;
+                }
                 $contact = $employee->crmContactLinks->first()?->contact;
 
                 $firstName = $contact?->first_name ?? '';
