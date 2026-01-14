@@ -491,7 +491,7 @@ class HcmExportService
             ->orderBy('vacation_date')
             ->get();
 
-        // Gruppiere zuerst nach Person (Employee/Vertrag), dann konsolidiere zusammenhängende Tage
+        // Gruppiere zuerst nach Person (Employee/Vertrag)
         $vacationByEmployee = $vacationDays->groupBy('employee_id');
         
         foreach ($vacationByEmployee as $employeeId => $employeeVacations) {
@@ -503,86 +503,34 @@ class HcmExportService
                 $contract = $firstVacation->contract;
                 $employee = $contract->employee;
                 $contact = $employee->crmContactLinks->first()?->contact;
-                
+
                 $firstName = $contact?->first_name ?? '';
                 $lastName = $contact?->last_name ?? '';
                 $employeeNumber = (string)($employee->employee_number ?? '');
-                
+
                 // Kostenstelle vom Vertrag holen
                 $costCenter = $contract->getCostCenter();
                 $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
-                
-                // Sortiere nach Datum
-                $sortedVacations = $group->sortBy('vacation_date')->values();
-                
-                // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
-                $consolidated = [];
-                $currentStart = null;
-                $currentEnd = null;
-                $currentHoursSum = 0.0;
-                $currentHoursHasValue = false;
-                
-                foreach ($sortedVacations as $vacation) {
+
+                // WICHTIG: Urlaub nicht konsolidieren / nicht summieren -> 1 Zeile pro Tag
+                foreach ($group->sortBy('vacation_date')->values() as $vacation) {
                     $vacationDate = Carbon::parse($vacation->vacation_date);
-                    $dayHours = $vacation->vacation_hours;
-                    if ($dayHours !== null && $dayHours !== '') {
-                        $currentHoursSum += (float) $dayHours;
-                        $currentHoursHasValue = true;
-                    }
-                    
-                    if ($currentStart === null) {
-                        // Erster Tag einer Sequenz
-                        $currentStart = $vacationDate;
-                        $currentEnd = $vacationDate;
-                    } elseif ($vacationDate->diffInDays($currentEnd) === 1) {
-                        // Fortsetzung der Sequenz (nächster Tag)
-                        $currentEnd = $vacationDate;
-                    } else {
-                        // Unterbrechung: Speichere aktuelle Sequenz und starte neue
-                        $consolidated[] = [
-                            'start' => $currentStart,
-                            'end' => $currentEnd,
-                            'days' => $currentStart->diffInDays($currentEnd) + 1,
-                            'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
-                        ];
-                        $currentStart = $vacationDate;
-                        $currentEnd = $vacationDate;
-                        $currentHoursSum = 0.0;
-                        $currentHoursHasValue = false;
-                        $dayHours = $vacation->vacation_hours;
-                        if ($dayHours !== null && $dayHours !== '') {
-                            $currentHoursSum += (float) $dayHours;
-                            $currentHoursHasValue = true;
-                        }
-                    }
-                }
-                
-                // Letzte Sequenz hinzufügen
-                if ($currentStart !== null) {
-                    $consolidated[] = [
-                        'start' => $currentStart,
-                        'end' => $currentEnd,
-                        'days' => $currentStart->diffInDays($currentEnd) + 1,
-                        'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
-                    ];
-                }
-                
-                // Erstelle Zeilen für konsolidierte Urlaubstage
-                foreach ($consolidated as $consolidation) {
+
                     $vacationHoursFormatted = '';
-                    if (!empty($consolidation['hours']) && (float) $consolidation['hours'] > 0) {
-                        $vacationHoursFormatted = str_replace('.', ',', number_format((float) $consolidation['hours'], 2, '.', ''));
+                    if ($vacation->vacation_hours !== null && $vacation->vacation_hours !== '' && (float) $vacation->vacation_hours > 0) {
+                        $vacationHoursFormatted = str_replace('.', ',', number_format((float) $vacation->vacation_hours, 2, '.', ''));
                     }
+
                     $row = [
                         $monthDisplay,                                    // Monat
-                        $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
-                        $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                        $vacationDate->format('d.m.Y'),                   // Von Datum (F:
+                        $vacationDate->format('d.m.Y'),                   // Bis Datum (FZ)
                         $firstName,                                       // Vorname
                         $lastName,                                        // Name
                         $employeeNumber,                                  // MA Code ZW
                         '',                                               // LA Code ZW
-                        $vacationHoursFormatted,                           // Einheiten (Std.)
-                        (string)$consolidation['days'],                   // Tage
+                        $vacationHoursFormatted,                          // Einheiten (Std.)
+                        '1',                                              // Tage (pro Datensatz)
                         '',                                               // Satz
                         '',                                               // Betrag
                         '',                                               // Prozent
@@ -595,7 +543,7 @@ class HcmExportService
                         '',                                               // zu löschen
                         '',                                               // Beschreibung init Text
                     ];
-                    
+
                     $lines[] = $this->escapeCsvRow($row);
                 }
             }
@@ -901,7 +849,7 @@ class HcmExportService
             ->orderBy('vacation_date')
             ->get();
 
-        // Gruppiere zuerst nach Person (Employee/Vertrag), dann konsolidiere zusammenhängende Tage
+        // Gruppiere zuerst nach Person (Employee/Vertrag)
         $vacationByEmployee = $vacationDays->groupBy('employee_id');
         
         foreach ($vacationByEmployee as $employeeId => $employeeVacations) {
@@ -913,86 +861,34 @@ class HcmExportService
                 $contract = $firstVacation->contract;
                 $employee = $contract->employee;
                 $contact = $employee->crmContactLinks->first()?->contact;
-                
+
                 $firstName = $contact?->first_name ?? '';
                 $lastName = $contact?->last_name ?? '';
                 $employeeNumber = (string)($employee->employee_number ?? '');
-                
+
                 // Kostenstelle vom Vertrag holen
                 $costCenter = $contract->getCostCenter();
                 $costCenterCode = $costCenter?->code ?? $contract->cost_center ?? '';
-                
-                // Sortiere nach Datum
-                $sortedVacations = $group->sortBy('vacation_date')->values();
-                
-                // Konsolidiere: Wenn mehrere Tage am Stück, dann zusammenfassen
-                $consolidated = [];
-                $currentStart = null;
-                $currentEnd = null;
-                $currentHoursSum = 0.0;
-                $currentHoursHasValue = false;
-                
-                foreach ($sortedVacations as $vacation) {
+
+                // WICHTIG: Urlaub nicht konsolidieren / nicht summieren -> 1 Zeile pro Tag
+                foreach ($group->sortBy('vacation_date')->values() as $vacation) {
                     $vacationDate = Carbon::parse($vacation->vacation_date);
-                    $dayHours = $vacation->vacation_hours;
-                    if ($dayHours !== null && $dayHours !== '') {
-                        $currentHoursSum += (float) $dayHours;
-                        $currentHoursHasValue = true;
-                    }
-                    
-                    if ($currentStart === null) {
-                        // Erster Tag einer Sequenz
-                        $currentStart = $vacationDate;
-                        $currentEnd = $vacationDate;
-                    } elseif ($vacationDate->diffInDays($currentEnd) === 1) {
-                        // Fortsetzung der Sequenz (nächster Tag)
-                        $currentEnd = $vacationDate;
-                    } else {
-                        // Unterbrechung: Speichere aktuelle Sequenz und starte neue
-                        $consolidated[] = [
-                            'start' => $currentStart,
-                            'end' => $currentEnd,
-                            'days' => $currentStart->diffInDays($currentEnd) + 1,
-                            'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
-                        ];
-                        $currentStart = $vacationDate;
-                        $currentEnd = $vacationDate;
-                        $currentHoursSum = 0.0;
-                        $currentHoursHasValue = false;
-                        $dayHours = $vacation->vacation_hours;
-                        if ($dayHours !== null && $dayHours !== '') {
-                            $currentHoursSum += (float) $dayHours;
-                            $currentHoursHasValue = true;
-                        }
-                    }
-                }
-                
-                // Letzte Sequenz hinzufügen
-                if ($currentStart !== null) {
-                    $consolidated[] = [
-                        'start' => $currentStart,
-                        'end' => $currentEnd,
-                        'days' => $currentStart->diffInDays($currentEnd) + 1,
-                        'hours' => $currentHoursHasValue ? round($currentHoursSum, 2) : null,
-                    ];
-                }
-                
-                // Erstelle Zeilen für konsolidierte Urlaubstage
-                foreach ($consolidated as $consolidation) {
+
                     $vacationHoursFormatted = '';
-                    if (!empty($consolidation['hours']) && (float) $consolidation['hours'] > 0) {
-                        $vacationHoursFormatted = str_replace('.', ',', number_format((float) $consolidation['hours'], 2, '.', ''));
+                    if ($vacation->vacation_hours !== null && $vacation->vacation_hours !== '' && (float) $vacation->vacation_hours > 0) {
+                        $vacationHoursFormatted = str_replace('.', ',', number_format((float) $vacation->vacation_hours, 2, '.', ''));
                     }
+
                     $row = [
                         $monthDisplay,                                    // Monat
-                        $consolidation['start']->format('d.m.Y'),        // Von Datum (F:
-                        $consolidation['end']->format('d.m.Y'),          // Bis Datum (FZ)
+                        $vacationDate->format('d.m.Y'),                   // Von Datum (F:
+                        $vacationDate->format('d.m.Y'),                   // Bis Datum (FZ)
                         $firstName,                                       // Vorname
                         $lastName,                                        // Name
                         $employeeNumber,                                  // MA Code ZW
                         '',                                               // LA Code ZW
-                        $vacationHoursFormatted,                           // Einheiten (Std.)
-                        (string)$consolidation['days'],                   // Tage
+                        $vacationHoursFormatted,                          // Einheiten (Std.)
+                        '1',                                              // Tage (pro Datensatz)
                         '',                                               // Satz
                         '',                                               // Betrag
                         '',                                               // Prozent
@@ -1005,7 +901,7 @@ class HcmExportService
                         '',                                               // zu löschen
                         '',                                               // Beschreibung init Text
                     ];
-                    
+
                     $lines[] = $this->escapeCsvRow($row);
                 }
             }
