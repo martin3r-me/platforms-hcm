@@ -331,9 +331,10 @@ class HcmExportService
             }
         }
 
-        // Abwesenheitstage aus dem laufenden Monat hinzufügen (1. des Monats bis heute)
-        $absenceFromDate = Carbon::create($now->year, $now->month, 1);
-        $absenceToDate = $now->copy()->startOfDay();
+        // Abwesenheitstage für den Zielmonat hinzufügen (kompletter Monat, inkl. zukünftiger Tage)
+        // Zielmonat = Monat des Abrechnungszeitraums-Endes ($toDate) / $monthDisplay
+        $absenceFromDate = $toDate->copy()->startOfMonth();
+        $absenceToDate = $toDate->copy()->endOfMonth();
         
         $absenceDays = HcmContractAbsenceDay::with([
                 'contract.employee.crmContactLinks.contact',
@@ -471,7 +472,7 @@ class HcmExportService
             }
         }
 
-        // Urlaubstage aus dem laufenden Monat hinzufügen (1. des Monats bis heute)
+        // Urlaubstage für den Zielmonat hinzufügen (kompletter Monat, inkl. zukünftiger Tage)
         $vacationDays = HcmContractVacationDay::with([
                 'contract.employee.crmContactLinks.contact',
                 'contract.costCenterLinks.costCenter',
@@ -630,7 +631,7 @@ class HcmExportService
         }
 
         // Zeitraum für Stundenlöhner: Gesamter Vormonat (1. bis letzter Tag des Vormonats)
-        // Zeitraum für Abwesenheitstage: 1. des aktuellen Monats bis heute
+        // Zeitraum für Abwesenheitstage/Urlaub: kompletter aktueller Monat (inkl. zukünftiger Tage)
         $now = Carbon::now();
         
         // Gesamter Vormonat für Stundenlöhner
@@ -639,9 +640,9 @@ class HcmExportService
         $hoursToDate = Carbon::create($lastMonth->year, $lastMonth->month, $lastMonth->daysInMonth);
         $monthDisplay = $now->format('m.Y');
         
-        // Zeitraum für Abwesenheitstage (1. des Monats bis heute)
-        $absenceFromDate = Carbon::create($now->year, $now->month, 1);
-        $absenceToDate = $now->copy()->startOfDay();
+        // Zeitraum für Abwesenheitstage/Urlaub (kompletter Monat)
+        $absenceFromDate = $now->copy()->startOfMonth();
+        $absenceToDate = $now->copy()->endOfMonth();
 
         // Headlines definieren
         $headers = [
