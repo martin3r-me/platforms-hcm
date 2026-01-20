@@ -744,18 +744,27 @@
                     <h3 class="text-lg font-medium text-[var(--ui-secondary)]">Arbeitszeit</h3>
                     @if($editMode)
                         <div class="space-y-4">
+                            {{-- Wochenstunden: Nur Anzeige, automatisch berechnet --}}
+                            <div>
+                                <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
+                                    Wochenstunden <span class="text-xs text-[var(--ui-muted)]">(automatisch berechnet)</span>
+                                </label>
+                                <div class="px-3 py-2 bg-gray-50 border border-[var(--ui-border)]/60 rounded-md text-sm text-[var(--ui-muted)]">
+                                    {{ $hours_per_week ?? '—' }}h
+                                </div>
+                            </div>
                             <x-ui-input-text 
-                                name="hours_per_week" 
-                                label="Wochenstunden"
-                                wire:model="hours_per_week"
+                                name="hours_per_week_factor" 
+                                label="Faktor (Monatsstunden → Wochenstunden)"
+                                wire:model.live="hours_per_week_factor"
                                 type="number"
-                                step="0.5"
-                                placeholder="z.B. 40"
+                                step="0.01"
+                                placeholder="z.B. 4.4"
                             />
                             <x-ui-input-text 
                                 name="hours_per_month" 
                                 label="Monatsstunden"
-                                wire:model="hours_per_month"
+                                wire:model.live="hours_per_month"
                                 type="number"
                                 step="0.5"
                                 placeholder="z.B. 173.33"

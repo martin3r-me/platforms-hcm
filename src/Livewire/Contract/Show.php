@@ -32,6 +32,7 @@ class Show extends Component
     
     // Arbeitszeit-Felder
     public $hours_per_week;
+    public $hours_per_week_factor;
     public $hours_per_month;
     public $work_days_per_week;
     public $calendar_work_days;
@@ -109,8 +110,10 @@ class Show extends Component
         $this->end_date = $this->contract->end_date?->format('Y-m-d');
         
         // Arbeitszeit-Felder
-        $this->hours_per_week = $this->contract->hours_per_week;
+        $this->hours_per_week_factor = $this->contract->hours_per_week_factor ?? 4.4;
         $this->hours_per_month = $this->contract->hours_per_month;
+        // Wochenstunden automatisch berechnen
+        $this->hours_per_week = $this->calculateHoursPerWeek();
         $this->work_days_per_week = $this->contract->work_days_per_week;
         $this->calendar_work_days = $this->contract->calendar_work_days;
         $this->wage_base_type = $this->contract->wage_base_type;
@@ -156,7 +159,8 @@ class Show extends Component
             'contract_form' => 'nullable|in:1,2,3,4,5,6,7,8,9',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'hours_per_week' => 'nullable|numeric|min:0|max:168',
+            // hours_per_week wird automatisch berechnet, keine Validierung nötig
+            'hours_per_week_factor' => 'nullable|numeric|min:1|max:10',
             'hours_per_month' => 'nullable|numeric|min:0|max:744',
             'work_days_per_week' => 'nullable|numeric|min:0|max:7',
             'calendar_work_days' => 'nullable|integer|min:0',
@@ -189,7 +193,8 @@ class Show extends Component
             'contract_form' => $this->contract_form,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
-            'hours_per_week' => $this->hours_per_week,
+            'hours_per_week' => $this->calculateHoursPerWeek(), // Immer neu berechnen
+            'hours_per_week_factor' => $this->hours_per_week_factor,
             'hours_per_month' => $this->hours_per_month,
             'work_days_per_week' => $this->work_days_per_week,
             'calendar_work_days' => $this->calendar_work_days,
@@ -227,6 +232,34 @@ class Show extends Component
     public function updatedTariffGroupId()
     {
         $this->tariff_level_id = null;
+    }
+
+    /**
+     * Berechnet Wochenstunden aus Monatsstunden und Faktor
+     */
+    protected function calculateHoursPerWeek(): ?float
+    {
+        if (!$this->hours_per_month || !$this->hours_per_week_factor) {
+            return null;
+        }
+        
+        return round((float)$this->hours_per_month / (float)$this->hours_per_week_factor, 2);
+    }
+
+    /**
+     * Wird aufgerufen, wenn Monatsstunden geändert werden
+     */
+    public function updatedHoursPerMonth()
+    {
+        $this->hours_per_week = $this->calculateHoursPerWeek();
+    }
+
+    /**
+     * Wird aufgerufen, wenn der Faktor geändert wird
+     */
+    public function updatedHoursPerWeekFactor()
+    {
+        $this->hours_per_week = $this->calculateHoursPerWeek();
     }
 
     public function getInsuranceStatusesProperty()
