@@ -208,6 +208,12 @@ class EmployeeNostradamusController extends ApiController
         // Contract Hours per Week
         $contractHoursPerWeek = $activeContract?->hours_per_week ?? 0;
         
+        // Contract Hours per Month
+        $contractHoursPerMonth = $activeContract?->hours_per_month ?? null;
+        
+        // Contract Hours per Week Factor
+        $contractHoursPerWeekFactor = $activeContract?->hours_per_week_factor ?? null;
+        
         // Employee Profile Code aus employmentRelationship
         // Manuell: employment_relationship_id auflösen und Code aus Tabelle holen
         $employeeProfileCode = null;
@@ -266,6 +272,8 @@ class EmployeeNostradamusController extends ApiController
             'contract_start_date' => $activeContract?->start_date?->format('Y-m-d'),
             'contract_end_date' => $activeContract?->end_date?->format('Y-m-d'),
             'contract_hours_per_week' => $contractHoursPerWeek,
+            'contract_hours_per_month' => $contractHoursPerMonth,
+            'contract_hours_per_week_factor' => $contractHoursPerWeekFactor,
             'employee_profile_code' => $employeeProfileCode,
             'cost_center' => $costCenter,
         ];
