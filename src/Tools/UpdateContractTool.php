@@ -49,7 +49,18 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
                 ],
                 'contract_type' => ['type' => 'string'],
                 'employment_status' => ['type' => 'string'],
-                'hours_per_week' => ['type' => 'number'],
+                'hours_per_month' => [
+                    'type' => 'number',
+                    'description' => 'Optional: Monatsstunden. Wenn gesetzt, werden Wochenstunden automatisch berechnet (Monatsstunden / Faktor).',
+                ],
+                'hours_per_week_factor' => [
+                    'type' => 'number',
+                    'description' => 'Optional: Faktor für Berechnung Wochenstunden aus Monatsstunden. Default: 4.4. Formel: Wochenstunden = Monatsstunden / Faktor.',
+                ],
+                'hours_per_week' => [
+                    'type' => 'number',
+                    'description' => 'Optional: Stunden/Woche. Wird automatisch berechnet, wenn hours_per_month gesetzt ist. Nicht manuell setzen, wenn hours_per_month vorhanden ist.',
+                ],
                 'wage_base_type' => [
                     'type' => 'string',
                     'description' => 'Optional: Lohngrundart/Vergütungsbasis (z.B. "Stundenlohn" oder "Monatslohn"). Setze auf "" um zu löschen.',
@@ -105,10 +116,42 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
             }
 
             $update = [];
-            foreach (['contract_type', 'employment_status', 'cost_center', 'is_active', 'hours_per_week', 'wage_base_type'] as $f) {
+            foreach (['contract_type', 'employment_status', 'cost_center', 'is_active', 'wage_base_type'] as $f) {
                 if (array_key_exists($f, $arguments)) {
                     $update[$f] = $arguments[$f] === '' ? null : $arguments[$f];
                 }
+            }
+
+            // Stunden-Berechnung: Wenn Monatsstunden gesetzt, berechne Wochenstunden automatisch
+            $hoursPerMonth = null;
+            $hoursPerWeekFactor = null;
+            
+            if (array_key_exists('hours_per_month', $arguments)) {
+                $hoursPerMonth = $arguments['hours_per_month'] === '' || $arguments['hours_per_month'] === null 
+                    ? null 
+                    : (float)$arguments['hours_per_month'];
+                $update['hours_per_month'] = $hoursPerMonth;
+            } else {
+                // Wenn nicht explizit gesetzt, verwende aktuellen Wert
+                $hoursPerMonth = $contract->hours_per_month;
+            }
+            
+            if (array_key_exists('hours_per_week_factor', $arguments)) {
+                $hoursPerWeekFactor = $arguments['hours_per_week_factor'] === '' || $arguments['hours_per_week_factor'] === null
+                    ? null
+                    : (float)$arguments['hours_per_week_factor'];
+                $update['hours_per_week_factor'] = $hoursPerWeekFactor;
+            } else {
+                // Wenn nicht explizit gesetzt, verwende aktuellen Wert oder Default
+                $hoursPerWeekFactor = $contract->hours_per_week_factor ?? 4.4;
+            }
+            
+            // Automatische Berechnung der Wochenstunden, wenn Monatsstunden vorhanden
+            if ($hoursPerMonth !== null && $hoursPerWeekFactor > 0) {
+                $update['hours_per_week'] = round($hoursPerMonth / $hoursPerWeekFactor, 2);
+            } elseif (array_key_exists('hours_per_week', $arguments)) {
+                // Fallback: Wenn keine Monatsstunden, aber Wochenstunden direkt gesetzt
+                $update['hours_per_week'] = $arguments['hours_per_week'] === '' ? null : (float)$arguments['hours_per_week'];
             }
 
             // Vergütung (verschlüsselt): Zahlen als String speichern, ""/null löschen
@@ -216,6 +259,9 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
                 'start_date' => $contract->start_date?->toDateString(),
                 'end_date' => $contract->end_date?->toDateString(),
                 'is_active' => (bool)$contract->is_active,
+                'hours_per_month' => $contract->hours_per_month,
+                'hours_per_week_factor' => $contract->hours_per_week_factor,
+                'hours_per_week' => $contract->hours_per_week,
                 'wage_base_type' => $contract->wage_base_type,
                 'hourly_wage' => $contract->hourly_wage,
                 'base_salary' => $contract->base_salary,

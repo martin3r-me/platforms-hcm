@@ -128,6 +128,8 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
                     'is_active' => (bool)$c->is_active,
                     'employment_status' => $c->employment_status,
                     'contract_type' => $c->contract_type,
+                    'hours_per_month' => $c->hours_per_month,
+                    'hours_per_week_factor' => $c->hours_per_week_factor,
                     'hours_per_week' => $c->hours_per_week,
                     'wage_base_type' => $c->wage_base_type,
                     // Robust: verhindert Undefined-Variable-Warning bei Scope/Refactor

@@ -57,9 +57,18 @@ class CreateContractTool implements ToolContract, ToolMetadataContract
                     'type' => 'string',
                     'description' => 'Optional: Beschäftigungsstatus.',
                 ],
+                'hours_per_month' => [
+                    'type' => 'number',
+                    'description' => 'Optional: Monatsstunden. Wenn gesetzt, werden Wochenstunden automatisch berechnet (Monatsstunden / Faktor).',
+                ],
+                'hours_per_week_factor' => [
+                    'type' => 'number',
+                    'description' => 'Optional: Faktor für Berechnung Wochenstunden aus Monatsstunden. Default: 4.4. Formel: Wochenstunden = Monatsstunden / Faktor.',
+                    'default' => 4.4,
+                ],
                 'hours_per_week' => [
                     'type' => 'number',
-                    'description' => 'Optional: Stunden/Woche.',
+                    'description' => 'Optional: Stunden/Woche. Wird automatisch berechnet, wenn hours_per_month gesetzt ist. Nicht manuell setzen, wenn hours_per_month vorhanden ist.',
                 ],
                 'wage_base_type' => [
                     'type' => 'string',
@@ -154,6 +163,23 @@ class CreateContractTool implements ToolContract, ToolMetadataContract
                     }
                 }
 
+                // Stunden-Berechnung: Wenn Monatsstunden gesetzt, berechne Wochenstunden automatisch
+                $hoursPerMonth = isset($arguments['hours_per_month']) && $arguments['hours_per_month'] !== null && $arguments['hours_per_month'] !== '' 
+                    ? (float)$arguments['hours_per_month'] 
+                    : null;
+                $hoursPerWeekFactor = isset($arguments['hours_per_week_factor']) && $arguments['hours_per_week_factor'] !== null && $arguments['hours_per_week_factor'] !== ''
+                    ? (float)$arguments['hours_per_week_factor']
+                    : 4.4; // Default
+                
+                $hoursPerWeek = null;
+                if ($hoursPerMonth !== null && $hoursPerWeekFactor > 0) {
+                    // Automatische Berechnung: Wochenstunden = Monatsstunden / Faktor
+                    $hoursPerWeek = round($hoursPerMonth / $hoursPerWeekFactor, 2);
+                } elseif (isset($arguments['hours_per_week']) && $arguments['hours_per_week'] !== null && $arguments['hours_per_week'] !== '') {
+                    // Fallback: Wenn keine Monatsstunden, aber Wochenstunden direkt gesetzt
+                    $hoursPerWeek = (float)$arguments['hours_per_week'];
+                }
+
                 $contract = HcmEmployeeContract::create([
                     'employee_id' => $employee->id,
                     'team_id' => $teamId,
@@ -164,7 +190,9 @@ class CreateContractTool implements ToolContract, ToolMetadataContract
                     'end_date' => $end,
                     'contract_type' => $arguments['contract_type'] ?? null,
                     'employment_status' => $arguments['employment_status'] ?? null,
-                    'hours_per_week' => $arguments['hours_per_week'] ?? null,
+                    'hours_per_month' => $hoursPerMonth,
+                    'hours_per_week_factor' => $hoursPerWeekFactor,
+                    'hours_per_week' => $hoursPerWeek,
                     'wage_base_type' => $wageBaseType ?: null,
                     'hourly_wage' => $hourlyWage,
                     'base_salary' => $baseSalary,
@@ -225,6 +253,9 @@ class CreateContractTool implements ToolContract, ToolMetadataContract
                 'start_date' => $contract->start_date?->toDateString(),
                 'end_date' => $contract->end_date?->toDateString(),
                 'is_active' => (bool)$contract->is_active,
+                'hours_per_month' => $contract->hours_per_month,
+                'hours_per_week_factor' => $contract->hours_per_week_factor,
+                'hours_per_week' => $contract->hours_per_week,
                 'wage_base_type' => $contract->wage_base_type,
                 'hourly_wage' => $contract->hourly_wage,
                 'base_salary' => $contract->base_salary,
