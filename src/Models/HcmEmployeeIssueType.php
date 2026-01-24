@@ -18,11 +18,13 @@ class HcmEmployeeIssueType extends Model
         'category',
         'requires_return',
         'is_active',
+        'field_definitions',
     ];
 
     protected $casts = [
         'requires_return' => 'boolean',
         'is_active' => 'boolean',
+        'field_definitions' => 'array',
     ];
 
     protected static function booted(): void

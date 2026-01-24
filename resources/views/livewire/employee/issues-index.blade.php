@@ -50,8 +50,11 @@
                                     @else
                                         —
                                     @endif
+                                    @if($issue->title)
+                                        <div class="text-xs text-[var(--ui-muted)] mt-1">{{ $issue->title }}</div>
+                                    @endif
                                 </td>
-                                <td class="px-4 py-3 font-mono text-xs">{{ $issue->identifier ?? '—' }}</td>
+                                <td class="px-4 py-3 font-mono text-xs">{{ $issue->identifier ?? ($issue->title ?? '—') }}</td>
                                 <td class="px-4 py-3">
                                     @if($issue->issued_at)
                                         {{ $issue->issued_at->format('d.m.Y') }}
@@ -77,7 +80,7 @@
                                 </td>
                                 <td class="px-4 py-3 text-xs text-[var(--ui-muted)] max-w-xs truncate">{{ $issue->notes ?? '—' }}</td>
                                 <td class="px-4 py-3">
-                                    <x-ui-button variant="secondary-outline" size="xs" wire:click="$dispatch('edit-issue', {id: {{ $issue->id }}})">
+                                    <x-ui-button variant="secondary-outline" size="xs" wire:click="openEditModal({{ $issue->id }})">
                                         Bearbeiten
                                     </x-ui-button>
                                 </td>
@@ -114,7 +117,7 @@
                 <div>
                     <h3 class="text-xs font-semibold text-[var(--ui-muted)] uppercase tracking-wider mb-2">Aktionen</h3>
                     <div class="space-y-1">
-                        <x-ui-button variant="primary" size="sm" wire:click="$dispatch('open-create-issue-modal')" class="w-full justify-start">
+                        <x-ui-button variant="primary" size="sm" wire:click="openCreateModal" class="w-full justify-start">
                             @svg('heroicon-o-plus', 'w-4 h-4')
                             <span class="ml-2">Neue Ausgabe</span>
                         </x-ui-button>
@@ -137,5 +140,137 @@
             </div>
         </x-ui-page-sidebar>
     </x-slot>
+
+    {{-- Create/Edit Modal --}}
+    <x-ui-modal wire:model="showModal" size="lg" :title="$editingIssue ? 'Ausgabe bearbeiten' : 'Neue Ausgabe'">
+        <div class="space-y-4">
+            {{-- Basis-Felder --}}
+            <div>
+                <x-ui-input-select 
+                    name="issue_type_id"
+                    wire:model.live="issue_type_id" 
+                    label="Typ *"
+                    :options="$this->issueTypes->map(fn($t) => ['id' => $t->id, 'label' => $t->name])->toArray()"
+                    option-value="id"
+                    option-label="label"
+                    placeholder="Typ auswählen"
+                />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-ui-input-text 
+                    name="title"
+                    wire:model="title" 
+                    label="Titel"
+                    placeholder="z.B. Laptop E15 Gen 4"
+                />
+                <x-ui-input-text 
+                    name="identifier"
+                    wire:model="identifier" 
+                    label="Identifikation/Seriennummer"
+                    placeholder="z.B. KB-LEVE15-49"
+                />
+            </div>
+
+            <x-ui-input-textarea 
+                name="description"
+                wire:model="description" 
+                label="Beschreibung"
+                placeholder="Detaillierte Beschreibung..."
+                rows="3"
+            />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-ui-input-date 
+                    name="issued_at"
+                    wire:model="issued_at" 
+                    label="Ausgegeben am"
+                />
+                <x-ui-input-date 
+                    name="returned_at"
+                    wire:model="returned_at" 
+                    label="Zurückgegeben am"
+                />
+            </div>
+
+            {{-- Flexible Felder basierend auf Issue-Type --}}
+            @if($this->selectedIssueType && $this->selectedIssueType->field_definitions)
+                <div class="border-t border-[var(--ui-border)] pt-4 mt-4">
+                    <h3 class="text-sm font-semibold text-[var(--ui-secondary)] mb-4">Zusätzliche Informationen</h3>
+                    <div class="space-y-4">
+                        @foreach($this->selectedIssueType->field_definitions as $field)
+                            @php
+                                $fieldKey = 'metadata.' . $field['key'];
+                                $fieldValue = $metadata[$field['key']] ?? '';
+                            @endphp
+                            
+                            @if($field['type'] === 'text')
+                                <x-ui-input-text 
+                                    :name="$fieldKey"
+                                    wire:model="metadata.{{ $field['key'] }}" 
+                                    :label="$field['label']"
+                                    :placeholder="$field['placeholder'] ?? ''"
+                                    :required="$field['required'] ?? false"
+                                />
+                            @elseif($field['type'] === 'textarea')
+                                <x-ui-input-textarea 
+                                    :name="$fieldKey"
+                                    wire:model="metadata.{{ $field['key'] }}" 
+                                    :label="$field['label']"
+                                    :placeholder="$field['placeholder'] ?? ''"
+                                    :required="$field['required'] ?? false"
+                                    :rows="$field['rows'] ?? 3"
+                                />
+                            @elseif($field['type'] === 'select')
+                                <x-ui-input-select 
+                                    :name="$fieldKey"
+                                    wire:model="metadata.{{ $field['key'] }}" 
+                                    :label="$field['label']"
+                                    :options="$field['options'] ?? []"
+                                    option-value="value"
+                                    option-label="label"
+                                    :required="$field['required'] ?? false"
+                                />
+                            @elseif($field['type'] === 'checkbox')
+                                <div class="flex items-center gap-2">
+                                    <input 
+                                        type="checkbox" 
+                                        id="field_{{ $field['key'] }}"
+                                        wire:model="metadata.{{ $field['key'] }}" 
+                                        class="w-4 h-4"
+                                    />
+                                    <label for="field_{{ $field['key'] }}" class="text-sm">
+                                        {{ $field['label'] }}
+                                    </label>
+                                </div>
+                            @elseif($field['type'] === 'date')
+                                <x-ui-input-date 
+                                    :name="$fieldKey"
+                                    wire:model="metadata.{{ $field['key'] }}" 
+                                    :label="$field['label']"
+                                    :required="$field['required'] ?? false"
+                                />
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            <x-ui-input-textarea 
+                name="notes"
+                wire:model="notes" 
+                label="Notizen"
+                placeholder="Zusätzliche Notizen..."
+                rows="3"
+            />
+        </div>
+
+        <x-slot name="footer">
+            <div class="flex justify-end gap-2">
+                <x-ui-button type="button" variant="secondary-outline" wire:click="closeModal">Abbrechen</x-ui-button>
+                <x-ui-button type="button" variant="primary" wire:click="save">Speichern</x-ui-button>
+            </div>
+        </x-slot>
+    </x-ui-modal>
 </x-ui-page>
 

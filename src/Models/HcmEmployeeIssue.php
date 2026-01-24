@@ -17,6 +17,8 @@ class HcmEmployeeIssue extends Model
         'employee_id',
         'contract_id',
         'issue_type_id',
+        'title',
+        'description',
         'identifier',
         'status',
         'issued_at',
