@@ -107,6 +107,10 @@
             @svg('heroicon-o-archive-box', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Ausgaben</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.issue-types.index')">
+            @svg('heroicon-o-tag', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Ausgabe-Typen</span>
+        </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('hcm.trainings.index')">
             @svg('heroicon-o-academic-cap', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Schulungen</span>

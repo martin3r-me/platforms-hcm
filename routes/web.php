@@ -96,6 +96,7 @@ Route::get('/employers/{employer}/employees/{employee}', EmployeeShow::class)->n
 // Benefits & Ausgaben (global)
 Route::get('/benefits', \Platform\Hcm\Livewire\Benefits\Index::class)->name('hcm.benefits.index');
 Route::get('/issues', \Platform\Hcm\Livewire\Issues\Index::class)->name('hcm.issues.index');
+Route::get('/issue-types', \Platform\Hcm\Livewire\IssueTypes\Index::class)->name('hcm.issue-types.index');
 Route::get('/trainings', \Platform\Hcm\Livewire\Trainings\Index::class)->name('hcm.trainings.index');
 Route::get('/training-types', \Platform\Hcm\Livewire\TrainingTypes\Index::class)->name('hcm.training-types.index');
 

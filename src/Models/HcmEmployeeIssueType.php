@@ -3,6 +3,7 @@
 namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Symfony\Component\Uid\UuidV7;
 
 class HcmEmployeeIssueType extends Model
@@ -26,6 +27,11 @@ class HcmEmployeeIssueType extends Model
         'is_active' => 'boolean',
         'field_definitions' => 'array',
     ];
+
+    public function issues(): HasMany
+    {
+        return $this->hasMany(HcmEmployeeIssue::class, 'issue_type_id');
+    }
 
     protected static function booted(): void
     {
