@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Prüfe ob Tabelle existiert (wird möglicherweise später erstellt)
+        if (!Schema::hasTable('hcm_tariff_levels')) {
+            return;
+        }
+        
         Schema::table('hcm_tariff_levels', function (Blueprint $table) {
             $table->unsignedInteger('progression_months')->nullable()->change();
         });
@@ -15,6 +20,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Prüfe ob Tabelle existiert
+        if (!Schema::hasTable('hcm_tariff_levels')) {
+            return;
+        }
+        
         Schema::table('hcm_tariff_levels', function (Blueprint $table) {
             $table->unsignedTinyInteger('progression_months')->nullable()->change();
         });

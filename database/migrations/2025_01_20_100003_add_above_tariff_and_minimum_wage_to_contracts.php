@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Prüfe ob Tabelle existiert (wird möglicherweise später erstellt)
+        if (!Schema::hasTable('hcm_employee_contracts')) {
+            return;
+        }
+        
         Schema::table('hcm_employee_contracts', function (Blueprint $table) {
             // Übertarifliche Bezahlung
             $table->boolean('is_above_tariff')->default(false)->after('next_tariff_level_date');
@@ -25,6 +30,11 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Prüfe ob Tabelle existiert
+        if (!Schema::hasTable('hcm_employee_contracts')) {
+            return;
+        }
+        
         Schema::table('hcm_employee_contracts', function (Blueprint $table) {
             $table->dropColumn([
                 'is_above_tariff',
