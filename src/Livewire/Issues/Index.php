@@ -32,6 +32,7 @@ class Index extends Component
     public $returned_at = '';
     public $notes = '';
     public $metadata = [];
+    public $signature_data = null;
     
     protected $listeners = ['open-create-issue-modal' => 'openCreateModal', 'edit-issue' => 'openEditModal'];
 
@@ -126,6 +127,7 @@ class Index extends Component
         $this->returned_at = $issue->returned_at?->format('Y-m-d');
         $this->notes = $issue->notes;
         $this->metadata = $issue->metadata ?? [];
+        $this->signature_data = $issue->signature_data;
         $this->showModal = true;
     }
     
@@ -148,6 +150,10 @@ class Index extends Component
             'notes' => 'nullable|string',
         ]);
         
+        // Determine if signature was just added (not present before, present now)
+        $signatureJustAdded = $this->signature_data &&
+            (!$this->editingIssue || !$this->editingIssue->signature_data);
+
         $data = [
             'team_id' => auth()->user()->currentTeam->id,
             'created_by_user_id' => auth()->id(),
@@ -160,6 +166,8 @@ class Index extends Component
             'returned_at' => $this->returned_at ?: null,
             'notes' => $this->notes,
             'metadata' => $this->metadata,
+            'signature_data' => $this->signature_data,
+            'signed_at' => $signatureJustAdded ? now() : ($this->editingIssue?->signed_at),
             'status' => $this->returned_at ? 'returned' : ($this->issued_at ? 'issued' : 'pending'),
         ];
         
@@ -192,6 +200,7 @@ class Index extends Component
         $this->returned_at = '';
         $this->notes = '';
         $this->metadata = [];
+        $this->signature_data = null;
     }
 
     public function render()

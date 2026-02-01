@@ -18,6 +18,7 @@ class Index extends Component
     public $category = '';
     public $requires_return = true;
     public $is_active = true;
+    public $requires_signature = false;
     public $field_definitions = [];
 
     protected $rules = [
@@ -26,6 +27,7 @@ class Index extends Component
         'category' => 'nullable|string|max:100',
         'requires_return' => 'boolean',
         'is_active' => 'boolean',
+        'requires_signature' => 'boolean',
         'field_definitions' => 'nullable|array',
     ];
 
@@ -66,6 +68,7 @@ class Index extends Component
         $this->category = $m->category;
         $this->requires_return = (bool) $m->requires_return;
         $this->is_active = (bool) $m->is_active;
+        $this->requires_signature = (bool) $m->requires_signature;
         $this->field_definitions = $m->field_definitions ?? [];
         $this->showEditModal = true;
     }
@@ -84,6 +87,7 @@ class Index extends Component
             'category' => $this->category,
             'requires_return' => $this->requires_return,
             'is_active' => $this->is_active,
+            'requires_signature' => $this->requires_signature,
             'field_definitions' => !empty($this->field_definitions) ? $this->field_definitions : null,
             'team_id' => auth()->user()->currentTeam->id,
         ];
@@ -147,6 +151,7 @@ class Index extends Component
         $this->category = '';
         $this->requires_return = true;
         $this->is_active = true;
+        $this->requires_signature = false;
         $this->field_definitions = [];
     }
 }

@@ -25,12 +25,15 @@ class HcmEmployeeIssue extends Model
         'returned_at',
         'metadata',
         'notes',
+        'signature_data',
+        'signed_at',
     ];
 
     protected $casts = [
         'issued_at' => 'date',
         'returned_at' => 'date',
         'metadata' => 'array',
+        'signed_at' => 'datetime',
     ];
 
     public function employee(): BelongsTo

@@ -84,9 +84,16 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <x-ui-button variant="secondary-outline" size="xs" wire:click="openEditModal({{ $issue->id }})">
-                                        Bearbeiten
-                                    </x-ui-button>
+                                    <div class="flex gap-1">
+                                        @if($issue->signature_data)
+                                            <a href="{{ route('hcm.issues.pdf', $issue) }}" target="_blank" class="inline-flex items-center justify-center px-2 py-1 text-xs font-medium rounded border border-[var(--ui-border)] text-[var(--ui-secondary)] hover:bg-gray-50 transition">
+                                                @svg('heroicon-o-document-arrow-down', 'w-4 h-4')
+                                            </a>
+                                        @endif
+                                        <x-ui-button variant="secondary-outline" size="xs" wire:click="openEditModal({{ $issue->id }})">
+                                            Bearbeiten
+                                        </x-ui-button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -275,13 +282,31 @@
                 </div>
             @endif
 
-            <x-ui-input-textarea 
+            <x-ui-input-textarea
                 name="notes"
-                wire:model="notes" 
+                wire:model="notes"
                 label="Notizen"
                 placeholder="Zusätzliche Notizen..."
                 rows="3"
             />
+
+            {{-- Unterschrift --}}
+            @if($this->selectedIssueType && $this->selectedIssueType->requires_signature)
+                <div class="border-t border-[var(--ui-border)] pt-4 mt-4">
+                    <x-ui-input-signature
+                        name="signature_data"
+                        wire:model="signature_data"
+                        label="Unterschrift des Mitarbeiters"
+                        :width="500"
+                        :height="200"
+                    />
+                    @if($editingIssue && $editingIssue->signed_at)
+                        <div class="mt-2 text-sm text-[var(--ui-muted)]">
+                            Unterschrieben am {{ $editingIssue->signed_at->format('d.m.Y H:i') }} Uhr
+                        </div>
+                    @endif
+                </div>
+            @endif
         </div>
 
         <x-slot name="footer">

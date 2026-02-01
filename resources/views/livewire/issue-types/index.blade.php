@@ -21,6 +21,7 @@
                                 <th class="px-4 py-2">Kategorie</th>
                                 <th class="px-4 py-2">Rückgabe</th>
                                 <th class="px-4 py-2">Felder</th>
+                                <th class="px-4 py-2">Unterschrift</th>
                                 <th class="px-4 py-2">Status</th>
                                 <th class="px-4 py-2"></th>
                             </tr>
@@ -52,6 +53,13 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-2">
+                                        @if($item->requires_signature)
+                                            <x-ui-badge variant="info" size="xs">Ja</x-ui-badge>
+                                        @else
+                                            <span class="text-[var(--ui-muted)]">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2">
                                         <x-ui-badge variant="{{ $item->is_active ? 'success' : 'secondary' }}" size="xs">
                                             {{ $item->is_active ? 'Aktiv' : 'Inaktiv' }}
                                         </x-ui-badge>
@@ -69,7 +77,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-4 py-8 text-center text-[var(--ui-muted)]">
+                                    <td colspan="8" class="px-4 py-8 text-center text-[var(--ui-muted)]">
                                         @svg('heroicon-o-archive-box', 'w-10 h-10 text-[var(--ui-muted)] mx-auto mb-2')
                                         <div class="text-sm">Keine Ausgabe-Typen gefunden</div>
                                     </td>
@@ -140,8 +148,9 @@
             </div>
             <x-ui-input-text name="category" label="Kategorie" wire:model="category" placeholder="z.B. IT, Kleidung, Schlüssel" />
             
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
                 <x-ui-input-checkbox model="requires_return" name="requires_return" wire:model="requires_return" checked-label="Rückgabe erforderlich" unchecked-label="Rückgabe optional" />
+                <x-ui-input-checkbox model="requires_signature" name="requires_signature" wire:model="requires_signature" checked-label="Unterschrift erforderlich" unchecked-label="Keine Unterschrift" />
                 <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
             </div>
 
@@ -153,22 +162,22 @@
                         @svg('heroicon-o-plus', 'w-4 h-4') Feld hinzufügen
                     </x-ui-button>
                 </div>
-                
+
                 @if(count($field_definitions) > 0)
                     <div class="space-y-3 max-h-96 overflow-y-auto">
                         @foreach($field_definitions as $index => $field)
                             <div class="p-3 border border-[var(--ui-border)] rounded-lg space-y-2">
                                 <div class="flex justify-between items-start">
                                     <div class="flex-1 grid grid-cols-2 gap-2">
-                                        <x-ui-input-text 
+                                        <x-ui-input-text
                                             :name="'field_definitions.' . $index . '.key'"
-                                            label="Key" 
-                                            wire:model="field_definitions.{{ $index }}.key" 
+                                            label="Key"
+                                            wire:model="field_definitions.{{ $index }}.key"
                                             placeholder="z.B. laptop_type"
                                         />
-                                        <x-ui-input-select 
+                                        <x-ui-input-select
                                             :name="'field_definitions.' . $index . '.type'"
-                                            label="Typ" 
+                                            label="Typ"
                                             wire:model="field_definitions.{{ $index }}.type"
                                             :options="[
                                                 ['value' => 'text', 'label' => 'Text'],
@@ -185,23 +194,23 @@
                                         @svg('heroicon-o-trash', 'w-4 h-4')
                                     </x-ui-button>
                                 </div>
-                                <x-ui-input-text 
+                                <x-ui-input-text
                                     :name="'field_definitions.' . $index . '.label'"
-                                    label="Label" 
-                                    wire:model="field_definitions.{{ $index }}.label" 
+                                    label="Label"
+                                    wire:model="field_definitions.{{ $index }}.label"
                                     placeholder="z.B. Laptop-Typ"
                                 />
-                                <x-ui-input-text 
+                                <x-ui-input-text
                                     :name="'field_definitions.' . $index . '.placeholder'"
-                                    label="Placeholder" 
-                                    wire:model="field_definitions.{{ $index }}.placeholder" 
+                                    label="Placeholder"
+                                    wire:model="field_definitions.{{ $index }}.placeholder"
                                     placeholder="z.B. E15 Gen 4"
                                 />
-                                <x-ui-input-checkbox 
+                                <x-ui-input-checkbox
                                     :model="'field_definitions.' . $index . '.required'"
                                     :name="'field_definitions.' . $index . '.required'"
-                                    wire:model="field_definitions.{{ $index }}.required" 
-                                    checked-label="Pflichtfeld" 
+                                    wire:model="field_definitions.{{ $index }}.required"
+                                    checked-label="Pflichtfeld"
                                     unchecked-label="Optional"
                                 />
                             </div>
@@ -230,8 +239,9 @@
             </div>
             <x-ui-input-text name="category" label="Kategorie" wire:model="category" placeholder="z.B. IT, Kleidung, Schlüssel" />
             
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
                 <x-ui-input-checkbox model="requires_return" name="requires_return" wire:model="requires_return" checked-label="Rückgabe erforderlich" unchecked-label="Rückgabe optional" />
+                <x-ui-input-checkbox model="requires_signature" name="requires_signature" wire:model="requires_signature" checked-label="Unterschrift erforderlich" unchecked-label="Keine Unterschrift" />
                 <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
             </div>
 
@@ -243,22 +253,22 @@
                         @svg('heroicon-o-plus', 'w-4 h-4') Feld hinzufügen
                     </x-ui-button>
                 </div>
-                
+
                 @if(count($field_definitions) > 0)
                     <div class="space-y-3 max-h-96 overflow-y-auto">
                         @foreach($field_definitions as $index => $field)
                             <div class="p-3 border border-[var(--ui-border)] rounded-lg space-y-2">
                                 <div class="flex justify-between items-start">
                                     <div class="flex-1 grid grid-cols-2 gap-2">
-                                        <x-ui-input-text 
+                                        <x-ui-input-text
                                             :name="'field_definitions.' . $index . '.key'"
-                                            label="Key" 
-                                            wire:model="field_definitions.{{ $index }}.key" 
+                                            label="Key"
+                                            wire:model="field_definitions.{{ $index }}.key"
                                             placeholder="z.B. laptop_type"
                                         />
-                                        <x-ui-input-select 
+                                        <x-ui-input-select
                                             :name="'field_definitions.' . $index . '.type'"
-                                            label="Typ" 
+                                            label="Typ"
                                             wire:model="field_definitions.{{ $index }}.type"
                                             :options="[
                                                 ['value' => 'text', 'label' => 'Text'],
@@ -275,23 +285,23 @@
                                         @svg('heroicon-o-trash', 'w-4 h-4')
                                     </x-ui-button>
                                 </div>
-                                <x-ui-input-text 
+                                <x-ui-input-text
                                     :name="'field_definitions.' . $index . '.label'"
-                                    label="Label" 
-                                    wire:model="field_definitions.{{ $index }}.label" 
+                                    label="Label"
+                                    wire:model="field_definitions.{{ $index }}.label"
                                     placeholder="z.B. Laptop-Typ"
                                 />
-                                <x-ui-input-text 
+                                <x-ui-input-text
                                     :name="'field_definitions.' . $index . '.placeholder'"
-                                    label="Placeholder" 
-                                    wire:model="field_definitions.{{ $index }}.placeholder" 
+                                    label="Placeholder"
+                                    wire:model="field_definitions.{{ $index }}.placeholder"
                                     placeholder="z.B. E15 Gen 4"
                                 />
-                                <x-ui-input-checkbox 
+                                <x-ui-input-checkbox
                                     :model="'field_definitions.' . $index . '.required'"
                                     :name="'field_definitions.' . $index . '.required'"
-                                    wire:model="field_definitions.{{ $index }}.required" 
-                                    checked-label="Pflichtfeld" 
+                                    wire:model="field_definitions.{{ $index }}.required"
+                                    checked-label="Pflichtfeld"
                                     unchecked-label="Optional"
                                 />
                             </div>

@@ -20,12 +20,14 @@ class HcmEmployeeIssueType extends Model
         'requires_return',
         'is_active',
         'field_definitions',
+        'requires_signature',
     ];
 
     protected $casts = [
         'requires_return' => 'boolean',
         'is_active' => 'boolean',
         'field_definitions' => 'array',
+        'requires_signature' => 'boolean',
     ];
 
     public function issues(): HasMany
