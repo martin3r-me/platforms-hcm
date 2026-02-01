@@ -1878,7 +1878,7 @@ class HcmExportService
         ];
 
         // Query mit Arbeitgeber-Filter
-        $query = \Platform\Hcm\Models\HcmEmployee::with(['employer', 'contracts', 'crmContactLinks.contact'])
+        $query = \Platform\Hcm\Models\HcmEmployee::with(['employer', 'contracts', 'crmContactLinks.contact.emailAddresses'])
             ->where('team_id', $this->teamId);
 
         if ($employerId) {
@@ -1907,7 +1907,7 @@ class HcmExportService
                     'employee_number' => $employee->employee_number,
                     'last_name' => $contact?->last_name ?? '',
                     'first_name' => $contact?->first_name ?? '',
-                    'primary_email' => $contact?->email ?? '',
+                    'primary_email' => $contact?->emailAddresses->where('is_primary', true)->first()?->email_address ?? '',
                     'employer' => $employee->employer?->name ?? '',
                     'status' => $employee->is_active ? 'Aktiv' : 'Inaktiv',
                     default => '',
