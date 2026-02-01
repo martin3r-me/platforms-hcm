@@ -19,6 +19,9 @@ class Index extends Component
     public $selectedExportType = '';
     public $selectedEmployerId = null;
     public $modalShow = false;
+
+    // Mitarbeiter-Export Felder
+    public $selectedEmployeeFields = [];
     
     // Error-Modal
     public $showErrorModal = false;
@@ -42,13 +45,21 @@ class Index extends Component
         // Flash-Messages und Validierungsfehler löschen beim Öffnen des Modals
         session()->forget(['success', 'error']);
         $this->resetValidation();
-        
+
         // Sicherstellen, dass Error-Modal geschlossen ist
         $this->showErrorModal = false;
         $this->errorDetails = null;
-        
+
         $this->selectedExportType = $type;
         $this->selectedEmployerId = null;
+
+        // Bei Mitarbeiter-Export: Standard-Felder vorauswählen
+        if ($type === 'employees') {
+            $this->selectedEmployeeFields = ['employee_number', 'last_name', 'first_name'];
+        } else {
+            $this->selectedEmployeeFields = [];
+        }
+
         $this->modalShow = true;
     }
     
@@ -68,31 +79,38 @@ class Index extends Component
         $rules = [
             'selectedExportType' => 'required|string|in:infoniqa-ma,infoniqa-dimensions,infoniqa-bank,infoniqa-zeitwirtschaft,infoniqa-zeitwirtschaft-monat,payroll,employees',
         ];
-        
-        // Für INFONIQA Exporte ist employer_id erforderlich
-        if (in_array($this->selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft', 'infoniqa-zeitwirtschaft-monat'], true)) {
+
+        // Für INFONIQA Exporte und Mitarbeiter-Export ist employer_id erforderlich
+        if (in_array($this->selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft', 'infoniqa-zeitwirtschaft-monat', 'employees'], true)) {
             $rules['selectedEmployerId'] = 'required|exists:hcm_employers,id';
         }
-        
+
+        // Für Mitarbeiter-Export müssen Felder ausgewählt sein
+        if ($this->selectedExportType === 'employees') {
+            $rules['selectedEmployeeFields'] = 'required|array|min:1';
+        }
+
         $this->validate($rules);
 
         // Modal sofort schließen
         $this->modalShow = false;
-        
+
         // Werte zwischenspeichern für Export
         $exportType = $this->selectedExportType;
         $employerId = $this->selectedEmployerId;
-        
+        $employeeFields = $this->selectedEmployeeFields;
+
         // Formular zurücksetzen
         $this->selectedExportType = !empty($this->exportTypes) ? array_key_first($this->exportTypes) : '';
         $this->selectedEmployerId = null;
+        $this->selectedEmployeeFields = [];
 
         try {
             $teamId = auth()->user()->currentTeam->id;
             $userId = auth()->id();
-            
+
             $service = new HcmExportService($teamId, $userId);
-            
+
             $name = match($exportType) {
                 'infoniqa-ma' => 'INFONIQA MA Export',
                 'infoniqa-dimensions' => 'INFONIQA Dimensionen Export',
@@ -103,23 +121,28 @@ class Index extends Component
                 'employees' => 'Mitarbeiter Export',
                 default => 'Export',
             };
-            
-            // Parameter für INFONIQA-Exporte
+
+            // Parameter für Exporte
             $parameters = null;
             if (in_array($exportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft', 'infoniqa-zeitwirtschaft-monat'], true)) {
                 $parameters = ['employer_id' => $employerId];
+            } elseif ($exportType === 'employees') {
+                $parameters = [
+                    'employer_id' => $employerId,
+                    'fields' => $employeeFields,
+                ];
             }
-            
+
             $export = $service->createExport(
                 name: $name,
                 type: $exportType,
                 format: 'csv',
                 parameters: $parameters
             );
-            
+
             // Export synchron ausführen (Fehler werden in DB gespeichert)
             $filepath = $service->executeExport($export);
-            
+
             session()->flash('success', 'Export erfolgreich erstellt!');
         } catch (\Throwable $e) {
             // Fehler wird bereits im Service in der DB gespeichert
@@ -132,6 +155,7 @@ class Index extends Component
         $this->modalShow = false;
         $this->selectedExportType = '';
         $this->selectedEmployerId = null;
+        $this->selectedEmployeeFields = [];
     }
 
     public function downloadExport(int $exportId)
@@ -277,6 +301,19 @@ class Index extends Component
             ->orderBy('employer_number')
             ->get()
             ->mapWithKeys(fn($employer) => [$employer->id => $employer->display_name]);
+    }
+
+    #[Computed]
+    public function employeeExportFields()
+    {
+        return [
+            'employee_number' => 'Personalnummer',
+            'last_name' => 'Nachname',
+            'first_name' => 'Vorname',
+            'primary_email' => 'Primäre E-Mail-Adresse',
+            'employer' => 'Arbeitgeber',
+            'status' => 'Status (Aktiv/Inaktiv)',
+        ];
     }
 
     public function render()

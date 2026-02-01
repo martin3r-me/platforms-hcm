@@ -194,13 +194,13 @@
                     @enderror
                 </div>
 
-                @if(in_array($selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft', 'infoniqa-zeitwirtschaft-monat'], true))
+                @if(in_array($selectedExportType, ['infoniqa-ma', 'infoniqa-dimensions', 'infoniqa-bank', 'infoniqa-zeitwirtschaft', 'infoniqa-zeitwirtschaft-monat', 'employees'], true))
                     <div>
                         <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
                             Arbeitgeber <span class="text-red-600">*</span>
                         </label>
-                        <select 
-                            wire:model="selectedEmployerId" 
+                        <select
+                            wire:model="selectedEmployerId"
                             class="block w-full rounded-md border border-[var(--ui-border)] bg-white px-3 py-2 text-sm"
                         >
                             <option value="">Bitte Arbeitgeber wählen...</option>
@@ -209,6 +209,30 @@
                             @endforeach
                         </select>
                         @error('selectedEmployerId')
+                            <span class="text-sm text-red-600 mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+                @endif
+
+                @if($selectedExportType === 'employees')
+                    <div>
+                        <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">
+                            Felder für Export <span class="text-red-600">*</span>
+                        </label>
+                        <div class="space-y-2 p-3 border border-[var(--ui-border)] rounded-md bg-gray-50">
+                            @foreach($this->employeeExportFields as $fieldKey => $fieldLabel)
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        wire:model="selectedEmployeeFields"
+                                        value="{{ $fieldKey }}"
+                                        class="rounded border-gray-300 text-[var(--ui-primary)] focus:ring-[var(--ui-primary)]"
+                                    />
+                                    <span class="text-sm text-[var(--ui-secondary)]">{{ $fieldLabel }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        @error('selectedEmployeeFields')
                             <span class="text-sm text-red-600 mt-1 block">{{ $message }}</span>
                         @enderror
                     </div>
@@ -228,10 +252,10 @@
                     <x-ui-button variant="secondary" wire:click="cancelExport">
                         Abbrechen
                     </x-ui-button>
-                    <x-ui-button 
-                        variant="primary" 
+                    <x-ui-button
+                        variant="primary"
                         wire:click="executeExport"
-                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions','infoniqa-bank','infoniqa-zeitwirtschaft','infoniqa-zeitwirtschaft-monat'], true) && !$selectedEmployerId)"
+                        :disabled="!$selectedExportType || (in_array($selectedExportType, ['infoniqa-ma','infoniqa-dimensions','infoniqa-bank','infoniqa-zeitwirtschaft','infoniqa-zeitwirtschaft-monat','employees'], true) && !$selectedEmployerId) || ($selectedExportType === 'employees' && empty($selectedEmployeeFields))"
                     >
                         @svg('heroicon-o-arrow-down-tray', 'w-4 h-4')
                         Export starten

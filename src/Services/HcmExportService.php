@@ -1863,23 +1863,58 @@ class HcmExportService
         $filename = 'employees_export_' . date('Y-m-d_H-i-s') . '.csv';
         $filepath = 'exports/hcm/' . $filename;
 
-        $employees = \Platform\Hcm\Models\HcmEmployee::with(['employer', 'contracts'])
-            ->where('team_id', $this->teamId)
-            ->get();
+        $parameters = $export->parameters ?? [];
+        $employerId = $parameters['employer_id'] ?? null;
+        $selectedFields = $parameters['fields'] ?? ['employee_number', 'last_name', 'first_name'];
 
-        $headers = ['Mitarbeiternummer', 'Nachname', 'Vorname', 'Arbeitgeber', 'Status'];
+        // Alle verfügbaren Felder mit Header-Namen
+        $allFields = [
+            'employee_number' => 'Personalnummer',
+            'last_name' => 'Nachname',
+            'first_name' => 'Vorname',
+            'primary_email' => 'Primäre E-Mail-Adresse',
+            'employer' => 'Arbeitgeber',
+            'status' => 'Status',
+        ];
+
+        // Query mit Arbeitgeber-Filter
+        $query = \Platform\Hcm\Models\HcmEmployee::with(['employer', 'contracts', 'crmContactLinks.contact'])
+            ->where('team_id', $this->teamId);
+
+        if ($employerId) {
+            $query->where('employer_id', $employerId);
+        }
+
+        $employees = $query->get();
+
+        // Header basierend auf ausgewählten Feldern
+        $headers = [];
+        foreach ($selectedFields as $field) {
+            if (isset($allFields[$field])) {
+                $headers[] = $allFields[$field];
+            }
+        }
+
         $csvData = [];
         $csvData[] = $this->escapeCsvRow($headers);
 
         foreach ($employees as $employee) {
             $contact = $employee->crmContactLinks->first()?->contact;
-            $csvData[] = $this->escapeCsvRow([
-                $employee->employee_number,
-                $contact?->last_name ?? '',
-                $contact?->first_name ?? '',
-                $employee->employer?->name ?? '',
-                $employee->is_active ? 'Aktiv' : 'Inaktiv',
-            ]);
+            $row = [];
+
+            foreach ($selectedFields as $field) {
+                $row[] = match ($field) {
+                    'employee_number' => $employee->employee_number,
+                    'last_name' => $contact?->last_name ?? '',
+                    'first_name' => $contact?->first_name ?? '',
+                    'primary_email' => $contact?->email ?? '',
+                    'employer' => $employee->employer?->name ?? '',
+                    'status' => $employee->is_active ? 'Aktiv' : 'Inaktiv',
+                    default => '',
+                };
+            }
+
+            $csvData[] = $this->escapeCsvRow($row);
         }
 
         $csvData = "\xEF\xBB\xBF" . implode("\n", $csvData);
