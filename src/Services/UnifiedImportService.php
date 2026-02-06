@@ -21,8 +21,8 @@ use Platform\Hcm\Models\HcmHealthInsuranceCompany;
 use Platform\Hcm\Models\HcmJobActivity;
 use Platform\Hcm\Models\HcmJobActivityAlias;
 use Platform\Hcm\Models\HcmJobTitle;
-use Platform\Hcm\Models\HcmEmployeeIssueType;
-use Platform\Hcm\Models\HcmEmployeeIssue;
+use Platform\Issuance\Models\IssIssueType;
+use Platform\Issuance\Models\IssIssue;
 use Platform\Hcm\Models\HcmPayoutMethod;
 use Platform\Hcm\Models\HcmChurchTaxType;
 use Platform\Crm\Models\CrmGender;
@@ -2751,7 +2751,7 @@ class UnifiedImportService
             $present = $c['bool'] ? (bool) $this->toBool($raw) : (trim((string) $raw) !== '' && trim((string) $raw) !== '[leer]');
             if (!$present) { continue; }
 
-            $type = HcmEmployeeIssueType::firstOrCreate(
+            $type = IssIssueType::firstOrCreate(
                 ['code' => $c['code']],
                 [
                     'uuid' => (string) \Symfony\Component\Uid\UuidV7::generate(),
@@ -2765,8 +2765,9 @@ class UnifiedImportService
             );
 
             // Duplicate guard: do not create same open issue twice
-            $exists = HcmEmployeeIssue::where('team_id', $teamId)
-                ->where('employee_id', $employee->id)
+            $exists = IssIssue::where('team_id', $teamId)
+                ->where('recipient_type', 'hcm_employee')
+                ->where('recipient_id', $employee->id)
                 ->where('issue_type_id', $type->id)
                 ->whereNull('returned_at')
                 ->first();
@@ -2779,11 +2780,11 @@ class UnifiedImportService
                 $identifier = trim((string) $raw) ?: null;
             }
 
-            HcmEmployeeIssue::create([
+            IssIssue::create([
                 'team_id' => $teamId,
                 'created_by_user_id' => $createdByUserId,
-                'employee_id' => $employee->id,
-                'contract_id' => $contract?->id,
+                'recipient_type' => 'hcm_employee',
+                'recipient_id' => $employee->id,
                 'issue_type_id' => $type->id,
                 'identifier' => $identifier,
                 'status' => 'issued',

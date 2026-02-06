@@ -752,7 +752,7 @@
                                 Benefits
                             </span>
                         </x-ui-button>
-                        <x-ui-button variant="secondary-outline" size="sm" :href="route('hcm.employees.issues.index', $employee)" wire:navigate class="w-full">
+                        <x-ui-button variant="secondary-outline" size="sm" :href="route('issuance.employees.issues.index', $employee)" wire:navigate class="w-full">
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-archive-box', 'w-4 h-4')
                                 Ausgaben

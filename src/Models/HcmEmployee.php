@@ -278,7 +278,7 @@ class HcmEmployee extends Model implements EmployeeInterface
 
     public function issues()
     {
-        return $this->hasMany(HcmEmployeeIssue::class, 'employee_id');
+        return $this->morphMany(\Platform\Issuance\Models\IssIssue::class, 'recipient');
     }
 
     public function benefits()

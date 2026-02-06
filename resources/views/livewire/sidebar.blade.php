@@ -97,19 +97,11 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
-    {{-- Abschnitt: Benefits & Ausgaben --}}
-    <x-ui-sidebar-list label="Benefits & Ausgaben">
+    {{-- Abschnitt: Benefits & Schulungen --}}
+    <x-ui-sidebar-list label="Benefits & Schulungen">
         <x-ui-sidebar-item :href="route('hcm.benefits.index')">
             @svg('heroicon-o-gift', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Benefits</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.issues.index')">
-            @svg('heroicon-o-archive-box', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Ausgaben</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.issue-types.index')">
-            @svg('heroicon-o-tag', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Ausgabe-Typen</span>
         </x-ui-sidebar-item>
         <x-ui-sidebar-item :href="route('hcm.trainings.index')">
             @svg('heroicon-o-academic-cap', 'w-4 h-4 text-[var(--ui-secondary)]')

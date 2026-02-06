@@ -9,7 +9,7 @@ use Platform\Core\Contracts\ToolMetadataContract;
 use Platform\Core\Contracts\ToolResult;
 use Platform\Core\Tools\Concerns\HasStandardGetOperations;
 use Platform\Hcm\Models\HcmChurchTaxType;
-use Platform\Hcm\Models\HcmEmployeeIssueType;
+use Platform\Issuance\Models\IssIssueType;
 use Platform\Hcm\Models\HcmEmployeeTrainingType;
 use Platform\Hcm\Models\HcmEmploymentRelationship;
 use Platform\Hcm\Models\HcmHealthInsuranceCompany;
@@ -324,7 +324,7 @@ class GetHcmLookupTool implements ToolContract, ToolMetadataContract
                 'default_sort_dir' => 'asc',
             ],
             'employee_issue_types' => [
-                'model' => HcmEmployeeIssueType::class,
+                'model' => IssIssueType::class,
                 'team_scoped' => true,
                 'scope' => 'team_id',
                 'search_fields' => ['name', 'code', 'category'],

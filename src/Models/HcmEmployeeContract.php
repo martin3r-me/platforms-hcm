@@ -306,11 +306,6 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         return $this->belongsTo(HcmTariffLevel::class, 'tariff_level_id');
     }
 
-    public function issues()
-    {
-        return $this->hasMany(HcmEmployeeIssue::class, 'contract_id');
-    }
-
     public function tariffProgressions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(HcmTariffProgression::class, 'employee_contract_id');
