@@ -4,6 +4,7 @@ namespace Platform\Hcm\Livewire\Applicant;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Core\Livewire\Concerns\WithExtraFields;
 use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantStatus;
@@ -11,6 +12,7 @@ use Platform\Crm\Models\CrmContact;
 
 class Show extends Component
 {
+    use WithExtraFields;
     public HcmApplicant $applicant;
 
     // Kontakt-Verknüpfungs-Modals
@@ -54,23 +56,30 @@ class Show extends Component
         ]);
 
         $this->loadAvailableContacts();
+        $this->loadExtraFieldValues($this->applicant);
     }
 
     public function rules(): array
     {
-        return [
+        return array_merge([
             'applicant.applicant_status_id' => 'nullable|exists:hcm_applicant_statuses,id',
             'applicant.progress' => 'integer|min:0|max:100',
             'applicant.notes' => 'nullable|string',
             'applicant.applied_at' => 'nullable|date',
             'applicant.is_active' => 'boolean',
-        ];
+        ], $this->getExtraFieldValidationRules());
+    }
+
+    public function messages(): array
+    {
+        return $this->getExtraFieldValidationMessages();
     }
 
     public function save(): void
     {
         $this->validate();
         $this->applicant->save();
+        $this->saveExtraFieldValues();
 
         session()->flash('message', 'Bewerber erfolgreich aktualisiert.');
     }
@@ -87,7 +96,7 @@ class Show extends Component
     #[Computed]
     public function isDirty()
     {
-        return $this->applicant->isDirty();
+        return $this->applicant->isDirty() || $this->isExtraFieldsDirty();
     }
 
     public function linkContact(): void

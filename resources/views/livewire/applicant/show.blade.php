@@ -118,47 +118,15 @@
         </div>
 
         {{-- Extra-Felder --}}
-        @php
-            $extraFields = $applicant->getExtraFieldsWithLabels();
-        @endphp
-        @if(count($extraFields) > 0)
+        @if(count($extraFieldDefinitions) > 0)
             <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
                 <div class="flex items-center justify-between mb-6">
                     <div class="flex items-center gap-2">
                         @svg('heroicon-o-squares-plus', 'w-6 h-6 text-purple-600')
                         <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Extra-Felder</h2>
                     </div>
-                    <button
-                        type="button"
-                        @click="$dispatch('extrafields', { context_type: '{{ addslashes(get_class($applicant)) }}', context_id: {{ $applicant->id }} }); $dispatch('extrafields:open')"
-                        class="text-sm text-[var(--ui-primary)] hover:text-[var(--ui-primary)]/80"
-                    >
-                        Bearbeiten
-                    </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    @foreach($extraFields as $field)
-                        <div>
-                            <dt class="text-sm font-medium text-[var(--ui-muted)] flex items-center gap-1">
-                                {{ $field['label'] }}
-                                @if($field['is_encrypted'] ?? false)
-                                    @svg('heroicon-o-lock-closed', 'w-3.5 h-3.5 text-[var(--ui-warning)]')
-                                @endif
-                            </dt>
-                            <dd class="mt-1 text-sm text-[var(--ui-secondary)]">
-                                @if($field['value'] !== null && $field['value'] !== '')
-                                    @if($field['type'] === 'textarea')
-                                        <span class="whitespace-pre-line">{{ $field['value'] }}</span>
-                                    @else
-                                        {{ $field['value'] }}
-                                    @endif
-                                @else
-                                    <span class="text-[var(--ui-muted)]">-</span>
-                                @endif
-                            </dd>
-                        </div>
-                    @endforeach
-                </div>
+                <x-core-extra-fields-form :definitions="$extraFieldDefinitions" />
             </div>
         @endif
 
@@ -372,17 +340,6 @@
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-user-plus', 'w-4 h-4')
                                 Kontakt erstellen
-                            </span>
-                        </x-ui-button>
-                        <x-ui-button
-                            variant="secondary"
-                            size="sm"
-                            class="w-full"
-                            @click="$dispatch('extrafields', { context_type: '{{ addslashes(get_class($applicant)) }}', context_id: {{ $applicant->id }} }); $dispatch('extrafields:open')"
-                        >
-                            <span class="inline-flex items-center gap-2">
-                                @svg('heroicon-o-squares-plus', 'w-4 h-4')
-                                Extra-Felder
                             </span>
                         </x-ui-button>
                     </div>
