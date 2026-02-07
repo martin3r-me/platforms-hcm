@@ -63,7 +63,6 @@ class Show extends Component
     {
         return array_merge([
             'applicant.applicant_status_id' => 'nullable|exists:hcm_applicant_statuses,id',
-            'applicant.progress' => 'integer|min:0|max:100',
             'applicant.notes' => 'nullable|string',
             'applicant.applied_at' => 'nullable|date',
             'applicant.is_active' => 'boolean',
@@ -80,6 +79,10 @@ class Show extends Component
         $this->validate();
         $this->applicant->save();
         $this->saveExtraFieldValues($this->applicant);
+
+        // Fortschritt automatisch berechnen
+        $this->applicant->progress = $this->applicant->calculateProgress();
+        $this->applicant->save();
 
         session()->flash('message', 'Bewerber erfolgreich aktualisiert.');
     }

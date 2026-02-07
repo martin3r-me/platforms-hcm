@@ -85,4 +85,29 @@ class HcmApplicant extends Model
     {
         return $query->where('team_id', $teamId);
     }
+
+    public function calculateProgress(): int
+    {
+        $definitions = $this->getExtraFieldDefinitions();
+        $requiredDefinitions = $definitions->where('is_required', true);
+
+        if ($requiredDefinitions->isEmpty()) {
+            return 100;
+        }
+
+        $values = $this->extraFieldValues()
+            ->whereIn('definition_id', $requiredDefinitions->pluck('id'))
+            ->get()
+            ->keyBy('definition_id');
+
+        $filled = 0;
+        foreach ($requiredDefinitions as $def) {
+            $val = $values->get($def->id);
+            if ($val !== null && $val->value !== null && $val->value !== '') {
+                $filled++;
+            }
+        }
+
+        return (int) round(($filled / $requiredDefinitions->count()) * 100);
+    }
 }

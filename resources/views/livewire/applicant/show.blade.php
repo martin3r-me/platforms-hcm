@@ -81,15 +81,10 @@
                     wire:model.live="applicant.applicant_status_id"
                 />
 
-                <x-ui-input-text
-                    name="applicant.progress"
-                    label="Fortschritt (%)"
-                    wire:model.live.debounce.500ms="applicant.progress"
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="0"
-                />
+                <div>
+                    <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">Fortschritt (%)</label>
+                    <div class="text-sm text-[var(--ui-muted)]">{{ $applicant->progress }}%</div>
+                </div>
 
                 <x-ui-input-date
                     name="applicant.applied_at"
