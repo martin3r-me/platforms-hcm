@@ -19,7 +19,7 @@ class HcmOverviewTool implements ToolContract, ToolMetadataContract
 
     public function getDescription(): string
     {
-        return 'GET /hcm/overview - Zeigt Übersicht über HCM-Konzepte (Employee, Contract, Employer) und die Verknüpfung Richtung CRM. REST-Parameter: keine.';
+        return 'GET /hcm/overview - Zeigt Übersicht über HCM-Konzepte (Employee, Applicant, Contract, Employer) und die Verknüpfung Richtung CRM. REST-Parameter: keine.';
     }
 
     public function getSchema(): array
@@ -57,10 +57,17 @@ class HcmOverviewTool implements ToolContract, ToolMetadataContract
                         'table' => 'hcm_employee_contracts',
                         'key_fields' => ['id', 'uuid', 'employee_id', 'start_date', 'end_date', 'team_id', 'is_active'],
                     ],
+                    'applicants' => [
+                        'model' => 'Platform\\Hcm\\Models\\HcmApplicant',
+                        'table' => 'hcm_applicants',
+                        'key_fields' => ['id', 'uuid', 'applicant_status_id', 'progress', 'applied_at', 'team_id', 'is_active'],
+                        'note' => 'Wie Employees: CRM-Verknüpfung über crm_contact_links (polymorph).',
+                    ],
                 ],
                 'crm_linking' => [
                     'mechanism' => 'crm_contact_links (polymorph: linkable_type/linkable_id)',
                     'employee_linkable_type' => 'Platform\\Hcm\\Models\\HcmEmployee',
+                    'applicant_linkable_type' => 'Platform\\Hcm\\Models\\HcmApplicant',
                     'rule' => 'Mitarbeiter sollten (fachlich) mindestens einen CRM Contact haben; technisch ist es aktuell optional (UI bietet Link/Create an).',
                     'where_to_find_in_ui' => 'HCM → Employee → Kontakte (link/create/unlink)',
                 ],
@@ -71,6 +78,10 @@ class HcmOverviewTool implements ToolContract, ToolMetadataContract
                     ],
                     'contracts' => [
                         'list' => 'hcm.contracts.GET',
+                    ],
+                    'applicants' => [
+                        'list' => 'hcm.applicants.GET',
+                        'get' => 'hcm.applicant.GET',
                     ],
                     'crm' => [
                         'contacts' => 'crm.contacts.GET',

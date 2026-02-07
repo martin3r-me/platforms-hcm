@@ -174,6 +174,17 @@ class HcmServiceProvider extends ServiceProvider
             $registry->register(new \Platform\Hcm\Tools\LinkEmployeeContactTool());
             $registry->register(new \Platform\Hcm\Tools\UnlinkEmployeeContactTool());
 
+            // Applicants (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListApplicantsTool());
+            $registry->register(new \Platform\Hcm\Tools\GetApplicantTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateApplicantTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateApplicantTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteApplicantTool());
+
+            // Applicant ↔ CRM Contact Links
+            $registry->register(new \Platform\Hcm\Tools\LinkApplicantContactTool());
+            $registry->register(new \Platform\Hcm\Tools\UnlinkApplicantContactTool());
+
             // Contracts (Read + Write)
             $registry->register(new \Platform\Hcm\Tools\ListContractsTool());
             $registry->register(new \Platform\Hcm\Tools\CreateContractTool());
