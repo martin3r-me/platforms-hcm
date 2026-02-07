@@ -112,18 +112,7 @@
             </div>
         </div>
 
-        {{-- Extra-Felder --}}
-        @if(count($extraFieldDefinitions) > 0)
-            <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-2">
-                        @svg('heroicon-o-squares-plus', 'w-6 h-6 text-purple-600')
-                        <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Extra-Felder</h2>
-                    </div>
-                </div>
-                <x-core-extra-fields-form :definitions="$extraFieldDefinitions" />
-            </div>
-        @endif
+        <x-core-extra-fields-section :definitions="$extraFieldDefinitions" />
 
         <!-- Verknüpfte Kontakte -->
         <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Bewerber verknüpft sind">
