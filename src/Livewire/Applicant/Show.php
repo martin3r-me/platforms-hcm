@@ -79,7 +79,7 @@ class Show extends Component
     {
         $this->validate();
         $this->applicant->save();
-        $this->saveExtraFieldValues();
+        $this->saveExtraFieldValues($this->applicant);
 
         session()->flash('message', 'Bewerber erfolgreich aktualisiert.');
     }
