@@ -191,6 +191,27 @@ class Show extends Component
             ->get();
     }
 
+    public function rendered(): void
+    {
+        // Extra-Fields-Kontext setzen
+        $this->dispatch('extrafields', [
+            'context_type' => get_class($this->applicant),
+            'context_id' => $this->applicant->id,
+        ]);
+
+        // Tagging-Kontext setzen
+        $this->dispatch('tagging', [
+            'context_type' => get_class($this->applicant),
+            'context_id' => $this->applicant->id,
+        ]);
+
+        // Files-Kontext setzen
+        $this->dispatch('files', [
+            'context_type' => get_class($this->applicant),
+            'context_id' => $this->applicant->id,
+        ]);
+    }
+
     public function render()
     {
         return view('hcm::livewire.applicant.show')

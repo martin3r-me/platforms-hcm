@@ -105,6 +105,15 @@ class Index extends Component
         }
     }
 
+    public function rendered(): void
+    {
+        // Extra-Fields-Kontext setzen (context_id = null = für ALLE Bewerber)
+        $this->dispatch('extrafields', [
+            'context_type' => HcmApplicant::class,
+            'context_id' => null,
+        ]);
+    }
+
     public function render()
     {
         return view('hcm::livewire.applicant.index')
