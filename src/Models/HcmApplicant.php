@@ -3,12 +3,14 @@
 namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Platform\Core\Traits\HasExtraFields;
 use Platform\Hcm\Traits\HasEmployeeContact;
 use Symfony\Component\Uid\UuidV7;
 
 class HcmApplicant extends Model
 {
     use HasEmployeeContact;
+    use HasExtraFields;
 
     protected $table = 'hcm_applicants';
 
