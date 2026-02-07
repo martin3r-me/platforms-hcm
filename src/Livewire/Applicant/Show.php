@@ -4,6 +4,7 @@ namespace Platform\Hcm\Livewire\Applicant;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantStatus;
 use Platform\Crm\Models\CrmContact;
@@ -35,7 +36,10 @@ class Show extends Component
 
     public function mount(HcmApplicant $applicant)
     {
+        $allowedTeamIds = $this->getAllowedTeamIds($applicant->team_id);
+
         $this->applicant = $applicant->load([
+            'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
             'crmContactLinks.contact.emailAddresses' => function ($q) {
                 $q->active()
                     ->orderByDesc('is_primary')
@@ -177,8 +181,10 @@ class Show extends Component
     private function loadAvailableContacts(): void
     {
         $linkedContactIds = $this->applicant->crmContactLinks->pluck('contact_id');
+        $allowedTeamIds = $this->getAllowedTeamIds($this->applicant->team_id);
 
         $this->availableContacts = CrmContact::active()
+            ->whereIn('team_id', $allowedTeamIds)
             ->whereNotIn('id', $linkedContactIds)
             ->orderBy('last_name')
             ->orderBy('first_name')
@@ -189,5 +195,15 @@ class Show extends Component
     {
         return view('hcm::livewire.applicant.show')
             ->layout('platform::layouts.app');
+    }
+
+    private function getAllowedTeamIds(int $teamId): array
+    {
+        $team = Team::find($teamId);
+        if (!$team) {
+            return [$teamId];
+        }
+
+        return array_merge([$teamId], $team->getAllAncestors()->pluck('id')->all());
     }
 }

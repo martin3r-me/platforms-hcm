@@ -4,6 +4,7 @@ namespace Platform\Hcm\Livewire\Applicant;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantStatus;
 use Platform\Crm\Models\CrmContact;
@@ -35,7 +36,11 @@ class Index extends Component
     #[Computed]
     public function applicants()
     {
+        $teamId = auth()->user()->currentTeam->id;
+        $allowedTeamIds = $this->getAllowedTeamIds($teamId);
+
         $query = HcmApplicant::with([
+            'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
             'crmContactLinks.contact.emailAddresses' => function ($q) {
                 $q->active()
                     ->orderByDesc('is_primary')
@@ -43,7 +48,7 @@ class Index extends Component
             },
             'applicantStatus',
         ])
-            ->forTeam(auth()->user()->currentTeam->id);
+            ->forTeam($teamId);
 
         if (!empty($this->search)) {
             $searchTerm = '%' . $this->search . '%';
@@ -146,5 +151,15 @@ class Index extends Component
     {
         $this->modalShow = false;
         $this->resetForm();
+    }
+
+    private function getAllowedTeamIds(int $teamId): array
+    {
+        $team = Team::find($teamId);
+        if (!$team) {
+            return [$teamId];
+        }
+
+        return array_merge([$teamId], $team->getAllAncestors()->pluck('id')->all());
     }
 }

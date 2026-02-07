@@ -4,6 +4,7 @@ namespace Platform\Hcm\Livewire;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployer;
@@ -13,8 +14,14 @@ class Sidebar extends Component
     #[Computed]
     public function recentEmployees()
     {
-        return HcmEmployee::with(['crmContactLinks.contact'])
-            ->forTeam(auth()->user()->currentTeam->id)
+        $teamId = auth()->user()->currentTeam->id;
+        $allowedTeamIds = $this->getAllowedTeamIds($teamId);
+
+        return HcmEmployee::with([
+            'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
+            'crmContactLinks.contact',
+        ])
+            ->forTeam($teamId)
             ->active()
             ->latest()
             ->take(5)
@@ -35,8 +42,15 @@ class Sidebar extends Component
     #[Computed]
     public function recentApplicants()
     {
-        return HcmApplicant::with(['crmContactLinks.contact', 'applicantStatus'])
-            ->forTeam(auth()->user()->currentTeam->id)
+        $teamId = auth()->user()->currentTeam->id;
+        $allowedTeamIds = $this->getAllowedTeamIds($teamId);
+
+        return HcmApplicant::with([
+            'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
+            'crmContactLinks.contact',
+            'applicantStatus',
+        ])
+            ->forTeam($teamId)
             ->active()
             ->latest()
             ->take(5)
@@ -61,5 +75,15 @@ class Sidebar extends Component
     public function render()
     {
         return view('hcm::livewire.sidebar');
+    }
+
+    private function getAllowedTeamIds(int $teamId): array
+    {
+        $team = Team::find($teamId);
+        if (!$team) {
+            return [$teamId];
+        }
+
+        return array_merge([$teamId], $team->getAllAncestors()->pluck('id')->all());
     }
 }

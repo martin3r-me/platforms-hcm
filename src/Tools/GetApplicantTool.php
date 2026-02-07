@@ -62,8 +62,11 @@ class GetApplicantTool implements ToolContract, ToolMetadataContract
 
             $includeContacts = (bool)($arguments['include_contacts'] ?? true);
 
+            $allowedTeamIds = $this->getAllowedTeamIds($teamId);
+
             $with = ['applicantStatus'];
             if ($includeContacts) {
+                $with['crmContactLinks'] = fn ($q) => $q->whereIn('team_id', $allowedTeamIds);
                 $with[] = 'crmContactLinks.contact';
                 $with[] = 'crmContactLinks.contact.emailAddresses';
                 $with[] = 'crmContactLinks.contact.phoneNumbers';

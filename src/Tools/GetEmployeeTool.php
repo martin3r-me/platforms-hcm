@@ -68,11 +68,14 @@ class GetEmployeeTool implements ToolContract, ToolMetadataContract
             $includeContacts = (bool)($arguments['include_contacts'] ?? true);
             $includeContractsComp = (bool)($arguments['include_contracts_compensation'] ?? false);
 
+            $allowedTeamIds = $this->getAllowedTeamIds($teamId);
+
             $with = [
                 'employer',
                 'contracts' => fn ($q) => $q->orderBy('start_date', 'desc'),
             ];
             if ($includeContacts) {
+                $with['crmContactLinks'] = fn ($q) => $q->whereIn('team_id', $allowedTeamIds);
                 $with[] = 'crmContactLinks.contact';
                 $with[] = 'crmContactLinks.contact.emailAddresses';
                 $with[] = 'crmContactLinks.contact.phoneNumbers';

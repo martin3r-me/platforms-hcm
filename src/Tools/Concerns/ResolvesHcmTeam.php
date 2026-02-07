@@ -56,6 +56,19 @@ trait ResolvesHcmTeam
 
         return ['team_id' => (int)$teamId, 'team' => $team, 'error' => null];
     }
+
+    /**
+     * Returns the given team ID plus all ancestor team IDs.
+     */
+    protected function getAllowedTeamIds(int $teamId): array
+    {
+        $team = Team::find($teamId);
+        if (!$team) {
+            return [$teamId];
+        }
+
+        return array_merge([$teamId], $team->getAllAncestors()->pluck('id')->all());
+    }
 }
 
 
