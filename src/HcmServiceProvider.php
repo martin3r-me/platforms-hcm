@@ -2,6 +2,7 @@
 
 namespace Platform\Hcm;
 
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -28,6 +29,11 @@ class HcmServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Relation::morphMap([
+            'hcm_employee' => \Platform\Hcm\Models\HcmEmployee::class,
+            'hcm_applicant' => \Platform\Hcm\Models\HcmApplicant::class,
+        ]);
+
         // Schritt 1: Config laden
         $this->mergeConfigFrom(__DIR__.'/../config/hcm.php', 'hcm');
         

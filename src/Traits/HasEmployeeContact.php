@@ -175,7 +175,7 @@ trait HasEmployeeContact
             \Platform\Crm\Models\CrmContactLink::create([
                 'contact_id' => $contact->id,
                 'linkable_id' => $this->id,
-                'linkable_type' => get_class($this),
+                'linkable_type' => $this->getMorphClass(),
                 'team_id' => $this->team_id,
                 'created_by_user_id' => auth()->id(),
             ]);

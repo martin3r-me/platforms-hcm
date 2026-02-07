@@ -13,6 +13,9 @@ use Platform\Hcm\Livewire\JobActivity\Index as JobActivityIndex;
 use Platform\Hcm\Livewire\PayrollType\Index as PayrollTypeIndex;
 use Platform\Hcm\Livewire\PersonGroup\Index as PersonGroupIndex;
 use Platform\Hcm\Livewire\InsuranceStatus\Index as InsuranceStatusIndex;
+use Platform\Hcm\Livewire\Applicant\Index as ApplicantIndex;
+use Platform\Hcm\Livewire\Applicant\Show as ApplicantShow;
+use Platform\Hcm\Livewire\ApplicantStatus\Index as ApplicantStatusIndex;
 use Platform\Hcm\Livewire\PensionType\Index as PensionTypeIndex;
 use Platform\Hcm\Livewire\EmploymentRelationship\Index as EmploymentRelationshipIndex;
 use Platform\Hcm\Livewire\LevyType\Index as LevyTypeIndex;
@@ -76,6 +79,13 @@ Route::get('/person-groups', PersonGroupIndex::class)->name('hcm.person-groups.i
 
 // Versicherungsstatus (Lookup)
 Route::get('/insurance-statuses', InsuranceStatusIndex::class)->name('hcm.insurance-statuses.index');
+
+// Bewerber-Verwaltung
+Route::get('/applicants', ApplicantIndex::class)->name('hcm.applicants.index');
+Route::get('/applicants/{applicant}', ApplicantShow::class)->name('hcm.applicants.show');
+
+// Bewerbungsstatus (Lookup)
+Route::get('/applicant-statuses', ApplicantStatusIndex::class)->name('hcm.applicant-statuses.index');
 
 // Rentenarten (Lookup)
 Route::get('/pension-types', PensionTypeIndex::class)->name('hcm.pension-types.index');
