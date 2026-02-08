@@ -181,6 +181,8 @@ class ProcessAutoPilotApplicants extends Command
                     'core.extra_fields.GET', 'core.extra_fields.PUT',
                     'core.comms.email_messages.GET', 'core.comms.email_messages.POST',
                     'hcm.applicants.PUT',
+                    'crm.contacts.GET', 'crm.contacts.POST',
+                    'hcm.applicant_contacts.POST',
                 ];
                 $messages = $this->buildMessages(
                     $applicant, $owner, $contactInfo, $extraFields, $missingFields,

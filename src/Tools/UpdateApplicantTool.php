@@ -69,10 +69,6 @@ class UpdateApplicantTool implements ToolContract, ToolMetadataContract
                     'type' => 'string',
                     'description' => 'Optional: ISO-Datetime oder "now" um auto_pilot_completed_at zu setzen.',
                 ],
-                'auto_pilot' => [
-                    'type' => 'boolean',
-                    'description' => 'Optional: AutoPilot ein-/ausschalten.',
-                ],
             ],
             'required' => ['applicant_id'],
         ]);
@@ -113,7 +109,6 @@ class UpdateApplicantTool implements ToolContract, ToolMetadataContract
                 'is_active',
                 'owned_by_user_id',
                 'auto_pilot_state_id',
-                'auto_pilot',
             ];
 
             foreach ($fields as $field) {

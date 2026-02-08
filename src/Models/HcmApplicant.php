@@ -49,6 +49,15 @@ class HcmApplicant extends Model
                 $model->uuid = $uuid;
             }
         });
+
+        // Guard: auto_pilot darf nur deaktiviert werden wenn alle Pflichtfelder ausgefüllt sind
+        static::saving(function (self $model) {
+            if ($model->isDirty('auto_pilot') && !$model->auto_pilot && $model->getOriginal('auto_pilot')) {
+                if ($model->calculateProgress() < 100) {
+                    $model->auto_pilot = true;
+                }
+            }
+        });
     }
 
     /**
