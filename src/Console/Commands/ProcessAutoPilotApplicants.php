@@ -112,8 +112,8 @@ class ProcessAutoPilotApplicants extends Command
 
                 $contactInfo = $this->loadContactInfo($applicant);
                 $extraFields = $this->loadExtraFields($applicant);
-                $threadsSummary = $this->loadThreadsSummary($applicant, $contactInfo);
                 $preferredChannel = $this->loadPreferredChannel($applicant);
+                $threadsSummary = $this->loadThreadsSummary($applicant, $contactInfo, $preferredChannel);
 
                 $this->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 $this->info("🤖 Bewerbung #{$applicant->id} → Owner: {$owner->name} (user_id={$owner->id})");
@@ -222,12 +222,20 @@ class ProcessAutoPilotApplicants extends Command
                 $this->line("  Email: " . ($emailSent ? 'JA' : 'NEIN'));
 
                 // Threads verknüpfen
-                $linkedThreads = $this->linkNewThreadsToApplicant($applicant, $contactInfo);
+                $linkedThreads = $this->linkNewThreadsToApplicant($applicant, $contactInfo, $preferredChannel);
                 if ($linkedThreads > 0) { $this->line("  Threads verknüpft: {$linkedThreads}"); }
 
                 // Reload
                 $applicant->refresh();
                 $applicant->loadMissing(['autoPilotState']);
+
+                // Guard: LLM darf auto_pilot nicht abschalten
+                if (!$applicant->auto_pilot) {
+                    $applicant->auto_pilot = true;
+                    $applicant->save();
+                    $this->logAutoPilot($applicant, 'warning', 'LLM hat auto_pilot deaktiviert — wurde zurückgesetzt.');
+                    $this->warn("  ⚠️ auto_pilot wurde vom LLM deaktiviert → zurückgesetzt.");
+                }
 
                 // Notes loggen
                 $notes = trim((string)($result['assistant'] ?? ''));
@@ -351,7 +359,7 @@ class ProcessAutoPilotApplicants extends Command
         }
     }
 
-    private function loadThreadsSummary(HcmApplicant $applicant, array $contactInfo): array
+    private function loadThreadsSummary(HcmApplicant $applicant, array $contactInfo, ?array $preferredChannel = null): array
     {
         try {
             $teamId = $applicant->team_id;
@@ -368,23 +376,30 @@ class ProcessAutoPilotApplicants extends Command
                 }
             }
 
+            $teamIds = array_unique(array_filter([
+                $teamId,
+                ($preferredChannel['comms_channel_id'] ?? null)
+                    ? CommsChannel::where('id', $preferredChannel['comms_channel_id'])->value('team_id')
+                    : null,
+            ]));
+
             $query = CommsEmailThread::query()
-                ->where('team_id', $teamId)
-                ->where(function ($q) use ($applicant, $emails) {
-                    // Bereits verknüpfte Threads
+                ->where(function ($q) use ($applicant, $emails, $teamIds) {
+                    // Bereits verknüpfte Threads (kein team_id Filter nötig — eindeutig)
                     $q->where(function ($q2) use ($applicant) {
                         $q2->where('context_model', get_class($applicant))
                             ->where('context_model_id', $applicant->id);
                     });
-                    // ODER Threads mit passender Email-Adresse
+                    // ODER Threads mit passender Email + passendem Team
                     if (!empty($emails)) {
-                        $q->orWhere(function ($q2) use ($emails) {
-                            $q2->where(function ($q3) use ($emails) {
-                                foreach ($emails as $email) {
-                                    $q3->orWhere('last_inbound_from_address', $email);
-                                    $q3->orWhere('last_outbound_to_address', $email);
-                                }
-                            });
+                        $q->orWhere(function ($q2) use ($emails, $teamIds) {
+                            $q2->whereIn('team_id', $teamIds)
+                                ->where(function ($q3) use ($emails) {
+                                    foreach ($emails as $email) {
+                                        $q3->orWhere('last_inbound_from_address', $email);
+                                        $q3->orWhere('last_outbound_to_address', $email);
+                                    }
+                                });
                         });
                     }
                 })
@@ -442,7 +457,7 @@ class ProcessAutoPilotApplicants extends Command
         }
     }
 
-    private function linkNewThreadsToApplicant(HcmApplicant $applicant, array $contactInfo): int
+    private function linkNewThreadsToApplicant(HcmApplicant $applicant, array $contactInfo, ?array $preferredChannel = null): int
     {
         $emails = [];
         foreach ($contactInfo as $contact) {
@@ -455,9 +470,16 @@ class ProcessAutoPilotApplicants extends Command
         $teamId = $applicant->team_id;
         if (!$teamId) { return 0; }
 
+        $teamIds = array_unique(array_filter([
+            $teamId,
+            ($preferredChannel['comms_channel_id'] ?? null)
+                ? CommsChannel::where('id', $preferredChannel['comms_channel_id'])->value('team_id')
+                : null,
+        ]));
+
         try {
             $updated = CommsEmailThread::query()
-                ->where('team_id', $teamId)
+                ->whereIn('team_id', $teamIds)
                 ->whereNull('context_model')
                 ->where(function ($q) use ($emails) {
                     foreach ($emails as $email) {
@@ -654,6 +676,10 @@ class ProcessAutoPilotApplicants extends Command
 
         if (!$hasThreads && !$isWaiting) {
             return 'B'; // Erstmalig: Email senden
+        }
+
+        if ($isWaiting && !$hasThreads) {
+            return 'B'; // Anomal: waiting aber keine Threads → LLM soll nachschauen
         }
 
         if ($isWaiting && $hasThreads && $this->hasNewInboundMessages($threadsSummary)) {
