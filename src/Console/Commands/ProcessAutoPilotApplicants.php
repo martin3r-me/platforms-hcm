@@ -132,15 +132,43 @@ class ProcessAutoPilotApplicants extends Command
 
                 // Snapshot state before run
                 $oldStateId = $applicant->auto_pilot_state_id;
-                $oldStateName = $applicant->autoPilotState?->name;
+                $oldStateName = $applicant->autoPilotState?->name ?? '(nicht gesetzt)';
 
-                // Log run_started
-                $this->logAutoPilot($applicant, 'run_started', 'AutoPilot-Run gestartet', [
-                    'state' => $oldStateName ?? 'nicht gesetzt',
-                    'progress' => $applicant->progress,
-                    'threads_count' => count($threadsSummary),
-                    'preferred_channel' => $preferredChannel['name'] ?? null,
+                $scenario = $this->determineScenario($applicant, $extraFields, $threadsSummary);
+                $missingFields = $this->getMissingRequiredFields($extraFields);
+                $this->line("  Scenario: {$scenario} | Fehlende Pflichtfelder: " . count($missingFields));
+
+                $this->logAutoPilot($applicant, 'scenario', "Scenario {$scenario}", [
+                    'missing_required' => count($missingFields),
+                    'has_threads' => !empty($threadsSummary),
+                    'state' => $applicant->autoPilotState?->code,
                 ]);
+
+                // ===== Scenario A: Komplett → direkt abschließen (kein LLM) =====
+                if ($scenario === 'A') {
+                    $this->impersonateForTask($owner, $applicant->team);
+                    $applicant->auto_pilot_state_id = $completedStateId;
+                    $applicant->auto_pilot_completed_at = now();
+                    $applicant->save();
+                    $this->logAutoPilot($applicant, 'completed', 'Scenario A: Alle Pflichtfelder ausgefüllt.');
+                    $this->info("  ✅ Scenario A → abgeschlossen.");
+                    continue;
+                }
+
+                // ===== Scenario D: Wartend, keine neuen Infos → überspringen (kein LLM) =====
+                if ($scenario === 'D') {
+                    $this->logAutoPilot($applicant, 'skipped', 'Scenario D: Warte auf Bewerber, keine neuen Infos.');
+                    $this->info("  ⏭️ Scenario D → übersprungen.");
+                    continue;
+                }
+
+                // ===== Scenario B + C: LLM-Call =====
+                $primaryEmail = $this->findPrimaryEmail($contactInfo);
+                if (!$primaryEmail) {
+                    $this->logAutoPilot($applicant, 'warning', 'Keine Email-Adresse vorhanden — übersprungen.');
+                    $this->warn("  ⚠️ Keine Email-Adresse → übersprungen.");
+                    continue;
+                }
 
                 $contextTeam = $applicant->team;
                 $this->impersonateForTask($owner, $contextTeam);
@@ -149,93 +177,74 @@ class ProcessAutoPilotApplicants extends Command
                     'context_model_id' => $applicant->id,
                 ]);
 
-                $messages = $this->buildAgentMessages($applicant, $owner, $contactInfo, $extraFields, $threadsSummary, $preferredChannel, $waitingForApplicantStateId, $completedStateId);
+                $preloadTools = [
+                    'core.extra_fields.GET', 'core.extra_fields.PUT',
+                    'core.comms.email_messages.GET', 'core.comms.email_messages.POST',
+                    'hcm.applicants.PUT',
+                ];
+                $messages = $this->buildMessages(
+                    $applicant, $owner, $contactInfo, $extraFields, $missingFields,
+                    $threadsSummary, $preferredChannel, $waitingForApplicantStateId, $completedStateId
+                );
+
+                $this->logAutoPilot($applicant, 'run_started', "Scenario {$scenario}: LLM-Run", [
+                    'preload_tools' => $preloadTools,
+                ]);
 
                 try {
-                    $result = $runner->run(
-                        $messages,
-                        $model,
-                        $toolContext,
-                        [
-                            'max_iterations' => $maxIterations,
-                            'max_output_tokens' => $maxOutputTokens,
-                            'include_web_search' => $includeWebSearch,
-                            'reasoning' => ['effort' => 'medium'],
-                        ]
-                    );
+                    $result = $runner->run($messages, $model, $toolContext, [
+                        'max_iterations' => $maxIterations,
+                        'max_output_tokens' => $maxOutputTokens,
+                        'include_web_search' => false,
+                        'reasoning' => ['effort' => 'medium'],
+                        'preload_tools' => $preloadTools,
+                        'on_iteration' => function (int $iter, array $toolNames, int $textLen) {
+                            $this->line("    Iter {$iter}: " . (empty($toolNames) ? '(keine Tools)' : implode(', ', $toolNames)));
+                        },
+                    ]);
                 } catch (\Throwable $e) {
-                    $this->logAutoPilot($applicant, 'error', 'Fehler beim LLM-Run: ' . $e->getMessage());
-                    $this->error("❌ Bewerbung #{$applicant->id}: " . $e->getMessage());
+                    $this->logAutoPilot($applicant, 'error', 'LLM-Fehler: ' . $e->getMessage());
+                    $this->error("  ❌ " . $e->getMessage());
                     continue;
                 }
 
+                // --- Ergebnis auswerten ---
                 $iterations = (int)($result['iterations'] ?? 0);
-                $hitMaxIterations = $result['previous_response_id'] !== null;
                 $allToolCallNames = $result['all_tool_call_names'] ?? [];
                 $emailSent = in_array('core.comms.email_messages.POST', $allToolCallNames);
 
-                $this->logAutoPilot($applicant, 'run_completed', "Run: {$iterations} Iteration(en)" . ($hitMaxIterations ? ' (max erreicht)' : ''), [
+                $this->logAutoPilot($applicant, 'run_completed', "Scenario {$scenario}: {$iterations} Iterationen", [
                     'iterations' => $iterations,
-                    'hit_max_iterations' => $hitMaxIterations,
                     'all_tool_calls' => $allToolCallNames,
                     'email_sent' => $emailSent,
                 ]);
-                $this->line("  Iterationen: {$iterations}/{$maxIterations}" . ($hitMaxIterations ? ' ⚠️ MAX' : ''));
-                $this->line("  Tool-Calls: " . (empty($allToolCallNames) ? '(keine)' : implode(', ', $allToolCallNames)));
-                $this->line("  Email gesendet: " . ($emailSent ? 'JA' : 'NEIN'));
+                $this->line("  Iterationen: {$iterations} | Tools: " . (empty($allToolCallNames) ? '(keine)' : implode(', ', $allToolCallNames)));
+                $this->line("  Email: " . ($emailSent ? 'JA' : 'NEIN'));
 
-                // Link new threads created during the run
+                // Threads verknüpfen
                 $linkedThreads = $this->linkNewThreadsToApplicant($applicant, $contactInfo);
-                if ($linkedThreads > 0) {
-                    $this->line("  Threads verknüpft: {$linkedThreads}");
-                }
+                if ($linkedThreads > 0) { $this->line("  Threads verknüpft: {$linkedThreads}"); }
 
-                // Reload and check end state
+                // Reload
                 $applicant->refresh();
                 $applicant->loadMissing(['autoPilotState']);
 
-                // Warn if state was set to waiting_for_applicant without sending an email
-                if ($applicant->auto_pilot_state_id === $waitingForApplicantStateId && !$emailSent) {
-                    $this->logAutoPilot($applicant, 'warning', 'State auf waiting_for_applicant gesetzt, aber KEINE Email gesendet!');
-                    $this->warn("  ⚠️ State=waiting_for_applicant aber KEINE Email gesendet!");
-                }
-
-                // Log LLM response as note
+                // Notes loggen
                 $notes = trim((string)($result['assistant'] ?? ''));
                 if ($notes !== '') {
                     $this->logAutoPilot($applicant, 'note', $notes);
                 }
 
+                // State-Änderung prüfen
                 if ($applicant->auto_pilot_completed_at !== null) {
-                    $this->logAutoPilot($applicant, 'completed', 'AutoPilot abgeschlossen', [
-                        'from_state' => $oldStateName,
-                        'to_state' => $applicant->autoPilotState?->name ?? 'completed',
-                    ]);
-                    $this->info("✅ Bewerbung #{$applicant->id}: abgeschlossen (auto_pilot_completed_at gesetzt).");
-                    continue;
-                }
-
-                if ($applicant->auto_pilot_state_id !== $oldStateId) {
+                    $this->logAutoPilot($applicant, 'completed', 'AutoPilot abgeschlossen.');
+                    $this->info("  ✅ Abgeschlossen.");
+                } elseif ($applicant->auto_pilot_state_id !== $oldStateId) {
                     $newStateName = $applicant->autoPilotState?->name ?? '?';
-                    $this->logAutoPilot($applicant, 'state_changed', "State geändert: {$oldStateName} → {$newStateName}", [
-                        'from_state_id' => $oldStateId,
-                        'to_state_id' => $applicant->auto_pilot_state_id,
-                        'from_state' => $oldStateName,
-                        'to_state' => $newStateName,
-                    ]);
-                    $this->info("ℹ️ Bewerbung #{$applicant->id}: Fortschritt (State → {$newStateName}).");
-                    continue;
-                }
-
-                // Nothing happened — append notes
-                $this->warn("⚠️ Bewerbung #{$applicant->id}: keine Statusänderung.");
-
-                if ($notes !== '') {
-                    $existingNotes = trim((string)($applicant->notes ?? ''));
-                    $stamp = Carbon::now()->format('Y-m-d H:i');
-                    $block = "— — —\nAutoPilot ({$stamp})\n{$notes}";
-                    $applicant->notes = $existingNotes !== '' ? "{$existingNotes}\n\n{$block}" : $block;
-                    $applicant->save();
+                    $this->logAutoPilot($applicant, 'state_changed', "State: {$oldStateName} → {$newStateName}");
+                    $this->info("  ℹ️ State → {$newStateName}");
+                } else {
+                    $this->warn("  ⚠️ Keine Statusänderung.");
                 }
             }
 
@@ -623,6 +632,126 @@ class ProcessAutoPilotApplicants extends Command
             . "Erster Schritt: tools.GET um die benötigten Tools zu laden.\n"
             . "Entweder ist die Bewerbung vollständig → abschließen. Oder es fehlen Infos → Nachricht senden.\n"
             . "Schreibe KEINEN Report — handle direkt.\n";
+
+        return [
+            ['role' => 'system', 'content' => $system],
+            ['role' => 'user', 'content' => $user],
+        ];
+    }
+
+    // ===== Scenario Routing Helpers =====
+
+    private function determineScenario(HcmApplicant $applicant, array $extraFields, array $threadsSummary): string
+    {
+        $missingRequired = $this->getMissingRequiredFields($extraFields);
+
+        if (empty($missingRequired)) {
+            return 'A'; // Komplett
+        }
+
+        $hasThreads = !empty($threadsSummary);
+        $isWaiting = $applicant->autoPilotState?->code === 'waiting_for_applicant';
+
+        if (!$hasThreads && !$isWaiting) {
+            return 'B'; // Erstmalig: Email senden
+        }
+
+        if ($isWaiting && $hasThreads && $this->hasNewInboundMessages($threadsSummary)) {
+            return 'C'; // Neue Infos: verarbeiten
+        }
+
+        return 'D'; // Weiterhin wartend: nichts tun
+    }
+
+    private function getMissingRequiredFields(array $extraFields): array
+    {
+        return array_filter($extraFields, fn(array $f) =>
+            !empty($f['is_required']) && ($f['value'] === null || $f['value'] === '')
+        );
+    }
+
+    private function hasNewInboundMessages(array $threadsSummary): bool
+    {
+        foreach ($threadsSummary as $thread) {
+            $inbound = $thread['last_inbound_at'] ?? null;
+            $outbound = $thread['last_outbound_at'] ?? null;
+            if ($inbound !== null && ($outbound === null || $inbound > $outbound)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private function findPrimaryEmail(array $contactInfo): ?string
+    {
+        $fallback = null;
+        foreach ($contactInfo as $contact) {
+            foreach ($contact['emails'] ?? [] as $email) {
+                if ($email['is_primary'] ?? false) return $email['email'];
+                if ($fallback === null) $fallback = $email['email'];
+            }
+        }
+        return $fallback;
+    }
+
+    // ===== Unified Prompt =====
+
+    private function buildMessages(
+        HcmApplicant $applicant, User $owner, array $contactInfo,
+        array $extraFields, array $missingFields, array $threadsSummary,
+        ?array $preferredChannel, int $waitingStateId, int $completedStateId
+    ): array {
+        $contactName = $contactInfo[0]['full_name'] ?? 'Bewerber/in';
+        $primaryEmail = $this->findPrimaryEmail($contactInfo);
+
+        $system = "Du bist {$owner->name}, HR-Verantwortlicher bei {$applicant->team?->name}.\n"
+            . "Du bearbeitest die Bewerbung von {$contactName} ({$primaryEmail}).\n"
+            . "Du arbeitest autonom — handle per Tool-Calls, schreibe keine Reports.\n"
+            . "Kommuniziere immer auf Deutsch, persönlich und professionell.\n\n"
+            . "DEINE AUFGABE:\n"
+            . "Sammle alle fehlenden Pflichtfelder vom Bewerber ein.\n"
+            . "- Lies bestehende Nachrichten-Threads, extrahiere alle verwertbaren Infos.\n"
+            . "- Schreibe alles was du findest in die Extra-Felder der Bewerbung (core_extra_fields_PUT).\n"
+            . "- Du kannst auch den CRM-Kontakt aktualisieren wenn du relevante Daten findest.\n"
+            . "- Wenn du dem Bewerber schreiben musst, nutze den Standardkanal des Bewerberportals.\n"
+            . "- Wenn alle Pflichtfelder gefüllt sind, schließe die Bewerbung ab.\n\n";
+
+        // Thread-Hinweise
+        if (!empty($threadsSummary)) {
+            $system .= "KOMMUNIKATION:\n"
+                . "- Es gibt bereits Threads mit dem Bewerber (siehe Daten unten).\n"
+                . "- Für Replies im bestehenden Thread: nur thread_id + body (KEIN to, KEIN subject).\n\n";
+        } else {
+            $system .= "KOMMUNIKATION:\n"
+                . "- Es gibt noch keinen Thread mit dem Bewerber.\n"
+                . "- Für neue Nachrichten: comms_channel_id + to + subject + body.\n\n";
+        }
+
+        // Bevorzugter Kanal
+        if ($preferredChannel) {
+            $system .= "STANDARDKANAL: comms_channel_id={$preferredChannel['comms_channel_id']} ({$preferredChannel['sender_identifier']})\n\n";
+        }
+
+        // State-IDs
+        $system .= "STATE-IDS:\n"
+            . "- waiting_for_applicant = {$waitingStateId} (setzen nachdem du eine Nachricht gesendet hast)\n"
+            . "- completed = {$completedStateId} (setzen wenn alle Pflichtfelder ausgefüllt sind, zusammen mit auto_pilot_completed_at=\"now\")\n"
+            . "- Applicant-ID für hcm_applicants_PUT: {$applicant->id}\n";
+
+        // Daten als user message
+        $data = [
+            'applicant_id' => $applicant->id,
+            'crm_contacts' => $contactInfo,
+            'extra_fields' => $extraFields,
+            'threads_summary' => $threadsSummary,
+        ];
+
+        if ($preferredChannel) {
+            $data['preferred_channel'] = $preferredChannel;
+        }
+
+        $user = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            . "\n\nBearbeite diese Bewerbung. Beginne mit Tool-Calls.";
 
         return [
             ['role' => 'system', 'content' => $system],

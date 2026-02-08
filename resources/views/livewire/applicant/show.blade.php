@@ -156,8 +156,6 @@
 
         <x-core-extra-fields-section
             :definitions="$extraFieldDefinitions"
-            :ownContextType="get_class($applicant)"
-            :ownContextId="$applicant->id"
         />
 
         <!-- Verknüpfte Kontakte -->

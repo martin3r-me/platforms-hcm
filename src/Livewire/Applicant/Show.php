@@ -244,10 +244,10 @@ class Show extends Component
 
     public function rendered(): void
     {
-        // Extra-Fields-Kontext setzen
+        // Extra-Fields-Kontext setzen (global für alle Bewerber)
         $this->dispatch('extrafields', [
             'context_type' => get_class($this->applicant),
-            'context_id' => $this->applicant->id,
+            'context_id' => null,  // NULL = gilt für ALLE Bewerber
         ]);
 
         // Tagging-Kontext setzen
