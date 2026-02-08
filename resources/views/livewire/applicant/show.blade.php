@@ -154,7 +154,11 @@
             </div>
         </div>
 
-        <x-core-extra-fields-section :definitions="$extraFieldDefinitions" />
+        <x-core-extra-fields-section
+            :definitions="$extraFieldDefinitions"
+            :ownContextType="get_class($applicant)"
+            :ownContextId="$applicant->id"
+        />
 
         <!-- Verknüpfte Kontakte -->
         <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Bewerber verknüpft sind">
