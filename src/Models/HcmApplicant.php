@@ -23,6 +23,7 @@ class HcmApplicant extends Model
         'is_active',
         'auto_pilot',
         'auto_pilot_completed_at',
+        'auto_pilot_state_id',
         'team_id',
         'created_by_user_id',
         'owned_by_user_id',
@@ -32,6 +33,7 @@ class HcmApplicant extends Model
         'is_active' => 'boolean',
         'auto_pilot' => 'boolean',
         'auto_pilot_completed_at' => 'datetime',
+        'auto_pilot_state_id' => 'integer',
         'progress' => 'integer',
         'applied_at' => 'date',
     ];
@@ -60,6 +62,11 @@ class HcmApplicant extends Model
     public function applicantStatus()
     {
         return $this->belongsTo(HcmApplicantStatus::class, 'applicant_status_id');
+    }
+
+    public function autoPilotState()
+    {
+        return $this->belongsTo(HcmAutoPilotState::class, 'auto_pilot_state_id');
     }
 
     public function team()

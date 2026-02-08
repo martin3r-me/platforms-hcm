@@ -64,7 +64,7 @@ class GetApplicantTool implements ToolContract, ToolMetadataContract
 
             $allowedTeamIds = $this->getAllowedTeamIds($teamId);
 
-            $with = ['applicantStatus'];
+            $with = ['applicantStatus', 'autoPilotState'];
             if ($includeContacts) {
                 $with['crmContactLinks'] = fn ($q) => $q->whereIn('team_id', $allowedTeamIds);
                 $with[] = 'crmContactLinks.contact';
@@ -102,6 +102,15 @@ class GetApplicantTool implements ToolContract, ToolMetadataContract
                 })->filter(fn ($x) => $x['contact_id'])->values()->toArray();
             }
 
+            $extraFields = [];
+            if (method_exists($applicant, 'getExtraFieldsWithLabels')) {
+                try {
+                    $extraFields = $applicant->getExtraFieldsWithLabels();
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
+
             return ToolResult::success([
                 'id' => $applicant->id,
                 'uuid' => $applicant->uuid,
@@ -113,6 +122,14 @@ class GetApplicantTool implements ToolContract, ToolMetadataContract
                 'notes' => $applicant->notes,
                 'applied_at' => $applicant->applied_at?->toDateString(),
                 'is_active' => (bool)$applicant->is_active,
+                'auto_pilot' => (bool)$applicant->auto_pilot,
+                'auto_pilot_state' => $applicant->autoPilotState ? [
+                    'id' => $applicant->autoPilotState->id,
+                    'code' => $applicant->autoPilotState->code,
+                    'name' => $applicant->autoPilotState->name,
+                ] : null,
+                'auto_pilot_completed_at' => $applicant->auto_pilot_completed_at?->toISOString(),
+                'extra_fields' => $extraFields,
                 'crm_contacts' => $contacts,
                 'team_id' => $applicant->team_id,
                 'created_at' => $applicant->created_at?->toISOString(),

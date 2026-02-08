@@ -61,6 +61,18 @@ class UpdateApplicantTool implements ToolContract, ToolMetadataContract
                     'type' => 'integer',
                     'description' => 'Optional: Owner des Bewerber-Datensatzes.',
                 ],
+                'auto_pilot_state_id' => [
+                    'type' => 'integer',
+                    'description' => 'Optional: AutoPilot-State-ID. Nutze "hcm.lookup.GET" mit lookup=auto_pilot_states.',
+                ],
+                'auto_pilot_completed_at' => [
+                    'type' => 'string',
+                    'description' => 'Optional: ISO-Datetime oder "now" um auto_pilot_completed_at zu setzen.',
+                ],
+                'auto_pilot' => [
+                    'type' => 'boolean',
+                    'description' => 'Optional: AutoPilot ein-/ausschalten.',
+                ],
             ],
             'required' => ['applicant_id'],
         ]);
@@ -100,11 +112,24 @@ class UpdateApplicantTool implements ToolContract, ToolMetadataContract
                 'applied_at',
                 'is_active',
                 'owned_by_user_id',
+                'auto_pilot_state_id',
+                'auto_pilot',
             ];
 
             foreach ($fields as $field) {
                 if (array_key_exists($field, $arguments)) {
                     $applicant->{$field} = $arguments[$field] === '' ? null : $arguments[$field];
+                }
+            }
+
+            if (array_key_exists('auto_pilot_completed_at', $arguments)) {
+                $val = $arguments['auto_pilot_completed_at'];
+                if ($val === 'now') {
+                    $applicant->auto_pilot_completed_at = now();
+                } elseif ($val === '' || $val === null) {
+                    $applicant->auto_pilot_completed_at = null;
+                } else {
+                    $applicant->auto_pilot_completed_at = $val;
                 }
             }
 
@@ -117,6 +142,9 @@ class UpdateApplicantTool implements ToolContract, ToolMetadataContract
                 'progress' => $applicant->progress,
                 'team_id' => $applicant->team_id,
                 'is_active' => (bool)$applicant->is_active,
+                'auto_pilot' => (bool)$applicant->auto_pilot,
+                'auto_pilot_state_id' => $applicant->auto_pilot_state_id,
+                'auto_pilot_completed_at' => $applicant->auto_pilot_completed_at?->toISOString(),
                 'message' => 'Bewerber erfolgreich aktualisiert.',
             ]);
         } catch (\Throwable $e) {

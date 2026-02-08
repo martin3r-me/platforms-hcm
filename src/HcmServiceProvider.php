@@ -102,6 +102,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\UpdateEmployeeEmailsFromCsv::class,
                 \Platform\Hcm\Console\Commands\ImportSollstundenFromCsv::class,
                 \Platform\Hcm\Console\Commands\ImportMonthlyHoursFromCsv::class,
+                \Platform\Hcm\Console\Commands\ProcessAutoPilotApplicants::class,
             ]);
         }
 
