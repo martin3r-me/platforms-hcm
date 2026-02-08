@@ -173,7 +173,7 @@ class ProcessAutoPilotApplicants extends Command
                 $contextTeam = $applicant->team;
                 $this->impersonateForTask($owner, $contextTeam);
                 $toolContext = new ToolContext($owner, $contextTeam, [
-                    'context_model' => get_class($applicant),
+                    'context_model' => $applicant->getMorphClass(),
                     'context_model_id' => $applicant->id,
                 ]);
 
@@ -387,13 +387,14 @@ class ProcessAutoPilotApplicants extends Command
                 ->where(function ($q) use ($applicant, $emails, $teamIds) {
                     // Bereits verknüpfte Threads (kein team_id Filter nötig — eindeutig)
                     $q->where(function ($q2) use ($applicant) {
-                        $q2->where('context_model', get_class($applicant))
+                        $q2->where('context_model', $applicant->getMorphClass())
                             ->where('context_model_id', $applicant->id);
                     });
                     // ODER Threads mit passender Email + passendem Team
                     if (!empty($emails)) {
                         $q->orWhere(function ($q2) use ($emails, $teamIds) {
                             $q2->whereIn('team_id', $teamIds)
+                                ->whereNull('context_model')
                                 ->where(function ($q3) use ($emails) {
                                     foreach ($emails as $email) {
                                         $q3->orWhere('last_inbound_from_address', $email);
@@ -415,7 +416,7 @@ class ProcessAutoPilotApplicants extends Command
                 'last_message_at' => ($t->last_inbound_at ?: $t->last_outbound_at)?->toIso8601String(),
                 'last_inbound_at' => $t->last_inbound_at?->toIso8601String(),
                 'last_outbound_at' => $t->last_outbound_at?->toIso8601String(),
-                'is_linked' => $t->context_model === get_class($applicant) && $t->context_model_id === $applicant->id,
+                'is_linked' => $t->context_model === $applicant->getMorphClass() && $t->context_model_id === $applicant->id,
             ])->toArray();
         } catch (\Throwable $e) {
             return [];
@@ -489,7 +490,7 @@ class ProcessAutoPilotApplicants extends Command
                 })
                 ->where('created_at', '>=', now()->subMinutes(30))
                 ->update([
-                    'context_model' => get_class($applicant),
+                    'context_model' => $applicant->getMorphClass(),
                     'context_model_id' => $applicant->id,
                 ]);
 
