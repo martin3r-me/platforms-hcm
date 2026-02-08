@@ -6,13 +6,19 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Platform\Core\Contracts\ToolContext;
+use Platform\Core\Models\CommsChannel;
+use Platform\Core\Models\CommsChannelContext;
+use Platform\Core\Models\CommsEmailThread;
 use Platform\Core\Models\CoreAiProvider;
 use Platform\Core\Models\Team;
 use Platform\Core\Models\User;
 use Platform\Core\Services\AiToolLoopRunner;
 use Platform\Hcm\Models\HcmApplicant;
+use Platform\Hcm\Models\HcmApplicantSettings;
+use Platform\Hcm\Models\HcmAutoPilotLog;
 
 class ProcessAutoPilotApplicants extends Command
 {
@@ -103,6 +109,7 @@ class ProcessAutoPilotApplicants extends Command
                 $contactInfo = $this->loadContactInfo($applicant);
                 $extraFields = $this->loadExtraFields($applicant);
                 $threadsSummary = $this->loadThreadsSummary($applicant, $contactInfo);
+                $preferredChannel = $this->loadPreferredChannel($applicant);
 
                 $this->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 $this->info("🤖 Bewerbung #{$applicant->id} → Owner: {$owner->name} (user_id={$owner->id})");
@@ -112,47 +119,84 @@ class ProcessAutoPilotApplicants extends Command
                 $this->line("AutoPilot-State: " . ($applicant->autoPilotState?->name ?? 'nicht gesetzt'));
                 $this->line("Kontakte: " . count($contactInfo));
                 $this->line("Extra-Fields: " . count($extraFields));
+                $this->line("Threads: " . count($threadsSummary));
+                $this->line("Bevorzugter Kanal: " . ($preferredChannel ? "{$preferredChannel['name']} ({$preferredChannel['sender_identifier']})" : '—'));
 
                 if ($dryRun) {
                     continue;
                 }
 
+                // Snapshot state before run
+                $oldStateId = $applicant->auto_pilot_state_id;
+                $oldStateName = $applicant->autoPilotState?->name;
+
+                // Log run_started
+                $this->logAutoPilot($applicant, 'run_started', 'AutoPilot-Run gestartet', [
+                    'state' => $oldStateName ?? 'nicht gesetzt',
+                    'progress' => $applicant->progress,
+                    'threads_count' => count($threadsSummary),
+                    'preferred_channel' => $preferredChannel['name'] ?? null,
+                ]);
+
                 $contextTeam = $applicant->team;
                 $this->impersonateForTask($owner, $contextTeam);
                 $toolContext = new ToolContext($owner, $contextTeam);
 
-                $messages = $this->buildAgentMessages($applicant, $owner, $contactInfo, $extraFields, $threadsSummary);
+                $messages = $this->buildAgentMessages($applicant, $owner, $contactInfo, $extraFields, $threadsSummary, $preferredChannel);
 
-                $result = $runner->run(
-                    $messages,
-                    $model,
-                    $toolContext,
-                    [
-                        'max_iterations' => $maxIterations,
-                        'max_output_tokens' => $maxOutputTokens,
-                        'include_web_search' => $includeWebSearch,
-                        'reasoning' => ['effort' => 'medium'],
-                    ]
-                );
+                try {
+                    $result = $runner->run(
+                        $messages,
+                        $model,
+                        $toolContext,
+                        [
+                            'max_iterations' => $maxIterations,
+                            'max_output_tokens' => $maxOutputTokens,
+                            'include_web_search' => $includeWebSearch,
+                            'reasoning' => ['effort' => 'medium'],
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    $this->logAutoPilot($applicant, 'error', 'Fehler beim LLM-Run: ' . $e->getMessage());
+                    $this->error("❌ Bewerbung #{$applicant->id}: " . $e->getMessage());
+                    continue;
+                }
+
+                // Link new threads created during the run
+                $this->linkNewThreadsToApplicant($applicant, $contactInfo);
 
                 // Reload and check end state
                 $applicant->refresh();
                 $applicant->loadMissing(['autoPilotState']);
 
+                // Log LLM response as note
+                $notes = trim((string)($result['assistant'] ?? ''));
+                if ($notes !== '') {
+                    $this->logAutoPilot($applicant, 'note', $notes);
+                }
+
                 if ($applicant->auto_pilot_completed_at !== null) {
+                    $this->logAutoPilot($applicant, 'completed', 'AutoPilot abgeschlossen', [
+                        'from_state' => $oldStateName,
+                        'to_state' => $applicant->autoPilotState?->name ?? 'completed',
+                    ]);
                     $this->info("✅ Bewerbung #{$applicant->id}: abgeschlossen (auto_pilot_completed_at gesetzt).");
                     continue;
                 }
 
-                $oldStateId = $applicant->getOriginal('auto_pilot_state_id');
                 if ($applicant->auto_pilot_state_id !== $oldStateId) {
-                    $stateName = $applicant->autoPilotState?->name ?? '?';
-                    $this->info("ℹ️ Bewerbung #{$applicant->id}: Fortschritt (State → {$stateName}).");
+                    $newStateName = $applicant->autoPilotState?->name ?? '?';
+                    $this->logAutoPilot($applicant, 'state_changed', "State geändert: {$oldStateName} → {$newStateName}", [
+                        'from_state_id' => $oldStateId,
+                        'to_state_id' => $applicant->auto_pilot_state_id,
+                        'from_state' => $oldStateName,
+                        'to_state' => $newStateName,
+                    ]);
+                    $this->info("ℹ️ Bewerbung #{$applicant->id}: Fortschritt (State → {$newStateName}).");
                     continue;
                 }
 
                 // Nothing happened — append notes
-                $notes = trim((string)($result['assistant'] ?? ''));
                 $this->warn("⚠️ Bewerbung #{$applicant->id}: keine Statusänderung.");
 
                 if ($notes !== '') {
@@ -270,11 +314,13 @@ class ProcessAutoPilotApplicants extends Command
     private function loadThreadsSummary(HcmApplicant $applicant, array $contactInfo): array
     {
         try {
-            if (empty($contactInfo)) {
+            $teamId = $applicant->team_id;
+            if (!$teamId) { return []; }
+
+            if (!class_exists(CommsEmailThread::class)) {
                 return [];
             }
 
-            // Collect all contact emails
             $emails = [];
             foreach ($contactInfo as $contact) {
                 foreach ($contact['emails'] ?? [] as $email) {
@@ -282,39 +328,126 @@ class ProcessAutoPilotApplicants extends Command
                 }
             }
 
-            if (empty($emails)) {
-                return [];
-            }
-
-            // Search for email threads involving these addresses
-            // The CommsEmailThread model may not exist yet — LLM can use tools to find threads at runtime
-            $threadModelClass = 'Platform\\Core\\Models\\CommsEmailThread';
-            if (!class_exists($threadModelClass)) {
-                return [];
-            }
-
-            $teamId = $applicant->team_id;
-            if (!$teamId) { return []; }
-
-            $threads = $threadModelClass::query()
+            $query = CommsEmailThread::query()
                 ->where('team_id', $teamId)
-                ->where(function ($q) use ($emails) {
-                    foreach ($emails as $email) {
-                        $q->orWhere('participants', 'LIKE', '%' . $email . '%');
+                ->where(function ($q) use ($applicant, $emails) {
+                    // Bereits verknüpfte Threads
+                    $q->where(function ($q2) use ($applicant) {
+                        $q2->where('context_model', get_class($applicant))
+                            ->where('context_model_id', $applicant->id);
+                    });
+                    // ODER Threads mit passender Email-Adresse
+                    if (!empty($emails)) {
+                        $q->orWhere(function ($q2) use ($emails) {
+                            $q2->where(function ($q3) use ($emails) {
+                                foreach ($emails as $email) {
+                                    $q3->orWhere('last_inbound_from_address', $email);
+                                    $q3->orWhere('last_outbound_to_address', $email);
+                                }
+                            });
+                        });
                     }
                 })
-                ->orderByDesc('last_message_at')
-                ->limit(5)
+                ->orderByDesc(DB::raw('COALESCE(last_inbound_at, last_outbound_at, updated_at)'))
+                ->limit(10)
                 ->get();
 
-            return $threads->map(fn ($t) => [
+            return $query->map(fn ($t) => [
                 'thread_id' => $t->id,
+                'channel_id' => $t->comms_channel_id,
                 'subject' => $t->subject,
-                'last_message_at' => $t->last_message_at?->toISOString(),
-                'message_count' => $t->message_count ?? null,
+                'counterpart' => $t->last_inbound_from_address ?: $t->last_outbound_to_address,
+                'last_message_at' => ($t->last_inbound_at ?: $t->last_outbound_at)?->toIso8601String(),
+                'is_linked' => $t->context_model === get_class($applicant) && $t->context_model_id === $applicant->id,
             ])->toArray();
         } catch (\Throwable $e) {
             return [];
+        }
+    }
+
+    private function loadPreferredChannel(HcmApplicant $applicant): ?array
+    {
+        try {
+            $teamId = $applicant->team_id;
+            if (!$teamId) { return null; }
+
+            if (!class_exists(HcmApplicantSettings::class) || !class_exists(CommsChannelContext::class)) {
+                return null;
+            }
+
+            $settings = HcmApplicantSettings::where('team_id', $teamId)->first();
+            if (!$settings) { return null; }
+
+            $context = CommsChannelContext::where('context_model', get_class($settings))
+                ->where('context_model_id', $settings->id)
+                ->first();
+
+            if (!$context) { return null; }
+
+            $channel = CommsChannel::where('id', $context->comms_channel_id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$channel) { return null; }
+
+            return [
+                'comms_channel_id' => $channel->id,
+                'name' => $channel->name,
+                'sender_identifier' => $channel->sender_identifier,
+            ];
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function linkNewThreadsToApplicant(HcmApplicant $applicant, array $contactInfo): void
+    {
+        $emails = [];
+        foreach ($contactInfo as $contact) {
+            foreach ($contact['emails'] ?? [] as $email) {
+                $emails[] = $email['email'];
+            }
+        }
+        if (empty($emails)) { return; }
+
+        $teamId = $applicant->team_id;
+        if (!$teamId) { return; }
+
+        try {
+            $updated = CommsEmailThread::query()
+                ->where('team_id', $teamId)
+                ->whereNull('context_model')
+                ->where(function ($q) use ($emails) {
+                    foreach ($emails as $email) {
+                        $q->orWhere('last_outbound_to_address', $email);
+                        $q->orWhere('last_inbound_from_address', $email);
+                    }
+                })
+                ->where('created_at', '>=', now()->subMinutes(30))
+                ->update([
+                    'context_model' => get_class($applicant),
+                    'context_model_id' => $applicant->id,
+                ]);
+
+            if ($updated > 0) {
+                $this->logAutoPilot($applicant, 'note', "{$updated} neue(r) Thread(s) mit Bewerber verknüpft");
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+    }
+
+    private function logAutoPilot(HcmApplicant $applicant, string $type, string $summary, ?array $details = null): void
+    {
+        try {
+            HcmAutoPilotLog::create([
+                'hcm_applicant_id' => $applicant->id,
+                'type' => $type,
+                'summary' => $summary,
+                'details' => $details,
+            ]);
+        } catch (\Throwable $e) {
+            // ignore — logging should never break the run
         }
     }
 
@@ -326,7 +459,8 @@ class ProcessAutoPilotApplicants extends Command
         User $owner,
         array $contactInfo,
         array $extraFields,
-        array $threadsSummary
+        array $threadsSummary,
+        ?array $preferredChannel
     ): array {
         $system = "Du bist {$owner->name} und bearbeitest automatisch Bewerbungen.\n"
             . "Du arbeitest im Namen des HR-Verantwortlichen — Kommunikation soll persönlich wirken.\n"
@@ -352,10 +486,23 @@ class ProcessAutoPilotApplicants extends Command
             . "4. Extrahiere Infos aus Nachrichten und fülle Felder\n"
             . "5. Ermittle Delta: was fehlt noch?\n"
             . "6. Falls etwas fehlt: schreibe dem Bewerber eine Email\n"
-            . "   - Nutze: core.comms.channels.GET, core.comms.email_messages.POST\n"
+            . "   - Nutze: core.comms.email_messages.POST\n"
             . "   - Bevorzuge existierende Threads für Replies\n"
             . "7. Setze auto_pilot_state entsprechend über hcm.applicants.PUT\n\n"
-            . "ENDZUSTÄNDE — wähle genau einen:\n"
+            . "EMAIL-THREADS — WICHTIG:\n"
+            . "- Die unten aufgeführten threads_summary enthalten bereits die richtigen Thread-IDs für diesen Bewerber.\n"
+            . "- Verwende für Replies NUR die angegebenen Thread-IDs (thread_id).\n"
+            . "- Erstelle KEINEN neuen Thread wenn bereits ein passender existiert.\n"
+            . "- Threads mit is_linked=true sind bereits mit diesem Bewerber verknüpft.\n";
+
+        if ($preferredChannel) {
+            $system .= "\nBEVORZUGTER EMAIL-KANAL:\n"
+                . "- comms_channel_id = {$preferredChannel['comms_channel_id']}\n"
+                . "- Absender: {$preferredChannel['sender_identifier']}\n"
+                . "- Verwende diesen Kanal für neue Emails. Du musst NICHT core.comms.channels.GET aufrufen.\n";
+        }
+
+        $system .= "\nENDZUSTÄNDE — wähle genau einen:\n"
             . "1. KOMPLETT: Alle Felder ausgefüllt, Kontakt verknüpft.\n"
             . "   → hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_completed_at\": \"now\"}\n"
             . "   Setze auch auto_pilot_state_id auf den 'completed' State.\n"
@@ -394,6 +541,10 @@ class ProcessAutoPilotApplicants extends Command
             'extra_fields' => $extraFields,
             'threads_summary' => $threadsSummary,
         ];
+
+        if ($preferredChannel) {
+            $applicantDump['preferred_channel'] = $preferredChannel;
+        }
 
         $user = "Bewerbung (JSON):\n"
             . json_encode($applicantDump, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n"

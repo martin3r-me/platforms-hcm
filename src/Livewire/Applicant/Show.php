@@ -54,6 +54,7 @@ class Show extends Component
                     ->orderBy('id');
             },
             'applicantStatus',
+            'autoPilotState',
         ]);
 
         $this->loadAvailableContacts();
@@ -117,6 +118,15 @@ class Show extends Component
     public function isDirty()
     {
         return $this->applicant->isDirty() || $this->isExtraFieldsDirty();
+    }
+
+    #[Computed]
+    public function autoPilotLogs()
+    {
+        return $this->applicant->autoPilotLogs()
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get();
     }
 
     public function linkContact(): void

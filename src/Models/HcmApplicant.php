@@ -84,6 +84,11 @@ class HcmApplicant extends Model
         return $this->belongsTo(\Platform\Core\Models\User::class, 'owned_by_user_id');
     }
 
+    public function autoPilotLogs()
+    {
+        return $this->hasMany(HcmAutoPilotLog::class, 'hcm_applicant_id');
+    }
+
     /**
      * Scopes
      */
