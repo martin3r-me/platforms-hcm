@@ -19,6 +19,7 @@
                             <th class="px-4 py-3">E-Mail</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Fortschritt</th>
+                            <th class="px-4 py-3">AutoPilot</th>
                             <th class="px-4 py-3">Bewerbungsdatum</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3 text-right">Aktionen</th>
@@ -73,6 +74,18 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
+                                    @if($applicant->auto_pilot)
+                                        <x-ui-badge variant="success" size="xs">An</x-ui-badge>
+                                        @if($applicant->auto_pilot_completed_at)
+                                            <div class="text-xs text-[var(--ui-muted)] mt-1">
+                                                {{ $applicant->auto_pilot_completed_at->format('d.m.Y') }}
+                                            </div>
+                                        @endif
+                                    @else
+                                        <x-ui-badge variant="secondary" size="xs">Aus</x-ui-badge>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
                                     @if($applicant->applied_at)
                                         <div class="flex items-center gap-1 text-sm">
                                             @svg('heroicon-o-calendar', 'w-4 h-4 text-[var(--ui-muted)]')
@@ -101,7 +114,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-12 text-center">
+                                <td colspan="8" class="px-4 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center">
                                         @svg('heroicon-o-user-plus', 'w-16 h-16 text-[var(--ui-muted)] mb-4')
                                         <div class="text-lg font-medium text-[var(--ui-secondary)] mb-1">Keine Bewerber gefunden</div>

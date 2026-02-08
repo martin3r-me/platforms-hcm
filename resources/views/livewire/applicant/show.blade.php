@@ -99,6 +99,20 @@
                     label="Aktiv"
                     wire:model.live="applicant.is_active"
                 />
+
+                <x-ui-input-checkbox
+                    model="applicant.auto_pilot"
+                    name="applicant.auto_pilot"
+                    label="AutoPilot"
+                    wire:model.live="applicant.auto_pilot"
+                />
+
+                @if($applicant->auto_pilot_completed_at)
+                    <div>
+                        <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">AutoPilot erledigt am</label>
+                        <div class="text-sm text-[var(--ui-muted)]">{{ $applicant->auto_pilot_completed_at->format('d.m.Y H:i') }}</div>
+                    </div>
+                @endif
             </div>
 
             <div class="mt-6">

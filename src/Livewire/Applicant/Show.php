@@ -66,6 +66,7 @@ class Show extends Component
             'applicant.notes' => 'nullable|string',
             'applicant.applied_at' => 'nullable|date',
             'applicant.is_active' => 'boolean',
+            'applicant.auto_pilot' => 'boolean',
         ], $this->getExtraFieldValidationRules());
     }
 

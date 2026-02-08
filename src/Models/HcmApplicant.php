@@ -21,6 +21,8 @@ class HcmApplicant extends Model
         'notes',
         'applied_at',
         'is_active',
+        'auto_pilot',
+        'auto_pilot_completed_at',
         'team_id',
         'created_by_user_id',
         'owned_by_user_id',
@@ -28,6 +30,8 @@ class HcmApplicant extends Model
 
     protected $casts = [
         'is_active' => 'boolean',
+        'auto_pilot' => 'boolean',
+        'auto_pilot_completed_at' => 'datetime',
         'progress' => 'integer',
         'applied_at' => 'date',
     ];
