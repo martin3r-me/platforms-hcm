@@ -19,6 +19,7 @@ use Platform\Core\Services\AiToolLoopRunner;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantSettings;
 use Platform\Hcm\Models\HcmAutoPilotLog;
+use Platform\Hcm\Models\HcmAutoPilotState;
 
 class ProcessAutoPilotApplicants extends Command
 {
@@ -75,6 +76,9 @@ class ProcessAutoPilotApplicants extends Command
             $processed = 0;
             $seenIds = [];
             $originalAuthUser = Auth::user();
+
+            $waitingForApplicantStateId = HcmAutoPilotState::where('code', 'waiting_for_applicant')->whereNull('team_id')->value('id');
+            $completedStateId = HcmAutoPilotState::where('code', 'completed')->whereNull('team_id')->value('id');
 
             while ($processed < $limit) {
                 if (Carbon::now()->greaterThanOrEqualTo($deadline)) {
@@ -145,7 +149,7 @@ class ProcessAutoPilotApplicants extends Command
                     'context_model_id' => $applicant->id,
                 ]);
 
-                $messages = $this->buildAgentMessages($applicant, $owner, $contactInfo, $extraFields, $threadsSummary, $preferredChannel);
+                $messages = $this->buildAgentMessages($applicant, $owner, $contactInfo, $extraFields, $threadsSummary, $preferredChannel, $waitingForApplicantStateId, $completedStateId);
 
                 try {
                     $result = $runner->run(
@@ -165,8 +169,22 @@ class ProcessAutoPilotApplicants extends Command
                     continue;
                 }
 
+                $iterations = (int)($result['iterations'] ?? 0);
+                $hitMaxIterations = $result['previous_response_id'] !== null;
+                $lastToolCallNames = array_map(fn($c) => $c['name'] ?? '?', $result['last_tool_calls'] ?? []);
+
+                $this->logAutoPilot($applicant, 'run_completed', "Run: {$iterations} Iteration(en)" . ($hitMaxIterations ? ' (max erreicht)' : ''), [
+                    'iterations' => $iterations,
+                    'hit_max_iterations' => $hitMaxIterations,
+                    'last_tool_calls' => $lastToolCallNames,
+                ]);
+                $this->line("  Iterationen: {$iterations}/{$maxIterations}" . ($hitMaxIterations ? ' ⚠️ MAX' : ''));
+
                 // Link new threads created during the run
-                $this->linkNewThreadsToApplicant($applicant, $contactInfo);
+                $linkedThreads = $this->linkNewThreadsToApplicant($applicant, $contactInfo);
+                if ($linkedThreads > 0) {
+                    $this->line("  Threads verknüpft: {$linkedThreads}");
+                }
 
                 // Reload and check end state
                 $applicant->refresh();
@@ -405,7 +423,7 @@ class ProcessAutoPilotApplicants extends Command
         }
     }
 
-    private function linkNewThreadsToApplicant(HcmApplicant $applicant, array $contactInfo): void
+    private function linkNewThreadsToApplicant(HcmApplicant $applicant, array $contactInfo): int
     {
         $emails = [];
         foreach ($contactInfo as $contact) {
@@ -413,10 +431,10 @@ class ProcessAutoPilotApplicants extends Command
                 $emails[] = $email['email'];
             }
         }
-        if (empty($emails)) { return; }
+        if (empty($emails)) { return 0; }
 
         $teamId = $applicant->team_id;
-        if (!$teamId) { return; }
+        if (!$teamId) { return 0; }
 
         try {
             $updated = CommsEmailThread::query()
@@ -437,8 +455,10 @@ class ProcessAutoPilotApplicants extends Command
             if ($updated > 0) {
                 $this->logAutoPilot($applicant, 'note', "{$updated} neue(r) Thread(s) mit Bewerber verknüpft");
             }
+
+            return $updated;
         } catch (\Throwable $e) {
-            // ignore
+            return 0;
         }
     }
 
@@ -465,7 +485,9 @@ class ProcessAutoPilotApplicants extends Command
         array $contactInfo,
         array $extraFields,
         array $threadsSummary,
-        ?array $preferredChannel
+        ?array $preferredChannel,
+        ?int $waitingForApplicantStateId = null,
+        ?int $completedStateId = null
     ): array {
         $system = "Du bist {$owner->name} und bearbeitest automatisch Bewerbungen.\n"
             . "Du arbeitest im Namen des HR-Verantwortlichen — Kommunikation soll persönlich wirken.\n"
@@ -507,8 +529,8 @@ class ProcessAutoPilotApplicants extends Command
             . "5. WENN neue Infos in Nachrichten gefunden → SOFORT per core.extra_fields.PUT in die Felder schreiben. Diesen Schritt NIEMALS überspringen!\n"
             . "6. Extra-Fields erneut prüfen — nach dem Schreiben: welche Pflichtfelder sind JETZT noch leer?\n"
             . "7. ENTSCHEIDUNG:\n"
-            . "   → Alle Pflichtfelder gefüllt? → State auf 'completed' setzen. FERTIG.\n"
-            . "   → Pflichtfelder fehlen, KEIN Thread in threads_summary? → NEUE Nachricht senden (siehe NEUER THREAD unten), fehlende Infos anfordern. State → 'waiting_for_applicant'. FERTIG.\n"
+            . "   → Alle Pflichtfelder gefüllt? → hcm.applicants.PUT mit auto_pilot_completed_at='now' UND auto_pilot_state_id={$completedStateId}. FERTIG.\n"
+            . "   → Pflichtfelder fehlen, KEIN Thread in threads_summary? → NEUE Nachricht senden (siehe NEUER THREAD unten), fehlende Infos anfordern. DANACH SOFORT: hcm.applicants.PUT mit auto_pilot_state_id={$waitingForApplicantStateId}. FERTIG.\n"
             . "   → Pflichtfelder fehlen, Thread vorhanden, neue Infos verarbeitet? → REPLY im bestehenden Thread (nur thread_id + body), restliche fehlende Infos nachfragen. FERTIG.\n"
             . "   → Pflichtfelder fehlen, Thread vorhanden, KEINE neuen Infos? → Nichts tun. FERTIG.\n\n"
             . "KOMMUNIKATION / THREADS — WICHTIG:\n"
@@ -533,14 +555,15 @@ class ProcessAutoPilotApplicants extends Command
                 . "- Verwende diesen Kanal für neue Nachrichten. Du musst NICHT core.comms.channels.GET aufrufen.\n";
         }
 
-        $system .= "\nENDZUSTÄNDE — es gibt genau vier:\n"
+        $system .= "\nSTATE-IDS (bereits aufgelöst, NICHT per Lookup suchen):\n"
+            . "- waiting_for_applicant = {$waitingForApplicantStateId}\n"
+            . "- completed = {$completedStateId}\n\n"
+            . "ENDZUSTÄNDE — es gibt genau vier:\n"
             . "A) KOMPLETT: Alle Pflichtfelder ausgefüllt, Kontakt verknüpft.\n"
-            . "   → hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_completed_at\": \"now\"}\n"
-            . "   Setze auch auto_pilot_state_id auf den 'completed' State.\n"
-            . "   (Nutze hcm.lookup.GET {\"lookup\": \"auto_pilot_states\", \"code\": \"completed\"} um die ID zu ermitteln.)\n"
+            . "   → EIN EINZIGER CALL: hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_completed_at\": \"now\", \"auto_pilot_state_id\": {$completedStateId}}\n"
             . "B) WARTE AUF BEWERBER (erstmalig): Pflichtfelder fehlen, neue Nachricht gesendet.\n"
-            . "   → hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_state_id\": <waiting_for_applicant ID>}\n"
-            . "   (Nutze hcm.lookup.GET {\"lookup\": \"auto_pilot_states\", \"code\": \"waiting_for_applicant\"} um die ID zu ermitteln.)\n"
+            . "   → PFLICHT-Schritt SOFORT nach dem Senden: hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_state_id\": {$waitingForApplicantStateId}}\n"
+            . "   DIESER SCHRITT DARF NIEMALS VERGESSEN WERDEN.\n"
             . "C) NEUE INFOS VERARBEITET: Infos geschrieben, aber noch Felder offen → Reply im Thread gesendet.\n"
             . "   → State bleibt 'waiting_for_applicant'. FERTIG.\n"
             . "D) WEITERHIN WARTEND: Keine neuen Infos, nichts zu tun.\n"
@@ -551,8 +574,7 @@ class ProcessAutoPilotApplicants extends Command
             . "- crm.contacts.GET, crm.contacts.POST\n"
             . "- core.extra_fields.GET, core.extra_fields.PUT\n"
             . "- core.comms.channels.GET, core.comms.email_threads.GET\n"
-            . "- core.comms.email_messages.GET, core.comms.email_messages.POST (Email, WhatsApp, etc.)\n"
-            . "- hcm.lookup.GET (für Status-IDs und auto_pilot_state-IDs)\n";
+            . "- core.comms.email_messages.GET, core.comms.email_messages.POST (Email, WhatsApp, etc.)\n";
 
         $applicantDump = [
             'applicant_id' => $applicant->id,
