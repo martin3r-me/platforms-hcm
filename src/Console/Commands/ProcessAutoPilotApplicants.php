@@ -19,7 +19,6 @@ use Platform\Core\Services\AiToolLoopRunner;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantSettings;
 use Platform\Hcm\Models\HcmAutoPilotLog;
-use Platform\Hcm\Models\HcmAutoPilotState;
 
 class ProcessAutoPilotApplicants extends Command
 {
@@ -102,12 +101,6 @@ class ProcessAutoPilotApplicants extends Command
 
                 if (method_exists($owner, 'isAiUser') && $owner->isAiUser()) {
                     $this->line("• Bewerbung #{$applicant->id}: übersprungen (Owner ist AI-User).");
-                    continue;
-                }
-
-                // Wartend auf Bewerber: nur weiterbearbeiten wenn neue Antwort eingegangen
-                if ($this->isWaitingWithoutNewReply($applicant)) {
-                    $this->line("• Bewerbung #{$applicant->id}: übersprungen (wartet auf Antwort vom Bewerber).");
                     continue;
                 }
 
@@ -368,6 +361,8 @@ class ProcessAutoPilotApplicants extends Command
                 'subject' => $t->subject,
                 'counterpart' => $t->last_inbound_from_address ?: $t->last_outbound_to_address,
                 'last_message_at' => ($t->last_inbound_at ?: $t->last_outbound_at)?->toIso8601String(),
+                'last_inbound_at' => $t->last_inbound_at?->toIso8601String(),
+                'last_outbound_at' => $t->last_outbound_at?->toIso8601String(),
                 'is_linked' => $t->context_model === get_class($applicant) && $t->context_model_id === $applicant->id,
             ])->toArray();
         } catch (\Throwable $e) {
@@ -447,65 +442,6 @@ class ProcessAutoPilotApplicants extends Command
         }
     }
 
-    private function isWaitingWithoutNewReply(HcmApplicant $applicant): bool
-    {
-        // Nur relevant wenn State = waiting_for_applicant
-        $stateCode = $applicant->autoPilotState?->code;
-        if ($stateCode !== 'waiting_for_applicant') {
-            return false;
-        }
-
-        // Letzten Run-Zeitpunkt ermitteln
-        $lastRun = HcmAutoPilotLog::where('hcm_applicant_id', $applicant->id)
-            ->where('type', 'run_started')
-            ->orderByDesc('created_at')
-            ->value('created_at');
-
-        if (!$lastRun) {
-            // Noch nie gelaufen → bearbeiten
-            return false;
-        }
-
-        // Kontakt-Emails laden
-        $emails = [];
-        try {
-            $applicant->loadMissing(['crmContactLinks.contact.emailAddresses']);
-            foreach ($applicant->crmContactLinks as $link) {
-                foreach ($link->contact?->emailAddresses ?? [] as $ea) {
-                    $emails[] = $ea->email_address;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Bei Fehler sicherheitshalber bearbeiten
-            return false;
-        }
-
-        if (empty($emails)) {
-            return true; // Keine Emails → kann keine Antwort geben
-        }
-
-        // Prüfe ob neue eingehende Nachrichten seit letztem Run existieren
-        $hasNewInbound = CommsEmailThread::query()
-            ->where('team_id', $applicant->team_id)
-            ->where(function ($q) use ($applicant, $emails) {
-                $q->where(function ($q2) use ($applicant) {
-                    $q2->where('context_model', get_class($applicant))
-                        ->where('context_model_id', $applicant->id);
-                });
-                if (!empty($emails)) {
-                    $q->orWhere(function ($q2) use ($emails) {
-                        foreach ($emails as $email) {
-                            $q2->orWhere('last_inbound_from_address', $email);
-                        }
-                    });
-                }
-            })
-            ->where('last_inbound_at', '>', $lastRun)
-            ->exists();
-
-        return !$hasNewInbound;
-    }
-
     private function logAutoPilot(HcmApplicant $applicant, string $type, string $summary, ?array $details = null): void
     {
         try {
@@ -540,11 +476,13 @@ class ProcessAutoPilotApplicants extends Command
             . "Du schreibst KEINE Reports, KEINE Zusammenfassungen, KEINE Vorschläge.\n"
             . "Jede deiner Antworten MUSS Tool-Calls enthalten — reiner Text ohne Tool-Call ist ein Fehler.\n"
             . "Dein Output ist NICHT für einen Menschen gedacht. Dein Output sind Tool-Calls.\n\n"
-            . "ES GIBT NUR ZWEI MÖGLICHE ERGEBNISSE:\n"
+            . "ES GIBT DREI MÖGLICHE ERGEBNISSE:\n"
             . "A) Bewerbung VOLLSTÄNDIG → Alle Pflichtfelder ausgefüllt, CRM-Kontakt verknüpft → State auf 'completed' setzen.\n"
-            . "B) Bewerbung UNVOLLSTÄNDIG → Pflichtfelder fehlen und Infos nicht aus vorhandenen Quellen extrahierbar\n"
-            . "   → Nachricht an Bewerber SENDEN (über den bevorzugten Kanal) und fehlende Infos anfordern → State auf 'waiting_for_applicant' setzen.\n"
-            . "Es gibt KEIN drittes Ergebnis. Entweder du kannst die Bewerbung abschließen oder du sendest eine Nachricht.\n\n"
+            . "B) Bewerbung UNVOLLSTÄNDIG (erstmalig) → Pflichtfelder fehlen und Infos nicht aus vorhandenen Quellen extrahierbar\n"
+            . "   → Nachricht an Bewerber SENDEN und fehlende Infos anfordern → State auf 'waiting_for_applicant' setzen.\n"
+            . "C) WEITERHIN WARTEND → State ist bereits 'waiting_for_applicant', du hast die Threads geprüft (per core.comms.messages.GET),\n"
+            . "   und es gibt KEINE neuen verwertbaren Infos vom Bewerber → State bleibt 'waiting_for_applicant', KEINE neue Nachricht senden. FERTIG.\n"
+            . "   WICHTIG: Sende NIEMALS eine zweite Nachricht wenn du bereits auf Antwort wartest und keine neue Antwort da ist.\n\n"
             . "VERBOTEN:\n"
             . "- Text-Antworten die beschreiben was du tun \"würdest\", \"könntest\" oder \"empfiehlst\"\n"
             . "- \"Vorgeschlagene Payloads\", \"Empfohlene Aktionen\" oder ähnliche Reports\n"
@@ -561,11 +499,12 @@ class ProcessAutoPilotApplicants extends Command
             . "1. tools.GET — lade alle benötigten Tools\n"
             . "2. CRM-Kontakt prüfen — falls keiner verknüpft: suchen/erstellen und verknüpfen\n"
             . "3. Extra-Fields laden — prüfen welche required (is_required=true) und leer sind\n"
-            . "4. Kommunikations-Threads prüfen — gibt es Nachrichten mit verwertbaren Infos?\n"
+            . "4. Kommunikations-Threads prüfen — lade die Nachrichten per core.comms.messages.GET und prüfe ob neue verwertbare Infos vom Bewerber eingegangen sind\n"
             . "5. Verfügbare Infos extrahieren und Felder füllen per core.extra_fields.PUT\n"
-            . "6. ENTSCHEIDUNG (es gibt nur diese zwei Optionen):\n"
+            . "6. ENTSCHEIDUNG (es gibt nur diese drei Optionen):\n"
             . "   → Alle Pflichtfelder gefüllt? → State auf 'completed' setzen. FERTIG.\n"
-            . "   → Pflichtfelder fehlen noch? → SOFORT Nachricht senden (über bevorzugten Kanal) und fehlende Infos anfordern.\n"
+            . "   → Pflichtfelder fehlen UND State ist bereits 'waiting_for_applicant' UND keine neuen Infos? → Nichts tun. FERTIG.\n"
+            . "   → Pflichtfelder fehlen UND noch keine Nachricht gesendet? → SOFORT Nachricht senden und fehlende Infos anfordern.\n"
             . "     Dann State auf 'waiting_for_applicant' setzen. FERTIG.\n\n"
             . "KOMMUNIKATION / THREADS — WICHTIG:\n"
             . "- Die unten aufgeführten threads_summary enthalten bereits die richtigen Thread-IDs für diesen Bewerber.\n"
@@ -581,7 +520,7 @@ class ProcessAutoPilotApplicants extends Command
                 . "- Verwende diesen Kanal für neue Nachrichten. Du musst NICHT core.comms.channels.GET aufrufen.\n";
         }
 
-        $system .= "\nENDZUSTÄNDE — es gibt genau zwei:\n"
+        $system .= "\nENDZUSTÄNDE — es gibt genau drei:\n"
             . "A) KOMPLETT: Alle Pflichtfelder ausgefüllt, Kontakt verknüpft.\n"
             . "   → hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_completed_at\": \"now\"}\n"
             . "   Setze auch auto_pilot_state_id auf den 'completed' State.\n"
@@ -589,7 +528,8 @@ class ProcessAutoPilotApplicants extends Command
             . "B) WARTE AUF BEWERBER: Pflichtfelder fehlen → Nachricht gesendet → warte auf Antwort.\n"
             . "   → hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_state_id\": <waiting_for_applicant ID>}\n"
             . "   (Nutze hcm.lookup.GET {\"lookup\": \"auto_pilot_states\", \"code\": \"waiting_for_applicant\"} um die ID zu ermitteln.)\n"
-            . "Es gibt KEINEN dritten Zustand. Entweder fertig oder Nachricht senden.\n\n"
+            . "C) WEITERHIN WARTEND: State ist bereits 'waiting_for_applicant', keine neuen verwertbaren Infos.\n"
+            . "   → Nichts ändern. KEINE Nachricht senden. FERTIG.\n\n"
             . "VERFÜGBARE TOOLS (per Discovery):\n"
             . "- hcm.applicant.GET, hcm.applicants.PUT\n"
             . "- hcm.applicant_contacts.POST\n"
