@@ -222,6 +222,30 @@ class Show extends Component
             'context_type' => get_class($this->applicant),
             'context_id' => $this->applicant->id,
         ]);
+
+        // Comms-Kontext setzen
+        $primaryContact = $this->applicant->crmContactLinks->first()?->contact;
+        $subject = 'Bewerbung #' . $this->applicant->id;
+        if ($primaryContact) {
+            $subject .= ' – ' . $primaryContact->full_name;
+        }
+
+        $this->dispatch('comms', [
+            'model' => get_class($this->applicant),
+            'modelId' => $this->applicant->id,
+            'subject' => $subject,
+            'description' => $this->applicant->notes ?? '',
+            'url' => route('hcm.applicants.show', $this->applicant),
+            'source' => 'hcm.applicant.view',
+            'recipients' => [],
+            'capabilities' => ['manage_channels' => false, 'threads' => true],
+            'meta' => [
+                'status' => $this->applicant->applicantStatus?->name,
+                'progress' => $this->applicant->progress,
+                'applied_at' => $this->applicant->applied_at?->toIso8601String(),
+                'is_active' => $this->applicant->is_active,
+            ],
+        ]);
     }
 
     public function render()
