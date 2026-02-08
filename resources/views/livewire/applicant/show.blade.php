@@ -368,6 +368,18 @@
                                 Kontakt erstellen
                             </span>
                         </x-ui-button>
+                        <x-ui-button
+                            variant="danger-outline"
+                            size="sm"
+                            wire:click="deleteApplicant"
+                            wire:confirm="Bewerbung wirklich unwiderruflich löschen?"
+                            class="w-full"
+                        >
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-trash', 'w-4 h-4')
+                                Bewerbung löschen
+                            </span>
+                        </x-ui-button>
                     </div>
                 </div>
             </div>

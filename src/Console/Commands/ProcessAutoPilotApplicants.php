@@ -19,6 +19,7 @@ use Platform\Core\Services\AiToolLoopRunner;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantSettings;
 use Platform\Hcm\Models\HcmAutoPilotLog;
+use Platform\Hcm\Models\HcmAutoPilotState;
 
 class ProcessAutoPilotApplicants extends Command
 {
@@ -104,6 +105,12 @@ class ProcessAutoPilotApplicants extends Command
                     continue;
                 }
 
+                // Wartend auf Bewerber: nur weiterbearbeiten wenn neue Antwort eingegangen
+                if ($this->isWaitingWithoutNewReply($applicant)) {
+                    $this->line("• Bewerbung #{$applicant->id}: übersprungen (wartet auf Antwort vom Bewerber).");
+                    continue;
+                }
+
                 $model = $this->determineModel();
 
                 $contactInfo = $this->loadContactInfo($applicant);
@@ -140,7 +147,10 @@ class ProcessAutoPilotApplicants extends Command
 
                 $contextTeam = $applicant->team;
                 $this->impersonateForTask($owner, $contextTeam);
-                $toolContext = new ToolContext($owner, $contextTeam);
+                $toolContext = new ToolContext($owner, $contextTeam, [
+                    'context_model' => get_class($applicant),
+                    'context_model_id' => $applicant->id,
+                ]);
 
                 $messages = $this->buildAgentMessages($applicant, $owner, $contactInfo, $extraFields, $threadsSummary, $preferredChannel);
 
@@ -435,6 +445,65 @@ class ProcessAutoPilotApplicants extends Command
         } catch (\Throwable $e) {
             // ignore
         }
+    }
+
+    private function isWaitingWithoutNewReply(HcmApplicant $applicant): bool
+    {
+        // Nur relevant wenn State = waiting_for_applicant
+        $stateCode = $applicant->autoPilotState?->code;
+        if ($stateCode !== 'waiting_for_applicant') {
+            return false;
+        }
+
+        // Letzten Run-Zeitpunkt ermitteln
+        $lastRun = HcmAutoPilotLog::where('hcm_applicant_id', $applicant->id)
+            ->where('type', 'run_started')
+            ->orderByDesc('created_at')
+            ->value('created_at');
+
+        if (!$lastRun) {
+            // Noch nie gelaufen → bearbeiten
+            return false;
+        }
+
+        // Kontakt-Emails laden
+        $emails = [];
+        try {
+            $applicant->loadMissing(['crmContactLinks.contact.emailAddresses']);
+            foreach ($applicant->crmContactLinks as $link) {
+                foreach ($link->contact?->emailAddresses ?? [] as $ea) {
+                    $emails[] = $ea->email_address;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Bei Fehler sicherheitshalber bearbeiten
+            return false;
+        }
+
+        if (empty($emails)) {
+            return true; // Keine Emails → kann keine Antwort geben
+        }
+
+        // Prüfe ob neue eingehende Nachrichten seit letztem Run existieren
+        $hasNewInbound = CommsEmailThread::query()
+            ->where('team_id', $applicant->team_id)
+            ->where(function ($q) use ($applicant, $emails) {
+                $q->where(function ($q2) use ($applicant) {
+                    $q2->where('context_model', get_class($applicant))
+                        ->where('context_model_id', $applicant->id);
+                });
+                if (!empty($emails)) {
+                    $q->orWhere(function ($q2) use ($emails) {
+                        foreach ($emails as $email) {
+                            $q2->orWhere('last_inbound_from_address', $email);
+                        }
+                    });
+                }
+            })
+            ->where('last_inbound_at', '>', $lastRun)
+            ->exists();
+
+        return !$hasNewInbound;
     }
 
     private function logAutoPilot(HcmApplicant $applicant, string $type, string $summary, ?array $details = null): void

@@ -6,6 +6,7 @@ use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Platform\Core\Livewire\Concerns\WithExtraFields;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantStatus;
@@ -76,6 +77,17 @@ class Show extends Component
     public function messages(): array
     {
         return $this->getExtraFieldValidationMessages();
+    }
+
+    public function deleteApplicant(): void
+    {
+        DB::transaction(function () {
+            $this->applicant->crmContactLinks()->delete();
+            $this->applicant->delete();
+        });
+
+        session()->flash('message', 'Bewerbung erfolgreich gelöscht.');
+        $this->redirect(route('hcm.applicants.index'), navigate: true);
     }
 
     public function save(): void
