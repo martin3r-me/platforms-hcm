@@ -171,14 +171,18 @@ class ProcessAutoPilotApplicants extends Command
 
                 $iterations = (int)($result['iterations'] ?? 0);
                 $hitMaxIterations = $result['previous_response_id'] !== null;
-                $lastToolCallNames = array_map(fn($c) => $c['name'] ?? '?', $result['last_tool_calls'] ?? []);
+                $allToolCallNames = $result['all_tool_call_names'] ?? [];
+                $emailSent = in_array('core.comms.email_messages.POST', $allToolCallNames);
 
                 $this->logAutoPilot($applicant, 'run_completed', "Run: {$iterations} Iteration(en)" . ($hitMaxIterations ? ' (max erreicht)' : ''), [
                     'iterations' => $iterations,
                     'hit_max_iterations' => $hitMaxIterations,
-                    'last_tool_calls' => $lastToolCallNames,
+                    'all_tool_calls' => $allToolCallNames,
+                    'email_sent' => $emailSent,
                 ]);
                 $this->line("  Iterationen: {$iterations}/{$maxIterations}" . ($hitMaxIterations ? ' ⚠️ MAX' : ''));
+                $this->line("  Tool-Calls: " . (empty($allToolCallNames) ? '(keine)' : implode(', ', $allToolCallNames)));
+                $this->line("  Email gesendet: " . ($emailSent ? 'JA' : 'NEIN'));
 
                 // Link new threads created during the run
                 $linkedThreads = $this->linkNewThreadsToApplicant($applicant, $contactInfo);
@@ -189,6 +193,12 @@ class ProcessAutoPilotApplicants extends Command
                 // Reload and check end state
                 $applicant->refresh();
                 $applicant->loadMissing(['autoPilotState']);
+
+                // Warn if state was set to waiting_for_applicant without sending an email
+                if ($applicant->auto_pilot_state_id === $waitingForApplicantStateId && !$emailSent) {
+                    $this->logAutoPilot($applicant, 'warning', 'State auf waiting_for_applicant gesetzt, aber KEINE Email gesendet!');
+                    $this->warn("  ⚠️ State=waiting_for_applicant aber KEINE Email gesendet!");
+                }
 
                 // Log LLM response as note
                 $notes = trim((string)($result['assistant'] ?? ''));
@@ -511,7 +521,8 @@ class ProcessAutoPilotApplicants extends Command
             . "- Text-Antworten die beschreiben was du tun \"würdest\", \"könntest\" oder \"empfiehlst\"\n"
             . "- \"Vorgeschlagene Payloads\", \"Empfohlene Aktionen\" oder ähnliche Reports\n"
             . "- Zusammenfassungen des Ist-Zustands als Endprodukt\n"
-            . "- Abwarten, Planen oder Analysieren ohne anschließende Tool-Calls\n\n"
+            . "- Abwarten, Planen oder Analysieren ohne anschließende Tool-Calls\n"
+            . "- State auf 'waiting_for_applicant' setzen OHNE vorher eine Nachricht gesendet zu haben\n\n"
             . "WICHTIG (Tool-Discovery):\n"
             . "- Du siehst anfangs nur Discovery-Tools (z.B. tools.GET, core.teams.GET).\n"
             . "- Wenn dir ein Tool fehlt, lade es per tools.GET nach.\n"
@@ -530,7 +541,10 @@ class ProcessAutoPilotApplicants extends Command
             . "6. Extra-Fields erneut prüfen — nach dem Schreiben: welche Pflichtfelder sind JETZT noch leer?\n"
             . "7. ENTSCHEIDUNG:\n"
             . "   → Alle Pflichtfelder gefüllt? → hcm.applicants.PUT mit auto_pilot_completed_at='now' UND auto_pilot_state_id={$completedStateId}. FERTIG.\n"
-            . "   → Pflichtfelder fehlen, KEIN Thread in threads_summary? → NEUE Nachricht senden (siehe NEUER THREAD unten), fehlende Infos anfordern. DANACH SOFORT: hcm.applicants.PUT mit auto_pilot_state_id={$waitingForApplicantStateId}. FERTIG.\n"
+            . "   → Pflichtfelder fehlen, KEIN Thread in threads_summary? → ZWEI PFLICHT-SCHRITTE:\n"
+            . "     1. ZUERST: core.comms.email_messages.POST (siehe NEUER THREAD unten) — fehlende Infos anfordern.\n"
+            . "     2. NUR WENN Schritt 1 ERFOLGREICH: hcm.applicants.PUT {auto_pilot_state_id={$waitingForApplicantStateId}}.\n"
+            . "     OHNE gesendete Nachricht NIEMALS den State setzen!\n"
             . "   → Pflichtfelder fehlen, Thread vorhanden, neue Infos verarbeitet? → REPLY im bestehenden Thread (nur thread_id + body), restliche fehlende Infos nachfragen. FERTIG.\n"
             . "   → Pflichtfelder fehlen, Thread vorhanden, KEINE neuen Infos? → Nichts tun. FERTIG.\n\n"
             . "KOMMUNIKATION / THREADS — WICHTIG:\n"
@@ -561,9 +575,10 @@ class ProcessAutoPilotApplicants extends Command
             . "ENDZUSTÄNDE — es gibt genau vier:\n"
             . "A) KOMPLETT: Alle Pflichtfelder ausgefüllt, Kontakt verknüpft.\n"
             . "   → EIN EINZIGER CALL: hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_completed_at\": \"now\", \"auto_pilot_state_id\": {$completedStateId}}\n"
-            . "B) WARTE AUF BEWERBER (erstmalig): Pflichtfelder fehlen, neue Nachricht gesendet.\n"
-            . "   → PFLICHT-Schritt SOFORT nach dem Senden: hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_state_id\": {$waitingForApplicantStateId}}\n"
-            . "   DIESER SCHRITT DARF NIEMALS VERGESSEN WERDEN.\n"
+            . "B) WARTE AUF BEWERBER (erstmalig): Pflichtfelder fehlen, KEINE bestehenden Threads.\n"
+            . "   → SCHRITT 1 (PFLICHT): core.comms.email_messages.POST — Nachricht an Bewerber senden.\n"
+            . "   → SCHRITT 2 (NUR nach erfolgreichem Schritt 1): hcm.applicants.PUT {\"applicant_id\": {$applicant->id}, \"auto_pilot_state_id\": {$waitingForApplicantStateId}}\n"
+            . "   OHNE GESENDETE NACHRICHT DARF DER STATE NICHT GESETZT WERDEN.\n"
             . "C) NEUE INFOS VERARBEITET: Infos geschrieben, aber noch Felder offen → Reply im Thread gesendet.\n"
             . "   → State bleibt 'waiting_for_applicant'. FERTIG.\n"
             . "D) WEITERHIN WARTEND: Keine neuen Infos, nichts zu tun.\n"
