@@ -137,7 +137,9 @@ class HcmServiceProvider extends ServiceProvider
             }
 
             // hcm.dashboard aus hcm + dashboard.php
-            $aliasPath = str_replace(['\\', '/'], '.', Str::kebab(str_replace('.php', '', $relativePath)));
+            // Jedes Pfad-Segment einzeln kebab-casen, damit "/" nicht als Zeichen in Str::kebab landet
+            $segments = explode('/', str_replace(['\\', '.php'], ['/', ''], $relativePath));
+            $aliasPath = implode('.', array_map([Str::class, 'kebab'], $segments));
             $alias = $prefix . '.' . $aliasPath;
 
             // Debug: Ausgabe der registrierten Komponente
