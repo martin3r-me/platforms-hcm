@@ -692,7 +692,7 @@ class ProcessAutoPilotApplicants extends Command
     private function getMissingRequiredFields(array $extraFields): array
     {
         return array_filter($extraFields, fn(array $f) =>
-            !empty($f['is_required']) && ($f['value'] === null || $f['value'] === '')
+            !empty($f['is_required']) && ($f['value'] === null || $f['value'] === '' || $f['value'] === [])
         );
     }
 
