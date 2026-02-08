@@ -176,7 +176,7 @@ class ProcessAutoPilotApplicants extends Command
                 $contextTeam = $applicant->team;
                 $this->impersonateForTask($owner, $contextTeam);
                 $toolContext = new ToolContext($owner, $contextTeam, [
-                    'context_model' => $applicant->getMorphClass(),
+                    'context_model' => get_class($applicant),
                     'context_model_id' => $applicant->id,
                 ]);
 
@@ -250,8 +250,19 @@ class ProcessAutoPilotApplicants extends Command
 
                 // State-Änderung prüfen
                 if ($applicant->auto_pilot_completed_at !== null) {
-                    $this->logAutoPilot($applicant, 'completed', 'AutoPilot abgeschlossen.');
-                    $this->info("  ✅ Abgeschlossen.");
+                    // Guard: Prüfe ob Pflichtfelder tatsächlich gefüllt sind
+                    $stillMissing = $this->getMissingRequiredFields($this->loadExtraFields($applicant));
+                    if (!empty($stillMissing)) {
+                        $missingNames = array_column($stillMissing, 'label');
+                        $applicant->auto_pilot_completed_at = null;
+                        $applicant->save();
+                        $this->logAutoPilot($applicant, 'warning',
+                            'LLM hat completed gesetzt, aber Pflichtfelder fehlen noch: ' . implode(', ', $missingNames));
+                        $this->warn("  ⚠️ Completed zurückgesetzt — fehlende Felder: " . implode(', ', $missingNames));
+                    } else {
+                        $this->logAutoPilot($applicant, 'completed', 'AutoPilot abgeschlossen.');
+                        $this->info("  ✅ Abgeschlossen.");
+                    }
                 } elseif ($applicant->auto_pilot_state_id !== $oldStateId) {
                     $newStateName = $applicant->autoPilotState?->name ?? '?';
                     $this->logAutoPilot($applicant, 'state_changed', "State: {$oldStateName} → {$newStateName}");
@@ -372,7 +383,7 @@ class ProcessAutoPilotApplicants extends Command
             }
 
             $query = CommsEmailThread::query()
-                ->where('context_model', $applicant->getMorphClass())
+                ->where('context_model', get_class($applicant))
                 ->where('context_model_id', $applicant->id)
                 ->orderByDesc(DB::raw('COALESCE(last_inbound_at, last_outbound_at, updated_at)'))
                 ->limit(10)
@@ -456,7 +467,7 @@ class ProcessAutoPilotApplicants extends Command
                 })
                 ->where('created_at', '>=', now()->subMinutes(30))
                 ->update([
-                    'context_model' => $applicant->getMorphClass(),
+                    'context_model' => get_class($applicant),
                     'context_model_id' => $applicant->id,
                 ]);
 
