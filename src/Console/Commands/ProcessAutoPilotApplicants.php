@@ -113,7 +113,7 @@ class ProcessAutoPilotApplicants extends Command
                 $contactInfo = $this->loadContactInfo($applicant);
                 $extraFields = $this->loadExtraFields($applicant);
                 $preferredChannel = $this->loadPreferredChannel($applicant);
-                $threadsSummary = $this->loadThreadsSummary($applicant, $contactInfo, $preferredChannel);
+                $threadsSummary = $this->loadThreadsSummary($applicant);
 
                 $this->info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 $this->info("🤖 Bewerbung #{$applicant->id} → Owner: {$owner->name} (user_id={$owner->id})");
@@ -359,51 +359,16 @@ class ProcessAutoPilotApplicants extends Command
         }
     }
 
-    private function loadThreadsSummary(HcmApplicant $applicant, array $contactInfo, ?array $preferredChannel = null): array
+    private function loadThreadsSummary(HcmApplicant $applicant): array
     {
         try {
-            $teamId = $applicant->team_id;
-            if (!$teamId) { return []; }
-
             if (!class_exists(CommsEmailThread::class)) {
                 return [];
             }
 
-            $emails = [];
-            foreach ($contactInfo as $contact) {
-                foreach ($contact['emails'] ?? [] as $email) {
-                    $emails[] = $email['email'];
-                }
-            }
-
-            $teamIds = array_unique(array_filter([
-                $teamId,
-                ($preferredChannel['comms_channel_id'] ?? null)
-                    ? CommsChannel::where('id', $preferredChannel['comms_channel_id'])->value('team_id')
-                    : null,
-            ]));
-
             $query = CommsEmailThread::query()
-                ->where(function ($q) use ($applicant, $emails, $teamIds) {
-                    // Bereits verknüpfte Threads (kein team_id Filter nötig — eindeutig)
-                    $q->where(function ($q2) use ($applicant) {
-                        $q2->where('context_model', $applicant->getMorphClass())
-                            ->where('context_model_id', $applicant->id);
-                    });
-                    // ODER Threads mit passender Email + passendem Team
-                    if (!empty($emails)) {
-                        $q->orWhere(function ($q2) use ($emails, $teamIds) {
-                            $q2->whereIn('team_id', $teamIds)
-                                ->whereNull('context_model')
-                                ->where(function ($q3) use ($emails) {
-                                    foreach ($emails as $email) {
-                                        $q3->orWhere('last_inbound_from_address', $email);
-                                        $q3->orWhere('last_outbound_to_address', $email);
-                                    }
-                                });
-                        });
-                    }
-                })
+                ->where('context_model', $applicant->getMorphClass())
+                ->where('context_model_id', $applicant->id)
                 ->orderByDesc(DB::raw('COALESCE(last_inbound_at, last_outbound_at, updated_at)'))
                 ->limit(10)
                 ->get();
@@ -416,7 +381,7 @@ class ProcessAutoPilotApplicants extends Command
                 'last_message_at' => ($t->last_inbound_at ?: $t->last_outbound_at)?->toIso8601String(),
                 'last_inbound_at' => $t->last_inbound_at?->toIso8601String(),
                 'last_outbound_at' => $t->last_outbound_at?->toIso8601String(),
-                'is_linked' => $t->context_model === $applicant->getMorphClass() && $t->context_model_id === $applicant->id,
+                'is_linked' => true,
             ])->toArray();
         } catch (\Throwable $e) {
             return [];
@@ -471,16 +436,12 @@ class ProcessAutoPilotApplicants extends Command
         $teamId = $applicant->team_id;
         if (!$teamId) { return 0; }
 
-        $teamIds = array_unique(array_filter([
-            $teamId,
-            ($preferredChannel['comms_channel_id'] ?? null)
-                ? CommsChannel::where('id', $preferredChannel['comms_channel_id'])->value('team_id')
-                : null,
-        ]));
+        $channelId = $preferredChannel['comms_channel_id'] ?? null;
+        if (!$channelId) { return 0; }
 
         try {
             $updated = CommsEmailThread::query()
-                ->whereIn('team_id', $teamIds)
+                ->where('comms_channel_id', $channelId)
                 ->whereNull('context_model')
                 ->where(function ($q) use ($emails) {
                     foreach ($emails as $email) {
