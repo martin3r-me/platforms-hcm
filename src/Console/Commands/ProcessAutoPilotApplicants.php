@@ -501,14 +501,16 @@ class ProcessAutoPilotApplicants extends Command
             . "1. tools.GET — lade alle benötigten Tools\n"
             . "2. CRM-Kontakt prüfen — falls keiner verknüpft: suchen/erstellen und verknüpfen\n"
             . "3. Extra-Fields laden — prüfen welche required (is_required=true) und leer sind\n"
-            . "4. Kommunikations-Threads prüfen — lade die Nachrichten per core.comms.email_messages.GET und prüfe ob neue verwertbare Infos vom Bewerber eingegangen sind\n"
+            . "4. Kommunikations-Threads prüfen:\n"
+            . "   → WENN threads_summary LEER ist (keine Threads): Überspringe Schritt 5-6, gehe direkt zu Schritt 7.\n"
+            . "   → WENN threads_summary Einträge hat: Lade Nachrichten per core.comms.email_messages.GET und prüfe ob neue verwertbare Infos vom Bewerber eingegangen sind.\n"
             . "5. WENN neue Infos in Nachrichten gefunden → SOFORT per core.extra_fields.PUT in die Felder schreiben. Diesen Schritt NIEMALS überspringen!\n"
             . "6. Extra-Fields erneut prüfen — nach dem Schreiben: welche Pflichtfelder sind JETZT noch leer?\n"
             . "7. ENTSCHEIDUNG:\n"
             . "   → Alle Pflichtfelder gefüllt? → State auf 'completed' setzen. FERTIG.\n"
-            . "   → Pflichtfelder fehlen, KEIN bestehender Thread? → Neue Nachricht senden, fehlende Infos anfordern. State → 'waiting_for_applicant'. FERTIG.\n"
-            . "   → Pflichtfelder fehlen, bestehender Thread vorhanden, neue Infos verarbeitet? → REPLY im bestehenden Thread (nur thread_id + body), restliche fehlende Infos nachfragen. FERTIG.\n"
-            . "   → Pflichtfelder fehlen, bestehender Thread vorhanden, KEINE neuen Infos? → Nichts tun. FERTIG.\n\n"
+            . "   → Pflichtfelder fehlen, KEIN Thread in threads_summary? → NEUE Nachricht senden (siehe NEUER THREAD unten), fehlende Infos anfordern. State → 'waiting_for_applicant'. FERTIG.\n"
+            . "   → Pflichtfelder fehlen, Thread vorhanden, neue Infos verarbeitet? → REPLY im bestehenden Thread (nur thread_id + body), restliche fehlende Infos nachfragen. FERTIG.\n"
+            . "   → Pflichtfelder fehlen, Thread vorhanden, KEINE neuen Infos? → Nichts tun. FERTIG.\n\n"
             . "KOMMUNIKATION / THREADS — WICHTIG:\n"
             . "- Die unten aufgeführten threads_summary enthalten bereits die richtigen Thread-IDs für diesen Bewerber.\n"
             . "- Verwende für Replies NUR die angegebenen Thread-IDs (thread_id).\n"
@@ -519,8 +521,10 @@ class ProcessAutoPilotApplicants extends Command
             . "- Für Reply NUR diese Parameter: core.comms.email_messages.POST { \"thread_id\": <thread_id aus threads_summary>, \"body\": \"Dein Text\" }\n"
             . "- 'to' und 'subject' werden AUTOMATISCH aus dem Thread abgeleitet — NICHT mitsenden.\n"
             . "- NIEMALS einen neuen Thread erstellen wenn threads_summary bereits einen passenden Thread enthält (insb. mit last_outbound_at gesetzt).\n\n"
-            . "NEUER THREAD (nur wenn KEIN Thread existiert):\n"
-            . "- core.comms.email_messages.POST { \"comms_channel_id\": <bevorzugter Kanal>, \"to\": \"<email>\", \"subject\": \"<Betreff>\", \"body\": \"...\" }\n";
+            . "NEUER THREAD (nur wenn threads_summary LEER ist — kein einziger Thread):\n"
+            . "- Nimm die Email-Adresse aus crm_contacts → emails (bevorzugt is_primary=true).\n"
+            . "- core.comms.email_messages.POST { \"comms_channel_id\": <bevorzugter Kanal aus preferred_channel>, \"to\": \"<email aus crm_contacts>\", \"subject\": \"<Betreff>\", \"body\": \"...\" }\n"
+            . "- Wenn KEIN bevorzugter Kanal angegeben: erst core.comms.channels.GET aufrufen um einen aktiven Email-Kanal zu finden.\n";
 
         if ($preferredChannel) {
             $system .= "\nBEVORZUGTER KOMMUNIKATIONSKANAL:\n"
