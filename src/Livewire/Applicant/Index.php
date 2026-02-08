@@ -47,6 +47,7 @@ class Index extends Component
                     ->orderBy('id');
             },
             'applicantStatus',
+            'ownedByUser',
         ])
             ->forTeam($teamId);
 

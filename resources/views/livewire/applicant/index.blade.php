@@ -5,7 +5,11 @@
 
     <x-ui-page-container>
         <x-ui-panel title="Übersicht" subtitle="Bewerber verwalten">
-            <div class="flex justify-end items-center mb-4">
+            <div class="flex justify-end items-center gap-2 mb-4">
+                <x-ui-button variant="secondary" size="sm"
+                    wire:click="$dispatch('open-applicant-settings')">
+                    @svg('heroicon-o-cog-6-tooth', 'w-4 h-4')
+                </x-ui-button>
                 <x-ui-button variant="primary" size="sm" wire:click="openCreateModal">
                     @svg('heroicon-o-plus', 'w-4 h-4') Neu
                 </x-ui-button>
@@ -18,6 +22,7 @@
                             <th class="px-4 py-3">Name & Kontakt</th>
                             <th class="px-4 py-3">E-Mail</th>
                             <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Verantwortlicher</th>
                             <th class="px-4 py-3">Fortschritt</th>
                             <th class="px-4 py-3">AutoPilot</th>
                             <th class="px-4 py-3">Bewerbungsdatum</th>
@@ -61,6 +66,18 @@
                                         <x-ui-badge variant="primary" size="xs">
                                             {{ $applicant->applicantStatus->name }}
                                         </x-ui-badge>
+                                    @else
+                                        <span class="text-[var(--ui-muted)]">–</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if($applicant->ownedByUser)
+                                        <div class="flex items-center gap-2">
+                                            <div class="w-6 h-6 bg-[var(--ui-primary)] text-[var(--ui-on-primary)] rounded-full flex items-center justify-center text-xs font-medium">
+                                                {{ strtoupper(substr($applicant->ownedByUser->name, 0, 1)) }}
+                                            </div>
+                                            <span class="text-sm">{{ $applicant->ownedByUser->fullname ?? $applicant->ownedByUser->name }}</span>
+                                        </div>
                                     @else
                                         <span class="text-[var(--ui-muted)]">–</span>
                                     @endif
@@ -114,7 +131,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-4 py-12 text-center">
+                                <td colspan="9" class="px-4 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center">
                                         @svg('heroicon-o-user-plus', 'w-16 h-16 text-[var(--ui-muted)] mb-4')
                                         <div class="text-lg font-medium text-[var(--ui-secondary)] mb-1">Keine Bewerber gefunden</div>
@@ -190,6 +207,8 @@
             </div>
         </x-slot>
     </x-ui-modal>
+
+    <livewire:hcm.applicant.applicant-settings-modal />
 
     <x-slot name="sidebar">
         <x-ui-page-sidebar title="Schnellzugriff" width="w-80" :defaultOpen="true" side="left">

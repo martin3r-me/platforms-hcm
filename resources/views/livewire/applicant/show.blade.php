@@ -81,6 +81,17 @@
                     wire:model.live="applicant.applicant_status_id"
                 />
 
+                <x-ui-input-select
+                    name="applicant.owned_by_user_id"
+                    label="Verantwortlicher"
+                    :options="$this->teamUsers"
+                    optionValue="id"
+                    optionLabel="name"
+                    :nullable="true"
+                    nullLabel="Kein Verantwortlicher"
+                    wire:model.live="applicant.owned_by_user_id"
+                />
+
                 <div>
                     <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">Fortschritt (%)</label>
                     <div class="text-sm text-[var(--ui-muted)]">{{ $applicant->progress }}%</div>

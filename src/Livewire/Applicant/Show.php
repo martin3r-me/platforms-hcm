@@ -5,6 +5,7 @@ namespace Platform\Hcm\Livewire\Applicant;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Platform\Core\Livewire\Concerns\WithExtraFields;
+use Illuminate\Support\Facades\Auth;
 use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmApplicantStatus;
@@ -63,6 +64,7 @@ class Show extends Component
     {
         return array_merge([
             'applicant.applicant_status_id' => 'nullable|exists:hcm_applicant_statuses,id',
+            'applicant.owned_by_user_id' => 'nullable|exists:users,id',
             'applicant.notes' => 'nullable|string',
             'applicant.applied_at' => 'nullable|date',
             'applicant.is_active' => 'boolean',
@@ -95,6 +97,20 @@ class Show extends Component
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
+    }
+
+    #[Computed]
+    public function teamUsers()
+    {
+        return Auth::user()
+            ->currentTeam
+            ->users()
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->fullname ?? $user->name,
+            ]);
     }
 
     #[Computed]
