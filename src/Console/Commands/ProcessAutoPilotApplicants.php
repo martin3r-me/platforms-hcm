@@ -60,7 +60,10 @@ class ProcessAutoPilotApplicants extends Command
         $includeWebSearch = !$this->option('no-web-search');
 
         $lockTtlSeconds = max(6 * 60 * 60, $maxRuntimeSeconds + 60 * 60);
-        $lock = Cache::lock('hcm:process-auto-pilot-applicants', $lockTtlSeconds);
+        $lockKey = $applicantId
+            ? "hcm:process-auto-pilot-applicant:{$applicantId}"
+            : 'hcm:process-auto-pilot-applicants';
+        $lock = Cache::lock($lockKey, $lockTtlSeconds);
         if (!$lock->get()) {
             $this->warn('⏳ Läuft bereits (Lock aktiv).');
             return Command::SUCCESS;

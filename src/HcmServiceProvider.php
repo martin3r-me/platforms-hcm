@@ -2,7 +2,6 @@
 
 namespace Platform\Hcm;
 
-use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
@@ -107,15 +106,6 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\DispatchAutoPilotApplicants::class,
             ]);
         }
-
-        // AutoPilot-Dispatcher alle 5 Minuten schedulen (ohne Overlap)
-        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
-            $schedule->command('hcm:dispatch-auto-pilot-applicants')
-                ->everyFiveMinutes()
-                ->withoutOverlapping()
-                ->runInBackground()
-                ->appendOutputTo(storage_path('logs/hcm-auto-pilot.log'));
-        });
 
         // Tools registrieren (loose gekoppelt - für AI/Chat)
         $this->registerTools();
