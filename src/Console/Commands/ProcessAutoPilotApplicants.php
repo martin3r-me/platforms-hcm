@@ -648,6 +648,10 @@ class ProcessAutoPilotApplicants extends Command
             return 'C'; // Neue Infos: verarbeiten
         }
 
+        if ($hasThreads && !$isWaiting) {
+            return 'C'; // Threads vorhanden, noch nicht wartend → LLM soll Konversation auswerten
+        }
+
         return 'D'; // Weiterhin wartend: nichts tun
     }
 
