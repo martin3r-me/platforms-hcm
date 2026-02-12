@@ -19,8 +19,6 @@ use Platform\Hcm\Models\HcmJobActivityAlias;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmLevyType;
 use Platform\Hcm\Models\HcmAbsenceReason;
-use Platform\Hcm\Models\HcmApplicantStatus;
-use Platform\Hcm\Models\HcmAutoPilotState;
 use Platform\Hcm\Models\HcmPayrollProvider;
 use Platform\Hcm\Models\HcmPayrollType;
 use Platform\Hcm\Models\HcmPayoutMethod;
@@ -138,8 +136,6 @@ class GetHcmLookupTool implements ToolContract, ToolMetadataContract
         'tariff_groups',
         'tariff_levels',
         'tariff_rates',
-        'applicant_statuses',
-        'auto_pilot_states',
     ];
 
     public function execute(array $arguments, ToolContext $context): ToolResult
@@ -461,24 +457,6 @@ class GetHcmLookupTool implements ToolContract, ToolMetadataContract
                 'sort_fields' => ['valid_from', 'amount', 'id'],
                 'default_sort_field' => 'valid_from',
                 'default_sort_dir' => 'desc',
-            ],
-            'applicant_statuses' => [
-                'model' => HcmApplicantStatus::class,
-                'team_scoped' => true,
-                'scope' => 'team_id',
-                'search_fields' => ['name', 'code', 'description'],
-                'sort_fields' => ['name', 'code', 'created_at'],
-                'default_sort_field' => 'name',
-                'default_sort_dir' => 'asc',
-            ],
-            'auto_pilot_states' => [
-                'model' => HcmAutoPilotState::class,
-                'team_scoped' => false,
-                'scope' => null,
-                'search_fields' => ['name', 'code', 'description'],
-                'sort_fields' => ['name', 'code', 'created_at'],
-                'default_sort_field' => 'name',
-                'default_sort_dir' => 'asc',
             ],
             default => null,
         };

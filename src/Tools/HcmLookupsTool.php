@@ -154,16 +154,6 @@ class HcmLookupsTool implements ToolContract, ToolMetadataContract
                     'description' => 'Tarifsätze (team-scoped via agreement) – filterbar nach tariff_group_id/tariff_level_id',
                     'tool' => 'hcm.lookup.GET',
                 ],
-                [
-                    'key' => 'applicant_statuses',
-                    'description' => 'Bewerbungsstatus (team-scoped)',
-                    'tool' => 'hcm.lookup.GET',
-                ],
-                [
-                    'key' => 'auto_pilot_states',
-                    'description' => 'AutoPilot-Zustände für Bewerbungen (global)',
-                    'tool' => 'hcm.lookup.GET',
-                ],
             ],
             'how_to' => [
                 'step_1' => 'Nutze hcm.lookups.GET um den passenden lookup-key zu finden.',

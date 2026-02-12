@@ -102,8 +102,6 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\UpdateEmployeeEmailsFromCsv::class,
                 \Platform\Hcm\Console\Commands\ImportSollstundenFromCsv::class,
                 \Platform\Hcm\Console\Commands\ImportMonthlyHoursFromCsv::class,
-                \Platform\Hcm\Console\Commands\ProcessAutoPilotApplicants::class,
-                \Platform\Hcm\Console\Commands\DispatchAutoPilotApplicants::class,
             ]);
         }
 
@@ -177,17 +175,6 @@ class HcmServiceProvider extends ServiceProvider
             // Employee ↔ CRM Contact Links
             $registry->register(new \Platform\Hcm\Tools\LinkEmployeeContactTool());
             $registry->register(new \Platform\Hcm\Tools\UnlinkEmployeeContactTool());
-
-            // Applicants (Read + Write)
-            $registry->register(new \Platform\Hcm\Tools\ListApplicantsTool());
-            $registry->register(new \Platform\Hcm\Tools\GetApplicantTool());
-            $registry->register(new \Platform\Hcm\Tools\CreateApplicantTool());
-            $registry->register(new \Platform\Hcm\Tools\UpdateApplicantTool());
-            $registry->register(new \Platform\Hcm\Tools\DeleteApplicantTool());
-
-            // Applicant ↔ CRM Contact Links
-            $registry->register(new \Platform\Hcm\Tools\LinkApplicantContactTool());
-            $registry->register(new \Platform\Hcm\Tools\UnlinkApplicantContactTool());
 
             // Contracts (Read + Write)
             $registry->register(new \Platform\Hcm\Tools\ListContractsTool());

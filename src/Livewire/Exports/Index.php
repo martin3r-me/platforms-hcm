@@ -308,8 +308,11 @@ class Index extends Component
     {
         return [
             'employee_number' => 'Personalnummer',
+            'company_employee_number' => 'Personalnummer (Firma)',
             'last_name' => 'Nachname',
             'first_name' => 'Vorname',
+            'phone' => 'Rufnummer (geschäftl. bevorzugt)',
+            'email' => 'E-Mail (geschäftl. bevorzugt)',
             'primary_email' => 'Primäre E-Mail-Adresse',
             'employer' => 'Arbeitgeber',
             'status' => 'Status (Aktiv/Inaktiv)',

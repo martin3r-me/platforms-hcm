@@ -1870,15 +1870,23 @@ class HcmExportService
         // Alle verfügbaren Felder mit Header-Namen
         $allFields = [
             'employee_number' => 'Personalnummer',
+            'company_employee_number' => 'Personalnummer (Firma)',
             'last_name' => 'Nachname',
             'first_name' => 'Vorname',
+            'phone' => 'Rufnummer',
+            'email' => 'E-Mail',
             'primary_email' => 'Primäre E-Mail-Adresse',
             'employer' => 'Arbeitgeber',
             'status' => 'Status',
         ];
 
-        // Query mit Arbeitgeber-Filter
-        $query = \Platform\Hcm\Models\HcmEmployee::with(['employer', 'contracts', 'crmContactLinks.contact.emailAddresses'])
+        // Query mit Arbeitgeber-Filter - Telefonnummern und E-Mail-Typen eager-loaden
+        $query = \Platform\Hcm\Models\HcmEmployee::with([
+                'employer',
+                'contracts',
+                'crmContactLinks.contact.emailAddresses.emailType',
+                'crmContactLinks.contact.phoneNumbers.phoneType',
+            ])
             ->where('team_id', $this->teamId);
 
         if ($employerId) {
@@ -1898,15 +1906,77 @@ class HcmExportService
         $csvData = [];
         $csvData[] = $this->escapeCsvRow($headers);
 
+        // Prüfen ob Kontaktfelder benötigt werden
+        $needsPhone = in_array('phone', $selectedFields, true);
+        $needsEmail = in_array('email', $selectedFields, true);
+
         foreach ($employees as $employee) {
-            $contact = $employee->crmContactLinks->first()?->contact;
+            $contactLink = $employee->crmContactLinks->first();
+            $contact = $contactLink?->contact;
+
+            // Rufnummer ermitteln: geschäftlich bevorzugt, Fallback privat/mobil
+            $phoneValue = '';
+            if ($needsPhone && $contact) {
+                $phones = ($contact->phoneNumbers ?? collect())
+                    ->filter(fn($p) => $p && ($p->is_active ?? true))
+                    ->sortByDesc(fn($p) => ($p->is_primary ?? false) ? 1 : 0)
+                    ->values();
+
+                // Zuerst geschäftliche Nummer suchen
+                $phone = $phones->first(fn($p) => in_array(strtoupper($p->phoneType?->code ?? ''), ['BUSINESS', 'WORK'], true));
+                // Fallback: private oder mobile Nummer
+                if (!$phone) {
+                    $phone = $phones->first(fn($p) => in_array(strtoupper($p->phoneType?->code ?? ''), ['PRIVATE', 'HOME', 'MOBILE'], true));
+                }
+                // Letzter Fallback: irgendeine Nummer
+                if (!$phone) {
+                    $phone = $phones->first();
+                }
+
+                $phoneValue = $phone->full_phone_number
+                    ?? $phone->display_number
+                    ?? $phone->national
+                    ?? $phone->international
+                    ?? $phone->raw_input
+                    ?? '';
+            }
+
+            // E-Mail ermitteln: geschäftlich bevorzugt, dann primäre, dann privat
+            $emailValue = '';
+            if ($needsEmail && $contact) {
+                $emails = ($contact->emailAddresses ?? collect())
+                    ->filter(fn($e) => $e && ($e->is_active ?? true))
+                    ->sortByDesc(fn($e) => (($e->is_primary ?? false) ? 2 : 0) + (($e->is_verified ?? false) ? 1 : 0))
+                    ->values();
+
+                // Zuerst geschäftliche E-Mail suchen
+                $email = $emails->first(fn($e) => in_array(strtoupper($e->emailType?->code ?? ''), ['BUSINESS', 'WORK'], true));
+                // Fallback: primäre E-Mail
+                if (!$email) {
+                    $email = $emails->first(fn($e) => $e->is_primary ?? false);
+                }
+                // Fallback: private E-Mail
+                if (!$email) {
+                    $email = $emails->first(fn($e) => in_array(strtoupper($e->emailType?->code ?? ''), ['PRIVATE', 'HOME'], true));
+                }
+                // Letzter Fallback: irgendeine E-Mail
+                if (!$email) {
+                    $email = $emails->first();
+                }
+
+                $emailValue = $email?->email_address ?? '';
+            }
+
             $row = [];
 
             foreach ($selectedFields as $field) {
                 $row[] = match ($field) {
                     'employee_number' => $employee->employee_number,
+                    'company_employee_number' => $contactLink?->company_employee_number ?? '',
                     'last_name' => $contact?->last_name ?? '',
                     'first_name' => $contact?->first_name ?? '',
+                    'phone' => $phoneValue,
+                    'email' => $emailValue,
                     'primary_email' => $contact?->emailAddresses->where('is_primary', true)->first()?->email_address ?? '',
                     'employer' => $employee->employer?->name ?? '',
                     'status' => $employee->is_active ? 'Aktiv' : 'Inaktiv',
