@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class HcmPayrollType extends Model
 {
     use SoftDeletes;
+
     protected $table = 'hcm_payroll_types';
 
     protected $fillable = [
@@ -26,8 +27,6 @@ class HcmPayrollType extends Model
         'relevant_tax',
         'addition_deduction',
         'default_rate',
-        'debit_finance_account_id',
-        'credit_finance_account_id',
         'valid_from',
         'valid_to',
         'successor_payroll_type_id',
@@ -53,16 +52,6 @@ class HcmPayrollType extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(\Platform\Core\Models\Team::class);
-    }
-
-    public function debitFinanceAccount(): BelongsTo
-    {
-        return $this->belongsTo(\Platform\Finance\Models\FinanceAccount::class, 'debit_finance_account_id');
-    }
-
-    public function creditFinanceAccount(): BelongsTo
-    {
-        return $this->belongsTo(\Platform\Finance\Models\FinanceAccount::class, 'credit_finance_account_id');
     }
 
     public function successor(): BelongsTo

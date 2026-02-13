@@ -36,22 +36,6 @@
     <x-ui-input-text :name="$prefix.'valid_from'" label="Gültig ab" type="date" wire:model.defer="{{ $prefix }}valid_from" />
     <x-ui-input-text :name="$prefix.'valid_to'" label="Gültig bis" type="date" wire:model.defer="{{ $prefix }}valid_to" />
 </div>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <x-ui-input-select 
-        :name="$prefix.'debit_finance_account_id'" 
-        label="Soll-Konto" 
-        wire:model.defer="{{ $prefix }}debit_finance_account_id" 
-        :options="$financeAccounts ?? []"
-        placeholder="Konto auswählen..."
-    />
-    <x-ui-input-select 
-        :name="$prefix.'credit_finance_account_id'" 
-        label="Haben-Konto" 
-        wire:model.defer="{{ $prefix }}credit_finance_account_id" 
-        :options="$financeAccounts ?? []"
-        placeholder="Konto auswählen..."
-    />
-</div>
 <x-ui-input-text :name="$prefix.'display_group'" label="Anzeigegruppe" wire:model.defer="{{ $prefix }}display_group" placeholder="Grundlohn, Zulagen …" />
 <x-ui-input-textarea :name="$prefix.'description'" label="Beschreibung" rows="3" wire:model.defer="{{ $prefix }}description" />
 <div class="flex items-center gap-2">

@@ -5,7 +5,6 @@ namespace Platform\Hcm\Services;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Platform\Hcm\Models\HcmPayrollType;
-use Platform\Finance\Models\FinanceAccount;
 
 class PayrollTypeImportService
 {
@@ -29,18 +28,16 @@ class PayrollTypeImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            // Gruppiere nach LANR + Soll-Konto + Haben-Konto Kombination
+            // Gruppiere nach LANR
             $uniqueCombinations = [];
             foreach ($data as $row) {
-                $combinationKey = $row['lohnart_nr'] . '-' . 
-                    $row['soll_konto'] . '-' . 
-                    $row['haben_konto'];
-                
+                $combinationKey = $row['lohnart_nr'];
+
                 if (!isset($uniqueCombinations[$combinationKey])) {
                     $uniqueCombinations[$combinationKey] = $row;
                 }
             }
-            
+
             DB::transaction(function () use ($uniqueCombinations) {
                 foreach ($uniqueCombinations as $row) {
                     $this->createPayrollType($row);
@@ -60,17 +57,11 @@ class PayrollTypeImportService
         try {
             $data = $this->parseCsv($csvPath);
             
-            // Gruppiere nach LANR + Soll-Konto + Haben-Konto Kombination
+            // Gruppiere nach LANR
             $uniqueCombinations = [];
             foreach ($data as $row) {
-                $debitAccount = $this->findFinanceAccount($row['soll_konto']);
-                $creditAccount = $this->findFinanceAccount($row['haben_konto']);
-                
-                // Verwende Konto-Nummern statt IDs für bessere Gruppierung
-                $combinationKey = $row['lohnart_nr'] . '-' . 
-                    $row['soll_konto'] . '-' . 
-                    $row['haben_konto'];
-                
+                $combinationKey = $row['lohnart_nr'];
+
                 if (!isset($uniqueCombinations[$combinationKey])) {
                     $uniqueCombinations[$combinationKey] = $row;
                 }
@@ -128,29 +119,9 @@ class PayrollTypeImportService
     {
         try {
             // Prüfe ob Lohnart bereits existiert
-            // Finde Finance Accounts
-            $debitAccount = $this->findFinanceAccount($row['soll_konto']);
-            $creditAccount = $this->findFinanceAccount($row['haben_konto']);
-
-            // Prüfe auf Duplikate - LANR + Soll-Konto + Haben-Konto müssen identisch sein
-            $query = HcmPayrollType::where('team_id', $this->teamId)
-                ->where('lanr', $row['lohnart_nr']);
-            
-            // Prüfe Soll-Konto
-            if ($debitAccount) {
-                $query->where('debit_finance_account_id', $debitAccount->id);
-            } else {
-                $query->whereNull('debit_finance_account_id');
-            }
-            
-            // Prüfe Haben-Konto
-            if ($creditAccount) {
-                $query->where('credit_finance_account_id', $creditAccount->id);
-            } else {
-                $query->whereNull('credit_finance_account_id');
-            }
-            
-            $existingPayrollType = $query->first();
+            $existingPayrollType = HcmPayrollType::where('team_id', $this->teamId)
+                ->where('lanr', $row['lohnart_nr'])
+                ->first();
 
             if ($existingPayrollType) {
                 $this->stats['payroll_types_updated']++;
@@ -159,12 +130,12 @@ class PayrollTypeImportService
 
             // Bestimme Kategorie basierend auf Lohnart-Nummer
             $category = $this->determineCategory($row['lohnart_nr'], $row['lohnart']);
-            
+
             // Bestimme Art (Zuschlag/Abzug)
             $additionDeduction = $this->determineAdditionDeduction($row['lohnart_nr'], $row['lohnart']);
 
-            // Generiere eindeutigen Code: LANR + Soll-Konto + Haben-Konto
-            $uniqueCode = $this->generateUniqueCode($row['lohnart_nr'], $debitAccount, $creditAccount);
+            // Generiere eindeutigen Code aus LANR
+            $uniqueCode = $this->generateUniqueCode($row['lohnart_nr']);
 
             HcmPayrollType::create([
                 'team_id' => $this->teamId,
@@ -174,12 +145,10 @@ class PayrollTypeImportService
                 'short_name' => $this->generateShortName($row['lohnart']),
                 'category' => $category,
                 'addition_deduction' => $additionDeduction,
-                'debit_finance_account_id' => $debitAccount?->id,
-                'credit_finance_account_id' => $creditAccount?->id,
                 'is_active' => true,
                 'display_group' => $this->determineDisplayGroup($row['lohnart_nr']),
                 'sort_order' => (int) $row['lohnart_nr'],
-                'description' => "Importiert aus CSV - Soll: {$row['soll_konto_bezeichnung']}, Haben: {$row['haben_konto_bezeichnung']}",
+                'description' => "Importiert aus CSV",
                 'created_by_user_id' => $this->userId,
             ]);
 
@@ -215,19 +184,6 @@ class PayrollTypeImportService
             }
             $this->stats['duplicates'][] = $row['lohnart_nr'];
         }
-    }
-
-    private function findFinanceAccount(string $accountNumber): ?FinanceAccount
-    {
-        $number = (int) $accountNumber;
-        
-        return FinanceAccount::where('team_id', $this->teamId)
-            ->where('number_from', '<=', $number)
-            ->where(function ($query) use ($number) {
-                $query->whereNull('number_to')
-                      ->orWhere('number_to', '>=', $number);
-            })
-            ->first();
     }
 
     private function determineCategory(string $lohnartNr, string $lohnartName): string
@@ -355,23 +311,14 @@ class PayrollTypeImportService
         return mb_substr($short, 0, 20, 'UTF-8');
     }
 
-    private function generateUniqueCode(string $lohnartNr, $debitAccount, $creditAccount): string
+    private function generateUniqueCode(string $lohnartNr): string
     {
-        // Basis-Code aus LANR und verfügbaren Kontoinformationen (vollständige Nummern)
-        $parts = [$lohnartNr];
-        if ($debitAccount) {
-            $parts[] = 'D' . $debitAccount->number; // Debit/Soll
-        }
-        if ($creditAccount) {
-            $parts[] = 'C' . $creditAccount->number; // Credit/Haben
-        }
-
-        $proposed = implode('-', $parts);
+        $proposed = $lohnartNr;
 
         // Sicherstellen, dass der Code innerhalb des Teams eindeutig ist
         $uniqueCode = $proposed;
         $counter = 2;
-        while (\Platform\Hcm\Models\HcmPayrollType::where('team_id', $this->teamId)->where('code', $uniqueCode)->exists()) {
+        while (HcmPayrollType::where('team_id', $this->teamId)->where('code', $uniqueCode)->exists()) {
             $uniqueCode = $proposed . '-v' . $counter;
             $counter++;
         }

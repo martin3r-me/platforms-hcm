@@ -11,7 +11,7 @@ return new class extends Migration {
             if (!Schema::hasColumn('hcm_payroll_types', 'successor_payroll_type_id')) {
                 $t->foreignId('successor_payroll_type_id')
                     ->nullable()
-                    ->after('credit_finance_account_id')
+                    ->after('default_rate')
                     ->constrained('hcm_payroll_types')
                     ->nullOnDelete();
             }

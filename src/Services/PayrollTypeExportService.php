@@ -43,8 +43,7 @@ class PayrollTypeExportService
 
     private function getPayrollTypes(): Collection
     {
-        return HcmPayrollType::with(['debitFinanceAccount', 'creditFinanceAccount'])
-            ->where('team_id', $this->teamId)
+        return HcmPayrollType::where('team_id', $this->teamId)
             ->orderBy('code')
             ->get();
     }
@@ -58,10 +57,6 @@ class PayrollTypeExportService
             'Kurzname',
             'Kategorie',
             'Art',
-            'Soll-Konto',
-            'Soll-Konto Name',
-            'Haben-Konto',
-            'Haben-Konto Name',
             'Steuerrelevant',
             'SV-Relevant',
             'Aktiv',
@@ -81,10 +76,6 @@ class PayrollTypeExportService
                 $type->short_name ?? '',
                 $type->category ?? '',
                 $this->getAdditionDeductionLabel($type->addition_deduction),
-                $type->debitFinanceAccount?->number ?? '',
-                $type->debitFinanceAccount?->name ?? '',
-                $type->creditFinanceAccount?->number ?? '',
-                $type->creditFinanceAccount?->name ?? '',
                 $type->relevant_tax ? 'Ja' : 'Nein',
                 $type->relevant_social_sec ? 'Ja' : 'Nein',
                 $type->is_active ? 'Ja' : 'Nein',
@@ -208,14 +199,12 @@ class PayrollTypeExportService
     <table>
         <thead>
             <tr>
-                <th width="8%">Code</th>
-                <th width="8%">LANR</th>
-                <th width="25%">Name</th>
-                <th width="12%">Kategorie</th>
-                <th width="8%">Art</th>
-                <th width="12%">Soll-Konto</th>
-                <th width="12%">Haben-Konto</th>
-                <th width="8%">Status</th>
+                <th width="10%">Code</th>
+                <th width="10%">LANR</th>
+                <th width="35%">Name</th>
+                <th width="15%">Kategorie</th>
+                <th width="15%">Art</th>
+                <th width="15%">Status</th>
             </tr>
         </thead>
         <tbody>';
@@ -227,8 +216,6 @@ class PayrollTypeExportService
                 <td>' . htmlspecialchars($type->name) . '</td>
                 <td>' . htmlspecialchars($type->category ?? '') . '</td>
                 <td>' . htmlspecialchars($this->getAdditionDeductionLabel($type->addition_deduction)) . '</td>
-                <td>' . htmlspecialchars($type->debitFinanceAccount?->number ?? '') . '</td>
-                <td>' . htmlspecialchars($type->creditFinanceAccount?->number ?? '') . '</td>
                 <td class="' . ($type->is_active ? 'status-active' : 'status-inactive') . '">' . ($type->is_active ? 'Aktiv' : 'Inaktiv') . '</td>
             </tr>';
         }

@@ -133,7 +133,6 @@ class Index extends Component
     public function render()
     {
         $query = HcmPayrollType::query()
-            ->with(['debitFinanceAccount', 'creditFinanceAccount'])
             ->where('team_id', auth()->user()->currentTeam->id)
             ->when($this->search !== '', function ($q) {
                 $q->where(function ($qq) {

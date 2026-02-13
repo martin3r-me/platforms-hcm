@@ -82,8 +82,6 @@ class UpdatePayrollTypesSuccessors extends Command
                         'relevant_tax' => $old?->relevant_tax ?? false,
                         'addition_deduction' => $old?->addition_deduction ?? 'neutral',
                         'default_rate' => $old?->default_rate,
-                        'debit_finance_account_id' => $old?->debit_finance_account_id,
-                        'credit_finance_account_id' => $old?->credit_finance_account_id,
                         'is_active' => true,
                         'display_group' => $old?->display_group,
                         'sort_order' => is_numeric($newCode) ? (int) $newCode : null,

@@ -21,7 +21,7 @@
             @endif
 
             <form wire:submit.prevent="save" class="space-y-6">
-                @include('hcm::livewire.payroll-type.partials.form-fields', ['prefix' => 'form.', 'financeAccounts' => $financeAccounts])
+                @include('hcm::livewire.payroll-type.partials.form-fields', ['prefix' => 'form.'])
 
                 <div class="flex justify-between items-center">
                     <div class="text-xs text-[var(--ui-muted)]">
@@ -79,22 +79,6 @@
                                 </x-ui-badge>
                             </dd>
                         </div>
-                        @if($payrollType->debitFinanceAccount)
-                        <div>
-                            <dt class="text-[var(--ui-muted)]">Soll-Konto</dt>
-                            <dd class="font-medium text-[var(--ui-secondary)]">
-                                {{ $payrollType->debitFinanceAccount->number }} - {{ $payrollType->debitFinanceAccount->name }}
-                            </dd>
-                        </div>
-                        @endif
-                        @if($payrollType->creditFinanceAccount)
-                        <div>
-                            <dt class="text-[var(--ui-muted)]">Haben-Konto</dt>
-                            <dd class="font-medium text-[var(--ui-secondary)]">
-                                {{ $payrollType->creditFinanceAccount->number }} - {{ $payrollType->creditFinanceAccount->name }}
-                            </dd>
-                        </div>
-                        @endif
                     </dl>
                 </div>
             </div>

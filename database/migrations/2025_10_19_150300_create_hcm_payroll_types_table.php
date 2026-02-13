@@ -34,10 +34,6 @@ return new class extends Migration {
             // Optional: Default rate/percentage (convenience only)
             $t->decimal('default_rate', 10, 4)->nullable(); // e.g. 15.5000 €/h or 15.0000 %
 
-            // Optional: Default accounts (default level only; final accounting via Finance rules)
-            $t->foreignId('debit_finance_account_id')->nullable()->constrained('finance_accounts')->nullOnDelete();
-            $t->foreignId('credit_finance_account_id')->nullable()->constrained('finance_accounts')->nullOnDelete();
-
             // Validity / Activity
             $t->date('valid_from')->nullable();
             $t->date('valid_to')->nullable();

@@ -18,7 +18,7 @@ class ExportPayrollTypes extends Command
         $format = $this->option('format');
         $output = $this->option('output');
 
-        $payrollTypes = HcmPayrollType::with(['team', 'debitFinanceAccount', 'creditFinanceAccount'])
+        $payrollTypes = HcmPayrollType::with(['team'])
             ->orderBy('team_id')
             ->orderBy('code')
             ->get();

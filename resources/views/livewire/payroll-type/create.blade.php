@@ -12,7 +12,7 @@
     <x-ui-page-container>
         <x-ui-panel title="Stammdaten" subtitle="Neue Lohnart erfassen">
             <form wire:submit.prevent="save" class="space-y-6">
-                @include('hcm::livewire.payroll-type.partials.form-fields', ['prefix' => 'form.', 'financeAccounts' => $financeAccounts])
+                @include('hcm::livewire.payroll-type.partials.form-fields', ['prefix' => 'form.'])
 
                 <div class="flex justify-end gap-3">
                     <x-ui-button type="button" variant="secondary-outline" wire:navigate href="{{ route('hcm.payroll-types.index') }}">
@@ -53,7 +53,6 @@
                     <h3 class="text-sm font-bold text-[var(--ui-secondary)] uppercase tracking-wider mb-4">Hinweise</h3>
                     <div class="text-sm text-[var(--ui-muted)] space-y-2">
                         <p>Bitte füllen Sie alle Pflichtfelder aus. Die Lohnart kann nach dem Speichern bearbeitet werden.</p>
-                        <p>Die Soll- und Haben-Konten werden aus dem Finance-Modul geladen.</p>
                     </div>
                 </div>
             </div>
