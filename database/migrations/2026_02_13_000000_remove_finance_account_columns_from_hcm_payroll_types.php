@@ -2,28 +2,25 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('hcm_payroll_types', function (Blueprint $t) {
-            // Drop FK constraints (if they exist)
-            if (Schema::hasColumn('hcm_payroll_types', 'debit_finance_account_id')) {
-                try {
-                    $t->dropForeign(['debit_finance_account_id']);
-                } catch (\Throwable $e) {
-                    // FK may not exist
-                }
-            }
-            if (Schema::hasColumn('hcm_payroll_types', 'credit_finance_account_id')) {
-                try {
-                    $t->dropForeign(['credit_finance_account_id']);
-                } catch (\Throwable $e) {
-                    // FK may not exist
-                }
-            }
-        });
+        // Drop FK constraints using raw statements so try/catch actually works
+        // (Blueprint defers execution, so try/catch inside Schema::table closures is ineffective)
+        try {
+            DB::statement('ALTER TABLE hcm_payroll_types DROP FOREIGN KEY hcm_payroll_types_debit_finance_account_id_foreign');
+        } catch (\Throwable $e) {
+            // FK may not exist
+        }
+
+        try {
+            DB::statement('ALTER TABLE hcm_payroll_types DROP FOREIGN KEY hcm_payroll_types_credit_finance_account_id_foreign');
+        } catch (\Throwable $e) {
+            // FK may not exist
+        }
 
         Schema::table('hcm_payroll_types', function (Blueprint $t) {
             if (Schema::hasColumn('hcm_payroll_types', 'debit_finance_account_id')) {
