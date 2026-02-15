@@ -61,15 +61,29 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_vacation_allowance_amount_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_minimum_wage_hourly_rate_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_above_tariff_amount_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `vacation_allowance_amount_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `minimum_wage_hourly_rate_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `above_tariff_amount_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `vacation_allowance_amount` DECIMAL(10, 2) NULL');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `minimum_wage_hourly_rate` DECIMAL(8, 2) NULL');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `above_tariff_amount` DECIMAL(12, 2) NULL');
+        try { DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_vacation_allowance_amount_hash`'); } catch (\Exception $e) {}
+        try { DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_minimum_wage_hourly_rate_hash`'); } catch (\Exception $e) {}
+        try { DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_above_tariff_amount_hash`'); } catch (\Exception $e) {}
+
+        if (Schema::hasColumn('hcm_employee_contracts', 'vacation_allowance_amount_hash')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `vacation_allowance_amount_hash`');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'minimum_wage_hourly_rate_hash')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `minimum_wage_hourly_rate_hash`');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'above_tariff_amount_hash')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `above_tariff_amount_hash`');
+        }
+
+        if (Schema::hasColumn('hcm_employee_contracts', 'vacation_allowance_amount')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `vacation_allowance_amount` DECIMAL(10, 2) NULL');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'minimum_wage_hourly_rate')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `minimum_wage_hourly_rate` DECIMAL(8, 2) NULL');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'above_tariff_amount')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `above_tariff_amount` DECIMAL(12, 2) NULL');
+        }
     }
 };
 
