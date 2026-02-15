@@ -18,8 +18,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('hcm_employee_contracts', function (Blueprint $table) {
-            $table->dropIndex(['primary_job_activity_id']);
             $table->dropForeign(['primary_job_activity_id']);
+            $table->dropIndex(['primary_job_activity_id']);
             $table->dropColumn('primary_job_activity_id');
         });
     }
