@@ -20,8 +20,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('hcm_employees', function (Blueprint $table) {
-            $table->dropIndex(['hcm_employees_schooling_level_index']);
-            $table->dropIndex(['hcm_employees_vocational_training_level_index']);
+            $table->dropIndex(['schooling_level']);
+            $table->dropIndex(['vocational_training_level']);
             $table->dropColumn(['schooling_level','vocational_training_level']);
         });
     }

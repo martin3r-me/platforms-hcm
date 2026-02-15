@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -22,12 +23,21 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_base_salary_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_hourly_wage_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `base_salary_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `hourly_wage_hash`');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `base_salary` DECIMAL(12, 2) NULL');
-        DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `hourly_wage` DECIMAL(10, 2) NULL');
+        try { DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_base_salary_hash`'); } catch (\Exception $e) {}
+        try { DB::statement('ALTER TABLE `hcm_employee_contracts` DROP INDEX `idx_hourly_wage_hash`'); } catch (\Exception $e) {}
+
+        if (Schema::hasColumn('hcm_employee_contracts', 'base_salary_hash')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `base_salary_hash`');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'hourly_wage_hash')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` DROP COLUMN `hourly_wage_hash`');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'base_salary')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `base_salary` DECIMAL(12, 2) NULL');
+        }
+        if (Schema::hasColumn('hcm_employee_contracts', 'hourly_wage')) {
+            DB::statement('ALTER TABLE `hcm_employee_contracts` MODIFY `hourly_wage` DECIMAL(10, 2) NULL');
+        }
     }
 };
 

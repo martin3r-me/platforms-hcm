@@ -24,14 +24,25 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('hcm_contract_compensation_events', function ($table) {
-            $table->dropIndex(['hourly_wage_hash']);
-            $table->dropIndex(['base_salary_hash']);
-            $table->dropColumn(['hourly_wage_hash', 'base_salary_hash']);
-        });
-        
-        DB::statement('ALTER TABLE `hcm_contract_compensation_events` MODIFY `hourly_wage` DECIMAL(10, 2) NULL');
-        DB::statement('ALTER TABLE `hcm_contract_compensation_events` MODIFY `base_salary` DECIMAL(12, 2) NULL');
+        if (Schema::hasTable('hcm_contract_compensation_events')) {
+            Schema::table('hcm_contract_compensation_events', function ($table) {
+                if (Schema::hasColumn('hcm_contract_compensation_events', 'hourly_wage_hash')) {
+                    $table->dropIndex(['hourly_wage_hash']);
+                    $table->dropColumn('hourly_wage_hash');
+                }
+                if (Schema::hasColumn('hcm_contract_compensation_events', 'base_salary_hash')) {
+                    $table->dropIndex(['base_salary_hash']);
+                    $table->dropColumn('base_salary_hash');
+                }
+            });
+
+            if (Schema::hasColumn('hcm_contract_compensation_events', 'hourly_wage')) {
+                DB::statement('ALTER TABLE `hcm_contract_compensation_events` MODIFY `hourly_wage` DECIMAL(10, 2) NULL');
+            }
+            if (Schema::hasColumn('hcm_contract_compensation_events', 'base_salary')) {
+                DB::statement('ALTER TABLE `hcm_contract_compensation_events` MODIFY `base_salary` DECIMAL(12, 2) NULL');
+            }
+        }
     }
 };
 

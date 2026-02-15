@@ -124,30 +124,25 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('hcm_employee_contracts', function (Blueprint $table) {
-            $table->dropIndex(['travel_cost_reimbursement_hash']);
-            $table->dropColumn([
-                'company_car_enabled',
-                'travel_cost_reimbursement',
-                'travel_cost_reimbursement_hash',
-                'is_fixed_term',
-                'fixed_term_end_date',
-                'probation_end_date',
-                'employment_relationship_type',
-                // contract_form wird nicht gelöscht (existiert bereits)
-                'additional_vacation_disability',
-                'work_location_name',
-                'work_location_address',
-                'work_location_postal_code',
-                'work_location_city',
-                'work_location_state',
-                'branch_name',
-                'pension_insurance_company_number',
-                'pension_insurance_exempt',
-                'is_primary_employment',
-                'has_additional_employment',
-                'accommodation',
-            ]);
+        $columns = [
+            'company_car_enabled', 'travel_cost_reimbursement', 'travel_cost_reimbursement_hash',
+            'is_fixed_term', 'fixed_term_end_date', 'probation_end_date',
+            'employment_relationship_type', 'additional_vacation_disability',
+            'work_location_name', 'work_location_address', 'work_location_postal_code',
+            'work_location_city', 'work_location_state', 'branch_name',
+            'pension_insurance_company_number', 'pension_insurance_exempt',
+            'is_primary_employment', 'has_additional_employment', 'accommodation',
+        ];
+
+        Schema::table('hcm_employee_contracts', function (Blueprint $table) use ($columns) {
+            if (Schema::hasColumn('hcm_employee_contracts', 'travel_cost_reimbursement_hash')) {
+                $table->dropIndex(['travel_cost_reimbursement_hash']);
+            }
+
+            $existing = array_filter($columns, fn ($col) => Schema::hasColumn('hcm_employee_contracts', $col));
+            if (!empty($existing)) {
+                $table->dropColumn($existing);
+            }
         });
     }
 };

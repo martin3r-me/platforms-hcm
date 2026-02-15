@@ -24,10 +24,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('hcm_employee_contracts', function (Blueprint $table) {
-            $table->dropIndex(['hcm_employee_contracts_schooling_level_index']);
-            $table->dropIndex(['hcm_employee_contracts_vocational_training_level_index']);
-            $table->dropIndex(['hcm_employee_contracts_is_temp_agency_index']);
-            $table->dropIndex(['hcm_employee_contracts_contract_form_index']);
+            $table->dropIndex(['schooling_level']);
+            $table->dropIndex(['vocational_training_level']);
+            $table->dropIndex(['is_temp_agency']);
+            $table->dropIndex(['contract_form']);
             $table->dropColumn(['schooling_level','vocational_training_level','is_temp_agency','contract_form']);
         });
     }
