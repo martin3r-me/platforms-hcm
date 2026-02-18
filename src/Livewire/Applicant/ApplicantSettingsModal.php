@@ -7,8 +7,8 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Computed;
 use Platform\Hcm\Models\HcmApplicantSettings;
 use Platform\Hcm\Models\HcmApplicantStatus;
-use Platform\Core\Models\CommsChannel;
-use Platform\Core\Models\CommsChannelContext;
+use Platform\Crm\Models\CommsChannel;
+use Platform\Crm\Models\CommsChannelContext;
 use Illuminate\Support\Facades\Auth;
 
 class ApplicantSettingsModal extends Component
