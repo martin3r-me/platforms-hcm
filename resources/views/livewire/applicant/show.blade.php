@@ -156,6 +156,7 @@
 
         <x-core-extra-fields-section
             :definitions="$extraFieldDefinitions"
+            :model="$applicant"
         />
 
         <!-- Verknüpfte Kontakte -->
