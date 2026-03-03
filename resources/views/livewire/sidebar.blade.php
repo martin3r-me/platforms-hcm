@@ -25,6 +25,14 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
+    {{-- Abschnitt: Onboarding --}}
+    <x-ui-sidebar-list label="Onboarding">
+        <x-ui-sidebar-item :href="route('hcm.onboardings.index')">
+            @svg('heroicon-o-clipboard-document-check', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Onboardings</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
     {{-- Abschnitt: Bewerbermanagement --}}
     <x-ui-sidebar-list label="Bewerbermanagement">
         <x-ui-sidebar-item :href="route('hcm.applicants.index')">
@@ -149,6 +157,11 @@
                 @svg('heroicon-o-user-group', 'w-5 h-5')
             </a>
             
+            {{-- Onboarding --}}
+            <a href="{{ route('hcm.onboardings.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Onboardings">
+                @svg('heroicon-o-clipboard-document-check', 'w-5 h-5')
+            </a>
+
             {{-- Bewerbermanagement --}}
             <a href="{{ route('hcm.applicants.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Bewerber">
                 @svg('heroicon-o-document-plus', 'w-5 h-5')
@@ -225,6 +238,24 @@
         </div>
     </div>
 
+    {{-- Abschnitt: Onboardings --}}
+    <div>
+        <div class="mt-2" x-show="!collapsed">
+            @if($this->recentOnboardings->count() > 0)
+                <x-ui-sidebar-list label="Neueste Onboardings">
+                    @foreach($this->recentOnboardings as $onboarding)
+                        <x-ui-sidebar-item :href="route('hcm.onboardings.show', ['onboarding' => $onboarding->id])">
+                            @svg('heroicon-o-clipboard-document-check', 'w-5 h-5 flex-shrink-0 text-[var(--ui-secondary)]')
+                            <span class="truncate text-sm ml-2">{{ $onboarding->crmContactLinks->first()?->contact?->full_name ?? 'Unbekannt' }}</span>
+                        </x-ui-sidebar-item>
+                    @endforeach
+                </x-ui-sidebar-list>
+            @else
+                <div class="px-3 py-1 text-xs text-[var(--ui-muted)]">Keine Onboardings</div>
+            @endif
+        </div>
+    </div>
+
     {{-- Abschnitt: Bewerber --}}
     <div>
         <div class="mt-2" x-show="!collapsed">
@@ -258,6 +289,14 @@
             <div class="flex justify-between items-center text-sm">
                 <span class="text-[var(--ui-muted)]">Aktiv</span>
                 <span class="font-medium text-green-600">{{ $this->stats['active_employees'] }}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-[var(--ui-muted)]">Onboardings</span>
+                <span class="font-medium text-[var(--ui-secondary)]">{{ $this->stats['total_onboardings'] }}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-[var(--ui-muted)]">Aktive Onboardings</span>
+                <span class="font-medium text-green-600">{{ $this->stats['active_onboardings'] }}</span>
             </div>
             <div class="flex justify-between items-center text-sm">
                 <span class="text-[var(--ui-muted)]">Bewerber</span>

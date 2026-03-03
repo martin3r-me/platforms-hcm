@@ -8,6 +8,7 @@ use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployer;
+use Platform\Hcm\Models\HcmOnboarding;
 
 class Sidebar extends Component
 {
@@ -58,6 +59,23 @@ class Sidebar extends Component
     }
 
     #[Computed]
+    public function recentOnboardings()
+    {
+        $teamId = auth()->user()->currentTeam->id;
+        $allowedTeamIds = $this->getAllowedTeamIds($teamId);
+
+        return HcmOnboarding::with([
+            'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
+            'crmContactLinks.contact',
+        ])
+            ->forTeam($teamId)
+            ->active()
+            ->latest()
+            ->take(5)
+            ->get();
+    }
+
+    #[Computed]
     public function stats()
     {
         $teamId = auth()->user()->currentTeam->id;
@@ -69,6 +87,8 @@ class Sidebar extends Component
             'active_employers' => HcmEmployer::forTeam($teamId)->active()->count(),
             'total_applicants' => HcmApplicant::forTeam($teamId)->count(),
             'active_applicants' => HcmApplicant::forTeam($teamId)->active()->count(),
+            'total_onboardings' => HcmOnboarding::forTeam($teamId)->count(),
+            'active_onboardings' => HcmOnboarding::forTeam($teamId)->active()->count(),
         ];
     }
 

@@ -32,6 +32,7 @@ class HcmServiceProvider extends ServiceProvider
         Relation::morphMap([
             'hcm_employee' => \Platform\Hcm\Models\HcmEmployee::class,
             'hcm_applicant' => \Platform\Hcm\Models\HcmApplicant::class,
+            'hcm_onboarding' => \Platform\Hcm\Models\HcmOnboarding::class,
         ]);
 
         // Schritt 1: Config laden

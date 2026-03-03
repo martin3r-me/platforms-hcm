@@ -126,6 +126,9 @@
             </div>
         </div>
 
+        {{-- Extra Fields --}}
+        <x-core-extra-fields-section :definitions="$extraFieldDefinitions" :model="$employee" />
+
         {{-- Bankverbindung & Auszahlung --}}
         <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
             <div class="flex items-center gap-2 mb-6">

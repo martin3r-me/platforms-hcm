@@ -1,13 +1,11 @@
 <?php
 
-namespace Platform\Hcm\Livewire\Applicant;
+namespace Platform\Hcm\Livewire\Onboarding;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Platform\Core\Models\Team;
-use Platform\Hcm\Models\HcmApplicant;
-use Platform\Hcm\Models\HcmApplicantStatus;
-use Platform\Hcm\Actions\TransferApplicantToOnboarding;
+use Platform\Hcm\Models\HcmOnboarding;
 use Platform\Crm\Models\CrmContact;
 
 class Index extends Component
@@ -24,30 +22,25 @@ class Index extends Component
 
     // Form Data
     public $contact_id = null;
-    public $applicant_status_id = null;
-    public $applied_at = null;
     public $notes = '';
 
     protected $rules = [
-        'applicant_status_id' => 'nullable|exists:hcm_applicant_statuses,id',
-        'applied_at' => 'nullable|date',
         'notes' => 'nullable|string',
     ];
 
     #[Computed]
-    public function applicants()
+    public function onboardings()
     {
         $teamId = auth()->user()->currentTeam->id;
         $allowedTeamIds = $this->getAllowedTeamIds($teamId);
 
-        $query = HcmApplicant::with([
+        $query = HcmOnboarding::with([
             'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
             'crmContactLinks.contact.emailAddresses' => function ($q) {
                 $q->active()
                     ->orderByDesc('is_primary')
                     ->orderBy('id');
             },
-            'applicantStatus',
             'ownedByUser',
         ])
             ->forTeam($teamId);
@@ -70,20 +63,10 @@ class Index extends Component
     }
 
     #[Computed]
-    public function availableStatuses()
-    {
-        return HcmApplicantStatus::where('team_id', auth()->user()->currentTeam->id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-    }
-
-    #[Computed]
     public function availableContacts()
     {
-        // Kontakte, die bereits als Bewerber verknüpft sind
         $alreadyLinkedContactIds = \Platform\Crm\Models\CrmContactLink::query()
-            ->where('linkable_type', 'hcm_applicant')
+            ->where('linkable_type', 'hcm_onboarding')
             ->whereHas('linkable', function ($q) {
                 $q->where('team_id', auth()->user()->currentTeam->id);
             })
@@ -109,26 +92,23 @@ class Index extends Component
 
     public function rendered(): void
     {
-        // Extra-Fields-Kontext setzen (context_id = null = für ALLE Bewerber)
         $this->dispatch('extrafields', [
-            'context_type' => HcmApplicant::class,
+            'context_type' => HcmOnboarding::class,
             'context_id' => null,
         ]);
     }
 
     public function render()
     {
-        return view('hcm::livewire.applicant.index')
+        return view('hcm::livewire.onboarding.index')
             ->layout('platform::layouts.app');
     }
 
-    public function createApplicant()
+    public function createOnboarding()
     {
         $this->validate();
 
-        $applicant = HcmApplicant::create([
-            'applicant_status_id' => $this->applicant_status_id,
-            'applied_at' => $this->applied_at,
+        $onboarding = HcmOnboarding::create([
             'notes' => $this->notes,
             'team_id' => auth()->user()->currentTeam->id,
             'created_by_user_id' => auth()->id(),
@@ -138,18 +118,18 @@ class Index extends Component
         if ($this->contact_id) {
             $contact = CrmContact::find($this->contact_id);
             if ($contact) {
-                $applicant->linkContact($contact);
+                $onboarding->linkContact($contact);
             }
         }
 
         $this->resetForm();
         $this->modalShow = false;
-        session()->flash('message', 'Bewerber erfolgreich erstellt.');
+        session()->flash('message', 'Onboarding erfolgreich erstellt.');
     }
 
     public function resetForm()
     {
-        $this->reset(['contact_id', 'applicant_status_id', 'applied_at', 'notes']);
+        $this->reset(['contact_id', 'notes']);
     }
 
     public function openCreateModal()
@@ -162,17 +142,6 @@ class Index extends Component
     {
         $this->modalShow = false;
         $this->resetForm();
-    }
-
-    public function transferToOnboarding($applicantId): void
-    {
-        $applicant = HcmApplicant::findOrFail($applicantId);
-
-        $action = new TransferApplicantToOnboarding();
-        $onboarding = $action->execute($applicant);
-
-        session()->flash('message', 'Bewerber erfolgreich ins Onboarding überführt.');
-        $this->redirect(route('hcm.onboardings.show', $onboarding), navigate: true);
     }
 
     private function getAllowedTeamIds(int $teamId): array

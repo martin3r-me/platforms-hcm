@@ -1,15 +1,11 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar title="Bewerber" icon="heroicon-o-user-plus" />
+        <x-ui-page-navbar title="Onboarding" icon="heroicon-o-clipboard-document-check" />
     </x-slot>
 
     <x-ui-page-container>
-        <x-ui-panel title="Übersicht" subtitle="Bewerber verwalten">
+        <x-ui-panel title="Übersicht" subtitle="Onboardings verwalten">
             <div class="flex justify-end items-center gap-2 mb-4">
-                <x-ui-button variant="secondary" size="sm"
-                    wire:click="$dispatch('open-applicant-settings')">
-                    @svg('heroicon-o-cog-6-tooth', 'w-4 h-4')
-                </x-ui-button>
                 <x-ui-button variant="primary" size="sm" wire:click="openCreateModal">
                     @svg('heroicon-o-plus', 'w-4 h-4') Neu
                 </x-ui-button>
@@ -21,19 +17,16 @@
                         <tr class="text-left text-[var(--ui-muted)] border-b border-[var(--ui-border)]/60 text-xs uppercase tracking-wide">
                             <th class="px-4 py-3">Name & Kontakt</th>
                             <th class="px-4 py-3">E-Mail</th>
-                            <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3">Verantwortlicher</th>
                             <th class="px-4 py-3">Fortschritt</th>
-                            <th class="px-4 py-3">AutoPilot</th>
-                            <th class="px-4 py-3">Bewerbungsdatum</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3 text-right">Aktionen</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[var(--ui-border)]/60">
-                        @forelse($this->applicants as $applicant)
+                        @forelse($this->onboardings as $onboarding)
                             @php
-                                $primaryContact = $applicant->crmContactLinks->first()?->contact;
+                                $primaryContact = $onboarding->crmContactLinks->first()?->contact;
                                 $primaryEmail = $primaryContact?->emailAddresses->first()?->email_address;
                             @endphp
                             <tr class="hover:bg-[var(--ui-muted-5)] transition-colors">
@@ -42,7 +35,7 @@
                                         <div class="space-y-1">
                                             <div class="font-semibold text-[var(--ui-secondary)] flex items-center gap-2">
                                                 {{ $primaryContact->full_name }}
-                                                @if($applicant->is_active)
+                                                @if($onboarding->is_active)
                                                     <span class="w-2 h-2 bg-green-500 rounded-full"></span>
                                                 @endif
                                             </div>
@@ -62,21 +55,12 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    @if($applicant->applicantStatus)
-                                        <x-ui-badge variant="primary" size="xs">
-                                            {{ $applicant->applicantStatus->name }}
-                                        </x-ui-badge>
-                                    @else
-                                        <span class="text-[var(--ui-muted)]">–</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    @if($applicant->ownedByUser)
+                                    @if($onboarding->ownedByUser)
                                         <div class="flex items-center gap-2">
                                             <div class="w-6 h-6 bg-[var(--ui-primary)] text-[var(--ui-on-primary)] rounded-full flex items-center justify-center text-xs font-medium">
-                                                {{ strtoupper(substr($applicant->ownedByUser->name, 0, 1)) }}
+                                                {{ strtoupper(substr($onboarding->ownedByUser->name, 0, 1)) }}
                                             </div>
-                                            <span class="text-sm">{{ $applicant->ownedByUser->fullname ?? $applicant->ownedByUser->name }}</span>
+                                            <span class="text-sm">{{ $onboarding->ownedByUser->fullname ?? $onboarding->ownedByUser->name }}</span>
                                         </div>
                                     @else
                                         <span class="text-[var(--ui-muted)]">–</span>
@@ -85,70 +69,35 @@
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-2">
                                         <div class="w-24 bg-gray-200 rounded-full h-2">
-                                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $applicant->progress }}%"></div>
+                                            <div class="bg-blue-600 h-2 rounded-full" style="width: {{ $onboarding->progress }}%"></div>
                                         </div>
-                                        <span class="text-xs text-[var(--ui-muted)]">{{ $applicant->progress }}%</span>
+                                        <span class="text-xs text-[var(--ui-muted)]">{{ $onboarding->progress }}%</span>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
-                                    @if($applicant->auto_pilot)
-                                        <x-ui-badge variant="success" size="xs">An</x-ui-badge>
-                                        @if($applicant->auto_pilot_completed_at)
-                                            <div class="text-xs text-[var(--ui-muted)] mt-1">
-                                                {{ $applicant->auto_pilot_completed_at->format('d.m.Y') }}
-                                            </div>
-                                        @endif
-                                    @else
-                                        <x-ui-badge variant="secondary" size="xs">Aus</x-ui-badge>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    @if($applicant->applied_at)
-                                        <div class="flex items-center gap-1 text-sm">
-                                            @svg('heroicon-o-calendar', 'w-4 h-4 text-[var(--ui-muted)]')
-                                            <span>{{ $applicant->applied_at->format('d.m.Y') }}</span>
-                                        </div>
-                                    @else
-                                        <span class="text-[var(--ui-muted)]">–</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    <x-ui-badge variant="{{ $applicant->is_active ? 'success' : 'secondary' }}" size="sm">
-                                        {{ $applicant->is_active ? 'Aktiv' : 'Inaktiv' }}
+                                    <x-ui-badge variant="{{ $onboarding->is_active ? 'success' : 'secondary' }}" size="sm">
+                                        {{ $onboarding->is_active ? 'Aktiv' : 'Inaktiv' }}
                                     </x-ui-badge>
                                 </td>
                                 <td class="px-4 py-3 text-right">
-                                    <div class="flex items-center justify-end gap-1">
-                                        @if($applicant->is_active)
-                                            <x-ui-button
-                                                size="sm"
-                                                variant="secondary"
-                                                wire:click="transferToOnboarding({{ $applicant->id }})"
-                                                wire:confirm="Bewerber wirklich ins Onboarding überführen? Der Bewerber wird deaktiviert."
-                                                title="Ins Onboarding überführen"
-                                            >
-                                                @svg('heroicon-o-arrow-right-circle', 'w-3 h-3')
-                                            </x-ui-button>
-                                        @endif
-                                        <x-ui-button
-                                            size="sm"
-                                            variant="primary"
-                                            href="{{ route('hcm.applicants.show', ['applicant' => $applicant->id]) }}"
-                                            wire:navigate
-                                        >
-                                            @svg('heroicon-o-pencil', 'w-3 h-3')
-                                            Bearbeiten
-                                        </x-ui-button>
-                                    </div>
+                                    <x-ui-button
+                                        size="sm"
+                                        variant="primary"
+                                        href="{{ route('hcm.onboardings.show', ['onboarding' => $onboarding->id]) }}"
+                                        wire:navigate
+                                    >
+                                        @svg('heroicon-o-pencil', 'w-3 h-3')
+                                        Bearbeiten
+                                    </x-ui-button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-12 text-center">
+                                <td colspan="6" class="px-4 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center">
-                                        @svg('heroicon-o-user-plus', 'w-16 h-16 text-[var(--ui-muted)] mb-4')
-                                        <div class="text-lg font-medium text-[var(--ui-secondary)] mb-1">Keine Bewerber gefunden</div>
-                                        <div class="text-sm text-[var(--ui-muted)]">Erstelle deinen ersten Bewerber</div>
+                                        @svg('heroicon-o-clipboard-document-check', 'w-16 h-16 text-[var(--ui-muted)] mb-4')
+                                        <div class="text-lg font-medium text-[var(--ui-secondary)] mb-1">Keine Onboardings gefunden</div>
+                                        <div class="text-sm text-[var(--ui-muted)]">Erstelle dein erstes Onboarding</div>
                                     </div>
                                 </td>
                             </tr>
@@ -159,16 +108,16 @@
         </x-ui-panel>
     </x-ui-page-container>
 
-    <!-- Create Applicant Modal -->
+    <!-- Create Onboarding Modal -->
     <x-ui-modal wire:model="modalShow" size="md">
-        <x-slot name="header">Neuer Bewerber</x-slot>
+        <x-slot name="header">Neues Onboarding</x-slot>
         <div class="space-y-4">
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <div class="flex items-center gap-2 mb-1">
                     @svg('heroicon-o-information-circle', 'w-5 h-5 text-blue-600')
                     <h4 class="font-medium text-blue-900">Kurzinfo</h4>
                 </div>
-                <p class="text-blue-700 text-sm">Erstelle einen neuen Bewerber und verknüpfe optional einen CRM-Kontakt.</p>
+                <p class="text-blue-700 text-sm">Erstelle ein neues Onboarding und verknüpfe optional einen CRM-Kontakt.</p>
             </div>
 
             <x-ui-input-select
@@ -180,24 +129,6 @@
                 :nullable="true"
                 nullLabel="Ohne Kontakt"
                 wire:model.live="contact_id"
-            />
-
-            <x-ui-input-select
-                name="applicant_status_id"
-                label="Bewerbungsstatus (optional)"
-                :options="$this->availableStatuses"
-                optionValue="id"
-                optionLabel="name"
-                :nullable="true"
-                nullLabel="Kein Status"
-                wire:model.live="applicant_status_id"
-            />
-
-            <x-ui-input-date
-                name="applied_at"
-                label="Bewerbungsdatum"
-                wire:model.live="applied_at"
-                :nullable="true"
             />
 
             <x-ui-input-textarea
@@ -214,14 +145,12 @@
                 <x-ui-button type="button" variant="secondary-outline" wire:click="closeCreateModal">
                     Abbrechen
                 </x-ui-button>
-                <x-ui-button type="button" variant="primary" wire:click="createApplicant">
+                <x-ui-button type="button" variant="primary" wire:click="createOnboarding">
                     Anlegen
                 </x-ui-button>
             </div>
         </x-slot>
     </x-ui-modal>
-
-    <livewire:hcm.applicant.applicant-settings-modal />
 
     <x-slot name="sidebar">
         <x-ui-page-sidebar title="Schnellzugriff" width="w-80" :defaultOpen="true" side="left">
@@ -236,7 +165,7 @@
                     <div class="space-y-2">
                         <x-ui-button variant="secondary" size="sm" wire:click="openCreateModal" class="w-full justify-start">
                             @svg('heroicon-o-plus', 'w-4 h-4')
-                            <span class="ml-2">Neuer Bewerber</span>
+                            <span class="ml-2">Neues Onboarding</span>
                         </x-ui-button>
                     </div>
                 </div>

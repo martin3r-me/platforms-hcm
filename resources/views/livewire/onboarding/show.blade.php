@@ -1,12 +1,12 @@
 <x-ui-page>
     <x-slot name="navbar">
-        <x-ui-page-navbar :title="($applicant->getContact()?->full_name ?? 'Bewerber #' . $applicant->id)" icon="heroicon-o-user-plus" />
+        <x-ui-page-navbar :title="($onboarding->getContact()?->full_name ?? 'Onboarding #' . $onboarding->id)" icon="heroicon-o-clipboard-document-check" />
     </x-slot>
 
     <x-ui-page-container spacing="space-y-8">
         {{-- Header --}}
         @php
-            $primaryContact = $applicant->crmContactLinks->first()?->contact;
+            $primaryContact = $onboarding->crmContactLinks->first()?->contact;
             $primaryEmail = $primaryContact?->emailAddresses->first()?->email_address;
             $primaryPhone = $primaryContact?->phoneNumbers->first()?->phone_number;
         @endphp
@@ -14,22 +14,9 @@
             <div class="flex items-start justify-between mb-6">
                 <div class="flex-1 min-w-0">
                     <h1 class="text-3xl font-bold text-[var(--ui-secondary)] mb-4 tracking-tight">
-                        {{ $primaryContact?->full_name ?? 'Bewerber #' . $applicant->id }}
+                        {{ $primaryContact?->full_name ?? 'Onboarding #' . $onboarding->id }}
                     </h1>
                     <div class="flex items-center gap-6 text-sm text-[var(--ui-muted)] flex-wrap">
-                        @if($applicant->applicantStatus)
-                            <span class="flex items-center gap-2">
-                                @svg('heroicon-o-clipboard-document-list', 'w-4 h-4')
-                                <span class="font-medium text-[var(--ui-secondary)]">Status:</span>
-                                {{ $applicant->applicantStatus->name }}
-                            </span>
-                        @endif
-                        @if($applicant->applied_at)
-                            <span class="flex items-center gap-2">
-                                @svg('heroicon-o-calendar', 'w-4 h-4')
-                                Beworben am {{ $applicant->applied_at->format('d.m.Y') }}
-                            </span>
-                        @endif
                         @if($primaryEmail)
                             <span class="flex items-center gap-2">
                                 @svg('heroicon-o-envelope', 'w-4 h-4')
@@ -45,8 +32,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
-                    <x-ui-badge variant="{{ $applicant->is_active ? 'success' : 'secondary' }}" size="lg">
-                        {{ $applicant->is_active ? 'Aktiv' : 'Inaktiv' }}
+                    <x-ui-badge variant="{{ $onboarding->is_active ? 'success' : 'secondary' }}" size="lg">
+                        {{ $onboarding->is_active ? 'Aktiv' : 'Inaktiv' }}
                     </x-ui-badge>
                 </div>
             </div>
@@ -55,100 +42,51 @@
             <div class="mt-4">
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-sm font-medium text-[var(--ui-secondary)]">Fortschritt</span>
-                    <span class="text-sm text-[var(--ui-muted)]">{{ $applicant->progress }}%</span>
+                    <span class="text-sm text-[var(--ui-muted)]">{{ $onboarding->progress }}%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div class="bg-blue-600 h-3 rounded-full transition-all" style="width: {{ $applicant->progress }}%"></div>
+                    <div class="bg-blue-600 h-3 rounded-full transition-all" style="width: {{ $onboarding->progress }}%"></div>
                 </div>
             </div>
         </div>
 
-        {{-- Bewerber-Daten --}}
+        {{-- Onboarding-Daten --}}
         <div class="bg-white rounded-lg border border-[var(--ui-border)]/60 p-8">
             <div class="flex items-center gap-2 mb-6">
-                @svg('heroicon-o-clipboard-document-list', 'w-6 h-6 text-blue-600')
-                <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Bewerber-Daten</h2>
+                @svg('heroicon-o-clipboard-document-check', 'w-6 h-6 text-blue-600')
+                <h2 class="text-xl font-bold text-[var(--ui-secondary)]">Onboarding-Daten</h2>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <x-ui-input-select
-                    name="applicant.applicant_status_id"
-                    label="Bewerbungsstatus"
-                    :options="$this->availableStatuses"
-                    optionValue="id"
-                    optionLabel="name"
-                    :nullable="true"
-                    nullLabel="Kein Status"
-                    wire:model.live="applicant.applicant_status_id"
-                />
-
-                <x-ui-input-select
-                    name="applicant.owned_by_user_id"
+                    name="onboarding.owned_by_user_id"
                     label="Verantwortlicher"
                     :options="$this->teamUsers"
                     optionValue="id"
                     optionLabel="name"
                     :nullable="true"
                     nullLabel="Kein Verantwortlicher"
-                    wire:model.live="applicant.owned_by_user_id"
+                    wire:model.live="onboarding.owned_by_user_id"
                 />
 
                 <div>
                     <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">Fortschritt (%)</label>
-                    <div class="text-sm text-[var(--ui-muted)]">{{ $applicant->progress }}%</div>
+                    <div class="text-sm text-[var(--ui-muted)]">{{ $onboarding->progress }}%</div>
                 </div>
-
-                <x-ui-input-date
-                    name="applicant.applied_at"
-                    label="Bewerbungsdatum"
-                    wire:model.live="applicant.applied_at"
-                    :nullable="true"
-                />
 
                 <x-ui-input-checkbox
-                    model="applicant.is_active"
-                    name="applicant.is_active"
+                    model="onboarding.is_active"
+                    name="onboarding.is_active"
                     label="Aktiv"
-                    wire:model.live="applicant.is_active"
+                    wire:model.live="onboarding.is_active"
                 />
-
-                <div>
-                    <div class="flex items-center gap-3">
-                        <x-ui-input-checkbox
-                            model="applicant.auto_pilot"
-                            name="applicant.auto_pilot"
-                            label="AutoPilot"
-                            wire:model.live="applicant.auto_pilot"
-                        />
-                        @if($applicant->autoPilotState)
-                            @php
-                                $stateVariant = match($applicant->autoPilotState->code ?? '') {
-                                    'completed' => 'success',
-                                    'review_needed' => 'warning',
-                                    'waiting_for_applicant' => 'info',
-                                    default => 'secondary',
-                                };
-                            @endphp
-                            <x-ui-badge variant="{{ $stateVariant }}" size="sm">
-                                {{ $applicant->autoPilotState->name }}
-                            </x-ui-badge>
-                        @endif
-                    </div>
-                </div>
-
-                @if($applicant->auto_pilot_completed_at)
-                    <div>
-                        <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">AutoPilot erledigt am</label>
-                        <div class="text-sm text-[var(--ui-muted)]">{{ $applicant->auto_pilot_completed_at->format('d.m.Y H:i') }}</div>
-                    </div>
-                @endif
             </div>
 
             <div class="mt-6">
                 <x-ui-input-textarea
-                    name="applicant.notes"
+                    name="onboarding.notes"
                     label="Notizen"
-                    wire:model.live.debounce.500ms="applicant.notes"
-                    placeholder="Notizen zum Bewerber..."
+                    wire:model.live.debounce.500ms="onboarding.notes"
+                    placeholder="Notizen zum Onboarding..."
                     rows="4"
                 />
             </div>
@@ -156,14 +94,14 @@
 
         <x-core-extra-fields-section
             :definitions="$extraFieldDefinitions"
-            :model="$applicant"
+            :model="$onboarding"
         />
 
         <!-- Verknüpfte Kontakte -->
-        <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Bewerber verknüpft sind">
-            @if($applicant->crmContactLinks->count() > 0)
+        <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Onboarding verknüpft sind">
+            @if($onboarding->crmContactLinks->count() > 0)
                 <div class="space-y-4">
-                    @foreach($applicant->crmContactLinks as $link)
+                    @foreach($onboarding->crmContactLinks as $link)
                         <div class="flex items-center justify-between p-4 bg-[var(--ui-muted-5)] rounded-lg border border-[var(--ui-border)]/40">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 bg-[var(--ui-primary)] text-[var(--ui-on-primary)] rounded-lg flex items-center justify-center">
@@ -202,7 +140,7 @@
                 <div class="text-center py-8">
                     @svg('heroicon-o-user', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
                     <h4 class="text-lg font-medium text-[var(--ui-secondary)] mb-2">Keine Kontakte verknüpft</h4>
-                    <p class="text-[var(--ui-muted)] mb-4">Dieser Bewerber hat noch keine CRM-Kontakte.</p>
+                    <p class="text-[var(--ui-muted)] mb-4">Dieses Onboarding hat noch keine CRM-Kontakte.</p>
                     <div class="flex gap-3 justify-center">
                         <x-ui-button variant="secondary" wire:click="linkContact">
                             @svg('heroicon-o-link', 'w-4 h-4')
@@ -271,7 +209,7 @@
                     @svg('heroicon-o-information-circle', 'w-5 h-5 text-blue-600')
                     <h4 class="font-medium text-blue-900">Hinweis</h4>
                 </div>
-                <p class="text-blue-700 text-sm">Der neue Kontakt wird automatisch mit diesem Bewerber verknüpft.</p>
+                <p class="text-blue-700 text-sm">Der neue Kontakt wird automatisch mit diesem Onboarding verknüpft.</p>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -342,9 +280,6 @@
             </div>
         </x-slot>
     </x-ui-modal>
-
-    {{-- Transfer to Onboarding Modal --}}
-    @include('hcm::livewire.applicant.partials.transfer-to-onboarding-modal')
     </x-ui-page-container>
 
     <x-slot name="sidebar">
@@ -374,24 +309,16 @@
                                 Kontakt erstellen
                             </span>
                         </x-ui-button>
-                        @if($applicant->is_active)
-                            <x-ui-button variant="secondary" size="sm" wire:click="openTransferModal" class="w-full">
-                                <span class="inline-flex items-center gap-2">
-                                    @svg('heroicon-o-arrow-right-circle', 'w-4 h-4')
-                                    Ins Onboarding überführen
-                                </span>
-                            </x-ui-button>
-                        @endif
                         <x-ui-button
                             variant="danger-outline"
                             size="sm"
-                            wire:click="deleteApplicant"
-                            wire:confirm="Bewerbung wirklich unwiderruflich löschen?"
+                            wire:click="deleteOnboarding"
+                            wire:confirm="Onboarding wirklich unwiderruflich löschen?"
                             class="w-full"
                         >
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-trash', 'w-4 h-4')
-                                Bewerbung löschen
+                                Onboarding löschen
                             </span>
                         </x-ui-button>
                     </div>
@@ -403,44 +330,7 @@
     <x-slot name="activity">
         <x-ui-page-sidebar title="Aktivitäten" width="w-80" :defaultOpen="false" storeKey="activityOpen" side="right">
             <div class="p-6 space-y-3 text-sm">
-                @if($this->autoPilotLogs->isEmpty())
-                    <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
-                @else
-                    <div class="relative">
-                        <div class="absolute left-3 top-0 bottom-0 w-px bg-[var(--ui-border)]/40"></div>
-                        <div class="space-y-4">
-                            @foreach($this->autoPilotLogs as $log)
-                                @php
-                                    $icon = match($log->type) {
-                                        'run_started' => 'heroicon-o-play',
-                                        'state_changed' => 'heroicon-o-arrow-path',
-                                        'email_sent' => 'heroicon-o-envelope',
-                                        'completed' => 'heroicon-o-check-circle',
-                                        'error' => 'heroicon-o-exclamation-triangle',
-                                        default => 'heroicon-o-document-text',
-                                    };
-                                    $iconColor = match($log->type) {
-                                        'run_started' => 'text-blue-500',
-                                        'state_changed' => 'text-amber-500',
-                                        'email_sent' => 'text-indigo-500',
-                                        'completed' => 'text-green-500',
-                                        'error' => 'text-red-500',
-                                        default => 'text-gray-400',
-                                    };
-                                @endphp
-                                <div class="relative flex gap-3 pl-1">
-                                    <div class="flex-shrink-0 w-5 h-5 rounded-full bg-white flex items-center justify-center z-10">
-                                        @svg($icon, 'w-4 h-4 ' . $iconColor)
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[var(--ui-secondary)] leading-snug break-words">{{ \Illuminate\Support\Str::limit($log->summary, 120) }}</p>
-                                        <p class="text-xs text-[var(--ui-muted)] mt-0.5">{{ $log->created_at->diffForHumans() }}</p>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
+                <div class="text-[var(--ui-muted)]">Keine Aktivitäten verfügbar</div>
             </div>
         </x-ui-page-sidebar>
     </x-slot>

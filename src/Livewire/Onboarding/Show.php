@@ -1,6 +1,6 @@
 <?php
 
-namespace Platform\Hcm\Livewire\Applicant;
+namespace Platform\Hcm\Livewire\Onboarding;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
@@ -8,22 +8,18 @@ use Platform\Core\Livewire\Concerns\WithExtraFields;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Platform\Core\Models\Team;
-use Platform\Hcm\Models\HcmApplicant;
-use Platform\Hcm\Models\HcmApplicantStatus;
-use Platform\Hcm\Actions\TransferApplicantToOnboarding;
+use Platform\Hcm\Models\HcmOnboarding;
 use Platform\Crm\Models\CrmContact;
 
 class Show extends Component
 {
     use WithExtraFields;
-    public HcmApplicant $applicant;
+
+    public HcmOnboarding $onboarding;
 
     // Kontakt-Verknüpfungs-Modals
     public $contactLinkModalShow = false;
     public $contactCreateModalShow = false;
-
-    // Transfer-Modal
-    public $transferModalShow = false;
 
     // Kontakt-Form
     public $contactForm = [
@@ -42,11 +38,11 @@ class Show extends Component
 
     public $availableContacts = [];
 
-    public function mount(HcmApplicant $applicant)
+    public function mount(HcmOnboarding $onboarding)
     {
-        $allowedTeamIds = $this->getAllowedTeamIds($applicant->team_id);
+        $allowedTeamIds = $this->getAllowedTeamIds($onboarding->team_id);
 
-        $this->applicant = $applicant->load([
+        $this->onboarding = $onboarding->load([
             'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
             'crmContactLinks.contact.emailAddresses' => function ($q) {
                 $q->active()
@@ -58,23 +54,18 @@ class Show extends Component
                     ->orderByDesc('is_primary')
                     ->orderBy('id');
             },
-            'applicantStatus',
-            'autoPilotState',
         ]);
 
         $this->loadAvailableContacts();
-        $this->loadExtraFieldValues($this->applicant);
+        $this->loadExtraFieldValues($this->onboarding);
     }
 
     public function rules(): array
     {
         return array_merge([
-            'applicant.applicant_status_id' => 'nullable|exists:hcm_applicant_statuses,id',
-            'applicant.owned_by_user_id' => 'nullable|exists:users,id',
-            'applicant.notes' => 'nullable|string',
-            'applicant.applied_at' => 'nullable|date',
-            'applicant.is_active' => 'boolean',
-            'applicant.auto_pilot' => 'boolean',
+            'onboarding.owned_by_user_id' => 'nullable|exists:users,id',
+            'onboarding.notes' => 'nullable|string',
+            'onboarding.is_active' => 'boolean',
         ], $this->getExtraFieldValidationRules());
     }
 
@@ -83,37 +74,27 @@ class Show extends Component
         return $this->getExtraFieldValidationMessages();
     }
 
-    public function deleteApplicant(): void
+    public function deleteOnboarding(): void
     {
         DB::transaction(function () {
-            $this->applicant->crmContactLinks()->delete();
-            $this->applicant->delete();
+            $this->onboarding->crmContactLinks()->delete();
+            $this->onboarding->delete();
         });
 
-        session()->flash('message', 'Bewerbung erfolgreich gelöscht.');
-        $this->redirect(route('hcm.applicants.index'), navigate: true);
+        session()->flash('message', 'Onboarding erfolgreich gelöscht.');
+        $this->redirect(route('hcm.onboardings.index'), navigate: true);
     }
 
     public function save(): void
     {
         $this->validate();
-        $this->applicant->save();
-        $this->saveExtraFieldValues($this->applicant);
+        $this->onboarding->save();
+        $this->saveExtraFieldValues($this->onboarding);
 
-        // Fortschritt automatisch berechnen
-        $this->applicant->progress = $this->applicant->calculateProgress();
-        $this->applicant->save();
+        $this->onboarding->progress = $this->onboarding->calculateProgress();
+        $this->onboarding->save();
 
-        session()->flash('message', 'Bewerber erfolgreich aktualisiert.');
-    }
-
-    #[Computed]
-    public function availableStatuses()
-    {
-        return HcmApplicantStatus::where('team_id', auth()->user()->currentTeam->id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        session()->flash('message', 'Onboarding erfolgreich aktualisiert.');
     }
 
     #[Computed]
@@ -133,16 +114,7 @@ class Show extends Component
     #[Computed]
     public function isDirty()
     {
-        return $this->applicant->isDirty() || $this->isExtraFieldsDirty();
-    }
-
-    #[Computed]
-    public function autoPilotLogs()
-    {
-        return $this->applicant->autoPilotLogs()
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
+        return $this->onboarding->isDirty() || $this->isExtraFieldsDirty();
     }
 
     public function linkContact(): void
@@ -174,10 +146,10 @@ class Show extends Component
         ]);
 
         $contact = CrmContact::find($this->contactLinkForm['contact_id']);
-        $this->applicant->linkContact($contact);
+        $this->onboarding->linkContact($contact);
 
         $this->closeContactLinkModal();
-        $this->applicant->load(['crmContactLinks.contact']);
+        $this->onboarding->load(['crmContactLinks.contact']);
         session()->flash('message', 'Kontakt verknüpft.');
     }
 
@@ -193,24 +165,24 @@ class Show extends Component
         ]);
 
         $contact = CrmContact::create(array_merge($this->contactForm, [
-            'team_id' => $this->applicant->team_id,
+            'team_id' => $this->onboarding->team_id,
             'created_by_user_id' => auth()->id(),
         ]));
 
-        $this->applicant->linkContact($contact);
+        $this->onboarding->linkContact($contact);
 
         $this->closeContactCreateModal();
-        $this->applicant->load('crmContactLinks.contact');
+        $this->onboarding->load('crmContactLinks.contact');
         session()->flash('message', 'Kontakt erstellt und verknüpft.');
     }
 
     public function unlinkContact($contactId): void
     {
-        $this->applicant->crmContactLinks()
+        $this->onboarding->crmContactLinks()
             ->where('contact_id', $contactId)
             ->delete();
 
-        $this->applicant->load('crmContactLinks.contact');
+        $this->onboarding->load('crmContactLinks.contact');
         session()->flash('message', 'Kontakt-Verknüpfung entfernt.');
     }
 
@@ -235,8 +207,8 @@ class Show extends Component
 
     private function loadAvailableContacts(): void
     {
-        $linkedContactIds = $this->applicant->crmContactLinks->pluck('contact_id');
-        $allowedTeamIds = $this->getAllowedTeamIds($this->applicant->team_id);
+        $linkedContactIds = $this->onboarding->crmContactLinks->pluck('contact_id');
+        $allowedTeamIds = $this->getAllowedTeamIds($this->onboarding->team_id);
 
         $this->availableContacts = CrmContact::active()
             ->whereIn('team_id', $allowedTeamIds)
@@ -246,87 +218,48 @@ class Show extends Component
             ->get();
     }
 
-    public function openTransferModal(): void
-    {
-        $this->transferModalShow = true;
-    }
-
-    #[Computed]
-    public function transferableFieldCount(): int
-    {
-        $sourceValues = $this->applicant->extraFieldValues()->with('definition')->get();
-        $targetDefinitions = (new \Platform\Hcm\Models\HcmOnboarding(['team_id' => $this->applicant->team_id]))
-            ->getExtraFieldDefinitions()
-            ->keyBy('name');
-
-        $count = 0;
-        foreach ($sourceValues as $sourceValue) {
-            $fieldName = $sourceValue->definition?->name;
-            if ($fieldName && $targetDefinitions->has($fieldName) && $sourceValue->value !== null && $sourceValue->value !== '') {
-                $count++;
-            }
-        }
-
-        return $count;
-    }
-
-    public function transferToOnboarding(): void
-    {
-        $action = new TransferApplicantToOnboarding();
-        $onboarding = $action->execute($this->applicant);
-
-        session()->flash('message', 'Bewerber erfolgreich ins Onboarding überführt.');
-        $this->redirect(route('hcm.onboardings.show', $onboarding), navigate: true);
-    }
-
     public function rendered(): void
     {
-        // Extra-Fields-Kontext setzen (global für alle Bewerber)
         $this->dispatch('extrafields', [
-            'context_type' => get_class($this->applicant),
-            'context_id' => null,  // NULL = gilt für ALLE Bewerber
+            'context_type' => get_class($this->onboarding),
+            'context_id' => null,
         ]);
 
-        // Tagging-Kontext setzen
         $this->dispatch('tagging', [
-            'context_type' => get_class($this->applicant),
-            'context_id' => $this->applicant->id,
+            'context_type' => get_class($this->onboarding),
+            'context_id' => $this->onboarding->id,
         ]);
 
-        // Files-Kontext setzen
         $this->dispatch('files', [
-            'context_type' => get_class($this->applicant),
-            'context_id' => $this->applicant->id,
+            'context_type' => get_class($this->onboarding),
+            'context_id' => $this->onboarding->id,
         ]);
 
-        // Comms-Kontext setzen
-        $primaryContact = $this->applicant->crmContactLinks->first()?->contact;
-        $subject = 'Bewerbung #' . $this->applicant->id;
+        $primaryContact = $this->onboarding->crmContactLinks->first()?->contact;
+        $subject = 'Onboarding #' . $this->onboarding->id;
         if ($primaryContact) {
             $subject .= ' – ' . $primaryContact->full_name;
         }
 
         $this->dispatch('comms', [
-            'model' => get_class($this->applicant),
-            'modelId' => $this->applicant->id,
+            'model' => get_class($this->onboarding),
+            'modelId' => $this->onboarding->id,
             'subject' => $subject,
-            'description' => $this->applicant->notes ?? '',
-            'url' => route('hcm.applicants.show', $this->applicant),
-            'source' => 'hcm.applicant.view',
+            'description' => $this->onboarding->notes ?? '',
+            'url' => route('hcm.onboardings.show', $this->onboarding),
+            'source' => 'hcm.onboarding.view',
             'recipients' => [],
             'capabilities' => ['manage_channels' => false, 'threads' => true],
             'meta' => [
-                'status' => $this->applicant->applicantStatus?->name,
-                'progress' => $this->applicant->progress,
-                'applied_at' => $this->applicant->applied_at?->toIso8601String(),
-                'is_active' => $this->applicant->is_active,
+                'progress' => $this->onboarding->progress,
+                'is_active' => $this->onboarding->is_active,
             ],
         ]);
     }
 
     public function render()
     {
-        return view('hcm::livewire.applicant.show')
+        return view('hcm::livewire.onboarding.show')
             ->layout('platform::layouts.app');
     }
 

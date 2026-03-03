@@ -15,6 +15,8 @@ use Platform\Hcm\Livewire\PersonGroup\Index as PersonGroupIndex;
 use Platform\Hcm\Livewire\InsuranceStatus\Index as InsuranceStatusIndex;
 use Platform\Hcm\Livewire\Applicant\Index as ApplicantIndex;
 use Platform\Hcm\Livewire\Applicant\Show as ApplicantShow;
+use Platform\Hcm\Livewire\Onboarding\Index as OnboardingIndex;
+use Platform\Hcm\Livewire\Onboarding\Show as OnboardingShow;
 use Platform\Hcm\Livewire\ApplicantStatus\Index as ApplicantStatusIndex;
 use Platform\Hcm\Livewire\PensionType\Index as PensionTypeIndex;
 use Platform\Hcm\Livewire\EmploymentRelationship\Index as EmploymentRelationshipIndex;
@@ -83,6 +85,10 @@ Route::get('/insurance-statuses', InsuranceStatusIndex::class)->name('hcm.insura
 // Bewerber-Verwaltung
 Route::get('/applicants', ApplicantIndex::class)->name('hcm.applicants.index');
 Route::get('/applicants/{applicant}', ApplicantShow::class)->name('hcm.applicants.show');
+
+// Onboarding-Verwaltung
+Route::get('/onboardings', OnboardingIndex::class)->name('hcm.onboardings.index');
+Route::get('/onboardings/{onboarding}', OnboardingShow::class)->name('hcm.onboardings.show');
 
 // Bewerbungsstatus (Lookup)
 Route::get('/applicant-statuses', ApplicantStatusIndex::class)->name('hcm.applicant-statuses.index');

@@ -4,12 +4,15 @@ namespace Platform\Hcm\Livewire\Employee;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Core\Livewire\Concerns\WithExtraFields;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Models\CrmCompany;
 
 class Employee extends Component
 {
+    use WithExtraFields;
+
     public HcmEmployee $employee;
 
     // Kontakt-Verknüpfungs-Modals
@@ -76,22 +79,31 @@ class Employee extends Component
         
         // Verfügbare Kontakte für Verknüpfung laden
         $this->loadAvailableContacts();
+
+        // Extra Fields laden
+        $this->loadExtraFieldValues($this->employee);
     }
 
     public function rules(): array
     {
-        return [
+        return array_merge([
             'employee.employee_number' => 'required|string|max:255|unique:hcm_employees,employee_number,' . $this->employee->id,
             'employee.employer_id' => 'nullable|exists:hcm_employers,id',
             'employee.children_count' => 'nullable|integer|min:0',
             'employee.is_active' => 'boolean',
-        ];
+        ], $this->getExtraFieldValidationRules());
+    }
+
+    public function messages(): array
+    {
+        return $this->getExtraFieldValidationMessages();
     }
 
     public function save(): void
     {
         $this->validate();
         $this->employee->save();
+        $this->saveExtraFieldValues($this->employee);
 
         session()->flash('message', 'Mitarbeiter erfolgreich aktualisiert.');
     }
@@ -249,6 +261,11 @@ class Employee extends Component
             'url' => route('hcm.employees.show', $this->employee),
             'source' => 'hcm.employees.view'
         ]);
+
+        $this->dispatch('extrafields', [
+            'context_type' => HcmEmployee::class,
+            'context_id' => null,
+        ]);
     }
 
     /**
@@ -257,7 +274,7 @@ class Employee extends Component
     #[Computed]
     public function isDirty()
     {
-        return $this->employee->isDirty();
+        return $this->employee->isDirty() || $this->isExtraFieldsDirty();
     }
 
     public function addContract(): void

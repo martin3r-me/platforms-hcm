@@ -5,6 +5,7 @@ namespace Platform\Hcm\Models;
 use Illuminate\Database\Eloquent\Model;
 use Platform\ActivityLog\Traits\LogsActivity;
 use Platform\Core\Traits\Encryptable;
+use Platform\Core\Traits\HasExtraFields;
 use Platform\Hcm\Contracts\EmployeeInterface;
 use Platform\Hcm\Traits\HasEmployeeContact;
 use Platform\Crm\Contracts\CompanyInterface;
@@ -14,7 +15,7 @@ use Symfony\Component\Uid\UuidV7;
 
 class HcmEmployee extends Model implements EmployeeInterface
 {
-    use LogsActivity, HasEmployeeContact, Encryptable;
+    use LogsActivity, HasEmployeeContact, Encryptable, HasExtraFields;
     
     protected $table = 'hcm_employees';
     
