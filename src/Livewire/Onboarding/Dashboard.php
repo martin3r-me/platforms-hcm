@@ -2,6 +2,7 @@
 
 namespace Platform\Hcm\Livewire\Onboarding;
 
+use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Platform\Crm\Models\CommsChannel;
@@ -103,6 +104,15 @@ class Dashboard extends Component
     {
         return $this->inProgressOnboardings
             ->filter(fn ($o) => $o->auto_pilot && !$o->auto_pilot_completed_at)
+            ->pluck('id')
+            ->toArray();
+    }
+
+    #[Computed]
+    public function enrichingOnboardingIds()
+    {
+        return $this->inboxOnboardings
+            ->filter(fn ($o) => Cache::has("onboarding-enrichment:processing:{$o->id}"))
             ->pluck('id')
             ->toArray();
     }
@@ -254,6 +264,7 @@ class Dashboard extends Component
             $this->positionGroups,
             $this->teamChannels,
             $this->autoPilotProcessingIds,
+            $this->enrichingOnboardingIds,
         );
     }
 

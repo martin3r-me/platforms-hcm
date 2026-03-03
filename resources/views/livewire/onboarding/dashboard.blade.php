@@ -69,6 +69,7 @@
                                 $primaryContact = $onboarding->crmContactLinks->first()?->contact;
                                 $extraCounts = $this->getExtraFieldCounts($onboarding);
                                 $waStatus = $this->getWhatsAppStatus($onboarding);
+                                $isEnriching = in_array($onboarding->id, $this->enrichingOnboardingIds);
                             @endphp
                             <tr class="hover:bg-[var(--ui-muted-5)] transition-colors">
                                 <td class="px-4 py-2.5">
@@ -84,6 +85,9 @@
                                                 <span class="font-medium text-[var(--ui-secondary)]">
                                                     {{ $primaryContact?->full_name ?? 'Onboarding #' . $onboarding->id }}
                                                 </span>
+                                                @if($isEnriching)
+                                                    <x-ui-badge variant="danger" size="xs">Enrichment</x-ui-badge>
+                                                @endif
                                                 @if($waStatus['color'] !== 'none')
                                                     <span title="{{ $waStatus['window_open'] ? 'WhatsApp Fenster offen' : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' : 'WhatsApp unbekannt') }}"
                                                           class="inline-flex items-center {{ $waStatus['color'] === 'green' ? 'text-green-500' : ($waStatus['color'] === 'yellow' ? 'text-yellow-500' : 'text-gray-400') }}">
@@ -122,21 +126,23 @@
                                 </td>
                                 <td class="px-4 py-2.5 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button
-                                            wire:click="markAsEnriched({{ $onboarding->id }})"
-                                            class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                                            title="In Bearbeitung verschieben"
-                                        >
-                                            @svg('heroicon-o-arrow-right', 'w-3.5 h-3.5')
-                                        </button>
-                                        <button
-                                            wire:click="dismissOnboarding({{ $onboarding->id }})"
-                                            wire:confirm="Onboarding wirklich deaktivieren?"
-                                            class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                                            title="Deaktivieren"
-                                        >
-                                            @svg('heroicon-o-x-mark', 'w-3.5 h-3.5')
-                                        </button>
+                                        @if(!$isEnriching)
+                                            <button
+                                                wire:click="markAsEnriched({{ $onboarding->id }})"
+                                                class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                                title="In Bearbeitung verschieben"
+                                            >
+                                                @svg('heroicon-o-arrow-right', 'w-3.5 h-3.5')
+                                            </button>
+                                            <button
+                                                wire:click="dismissOnboarding({{ $onboarding->id }})"
+                                                wire:confirm="Onboarding wirklich deaktivieren?"
+                                                class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                title="Deaktivieren"
+                                            >
+                                                @svg('heroicon-o-x-mark', 'w-3.5 h-3.5')
+                                            </button>
+                                        @endif
                                         <x-ui-button size="sm" variant="secondary" href="{{ route('hcm.onboardings.show', $onboarding) }}" wire:navigate>
                                             @svg('heroicon-o-arrow-right', 'w-4 h-4')
                                         </x-ui-button>

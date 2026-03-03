@@ -2,6 +2,7 @@
 
 namespace Platform\Hcm;
 
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Schema;
@@ -103,11 +104,27 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\UpdateEmployeeEmailsFromCsv::class,
                 \Platform\Hcm\Console\Commands\ImportSollstundenFromCsv::class,
                 \Platform\Hcm\Console\Commands\ImportMonthlyHoursFromCsv::class,
+                \Platform\Hcm\Console\Commands\DispatchEnrichInboxOnboardings::class,
+                \Platform\Hcm\Console\Commands\EnrichInboxOnboardings::class,
             ]);
         }
 
+        // Schedule registrieren
+        $this->registerSchedule();
+
         // Tools registrieren (loose gekoppelt - für AI/Chat)
         $this->registerTools();
+    }
+
+    protected function registerSchedule(): void
+    {
+        $this->app->booted(function () {
+            $schedule = $this->app->make(Schedule::class);
+            $schedule->command('hcm:dispatch-enrich-inbox-onboardings')
+                ->everyMinute()
+                ->withoutOverlapping()
+                ->runInBackground();
+        });
     }
 
     protected function registerLivewireComponents(): void

@@ -13,6 +13,7 @@ class HcmAutoPilotLog extends Model
 
     protected $fillable = [
         'hcm_applicant_id',
+        'hcm_onboarding_id',
         'type',
         'summary',
         'details',
@@ -26,5 +27,10 @@ class HcmAutoPilotLog extends Model
     public function applicant(): BelongsTo
     {
         return $this->belongsTo(HcmApplicant::class, 'hcm_applicant_id');
+    }
+
+    public function onboarding(): BelongsTo
+    {
+        return $this->belongsTo(HcmOnboarding::class, 'hcm_onboarding_id');
     }
 }
