@@ -2,15 +2,19 @@
 
 namespace Platform\Hcm\Actions;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Platform\Core\Models\CoreExtraFieldValue;
 use Platform\Crm\Models\CrmContact;
-use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmOnboarding;
 
 class TransferApplicantToOnboarding
 {
-    public function execute(HcmApplicant $applicant): HcmOnboarding
+    /**
+     * Transfer an applicant (HcmApplicant or RecApplicant) to HCM Onboarding.
+     * Both models share HasEmployeeContact + HasExtraFields traits.
+     */
+    public function execute(Model $applicant): HcmOnboarding
     {
         return DB::transaction(function () use ($applicant) {
             // 1. Onboarding erstellen
@@ -39,13 +43,14 @@ class TransferApplicantToOnboarding
 
             // 5. Bewerber deaktivieren
             $applicant->is_active = false;
+            $applicant->auto_pilot = false;
             $applicant->save();
 
             return $onboarding;
         });
     }
 
-    private function transferExtraFields(HcmApplicant $from, HcmOnboarding $to): void
+    private function transferExtraFields(Model $from, HcmOnboarding $to): void
     {
         // Definitionen beider Seiten laden
         $sourceDefinitions = $from->getExtraFieldDefinitions();
