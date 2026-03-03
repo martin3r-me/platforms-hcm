@@ -205,6 +205,20 @@ class HcmServiceProvider extends ServiceProvider
             $registry->register(new \Platform\Hcm\Tools\CreateContractTool());
             $registry->register(new \Platform\Hcm\Tools\UpdateContractTool());
             $registry->register(new \Platform\Hcm\Tools\DeleteContractTool());
+
+            // Onboardings (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListOnboardingsTool());
+            $registry->register(new \Platform\Hcm\Tools\GetOnboardingTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateOnboardingTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateOnboardingTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteOnboardingTool());
+
+            // Job Titles / Stellen (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListJobTitlesTool());
+            $registry->register(new \Platform\Hcm\Tools\GetJobTitleTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateJobTitleTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateJobTitleTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteJobTitleTool());
         } catch (\Throwable $e) {
             \Log::warning('HCM: Tool-Registrierung fehlgeschlagen', ['error' => $e->getMessage()]);
         }
