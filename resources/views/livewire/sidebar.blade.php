@@ -13,6 +13,18 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
+    {{-- Abschnitt: Onboarding --}}
+    <x-ui-sidebar-list label="Onboarding">
+        <x-ui-sidebar-item :href="route('hcm.onboardings.dashboard')">
+            @svg('heroicon-o-squares-2x2', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Dashboard</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.onboardings.index')">
+            @svg('heroicon-o-clipboard-document-check', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Onboardings</span>
+        </x-ui-sidebar-item>
+    </x-ui-sidebar-list>
+
     {{-- Abschnitt: Organisation --}}
     <x-ui-sidebar-list label="Organisation">
         <x-ui-sidebar-item :href="route('hcm.employers.index')">
@@ -22,14 +34,6 @@
         <x-ui-sidebar-item :href="route('hcm.employees.index')">
             @svg('heroicon-o-user-group', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Mitarbeiter</span>
-        </x-ui-sidebar-item>
-    </x-ui-sidebar-list>
-
-    {{-- Abschnitt: Onboarding --}}
-    <x-ui-sidebar-list label="Onboarding">
-        <x-ui-sidebar-item :href="route('hcm.onboardings.index')">
-            @svg('heroicon-o-clipboard-document-check', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Onboardings</span>
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
@@ -149,17 +153,20 @@
                 @svg('heroicon-o-home', 'w-5 h-5')
             </a>
             
+            {{-- Onboarding --}}
+            <a href="{{ route('hcm.onboardings.dashboard') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Onboarding Dashboard">
+                @svg('heroicon-o-squares-2x2', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.onboardings.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Onboardings">
+                @svg('heroicon-o-clipboard-document-check', 'w-5 h-5')
+            </a>
+
             {{-- Organisation --}}
             <a href="{{ route('hcm.employers.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Arbeitgeber">
                 @svg('heroicon-o-building-office', 'w-5 h-5')
             </a>
             <a href="{{ route('hcm.employees.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Mitarbeiter">
                 @svg('heroicon-o-user-group', 'w-5 h-5')
-            </a>
-            
-            {{-- Onboarding --}}
-            <a href="{{ route('hcm.onboardings.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Onboardings">
-                @svg('heroicon-o-clipboard-document-check', 'w-5 h-5')
             </a>
 
             {{-- Bewerbermanagement --}}

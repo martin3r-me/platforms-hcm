@@ -17,6 +17,11 @@ class HcmOnboarding extends Model
     protected $fillable = [
         'uuid',
         'progress',
+        'enrichment_status',
+        'auto_pilot',
+        'auto_pilot_completed_at',
+        'preferred_comms_channel_id',
+        'source_position_title',
         'notes',
         'is_active',
         'team_id',
@@ -27,6 +32,8 @@ class HcmOnboarding extends Model
     protected $casts = [
         'is_active' => 'boolean',
         'progress' => 'integer',
+        'auto_pilot' => 'boolean',
+        'auto_pilot_completed_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -63,6 +70,11 @@ class HcmOnboarding extends Model
     public function ownedByUser()
     {
         return $this->belongsTo(\Platform\Core\Models\User::class, 'owned_by_user_id');
+    }
+
+    public function preferredCommsChannel()
+    {
+        return $this->belongsTo(\Platform\Crm\Models\CommsChannel::class, 'preferred_comms_channel_id');
     }
 
     /**

@@ -17,6 +17,7 @@ use Platform\Hcm\Livewire\Applicant\Index as ApplicantIndex;
 use Platform\Hcm\Livewire\Applicant\Show as ApplicantShow;
 use Platform\Hcm\Livewire\Onboarding\Index as OnboardingIndex;
 use Platform\Hcm\Livewire\Onboarding\Show as OnboardingShow;
+use Platform\Hcm\Livewire\Onboarding\Dashboard as OnboardingDashboard;
 use Platform\Hcm\Livewire\ApplicantStatus\Index as ApplicantStatusIndex;
 use Platform\Hcm\Livewire\PensionType\Index as PensionTypeIndex;
 use Platform\Hcm\Livewire\EmploymentRelationship\Index as EmploymentRelationshipIndex;
@@ -87,6 +88,7 @@ Route::get('/applicants', ApplicantIndex::class)->name('hcm.applicants.index');
 Route::get('/applicants/{applicant}', ApplicantShow::class)->name('hcm.applicants.show');
 
 // Onboarding-Verwaltung
+Route::get('/onboardings/dashboard', OnboardingDashboard::class)->name('hcm.onboardings.dashboard');
 Route::get('/onboardings', OnboardingIndex::class)->name('hcm.onboardings.index');
 Route::get('/onboardings/{onboarding}', OnboardingShow::class)->name('hcm.onboardings.show');
 

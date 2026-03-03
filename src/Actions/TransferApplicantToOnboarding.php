@@ -17,6 +17,13 @@ class TransferApplicantToOnboarding
     public function execute(Model $applicant): HcmOnboarding
     {
         return DB::transaction(function () use ($applicant) {
+            // Position-Titel aus Postings extrahieren
+            $positionTitle = null;
+            if (method_exists($applicant, 'postings')) {
+                $positionTitle = $applicant->postings()->with('position')->get()
+                    ->map(fn($p) => $p->position?->title)->filter()->first();
+            }
+
             // 1. Onboarding erstellen
             $onboarding = HcmOnboarding::create([
                 'notes' => $applicant->notes,
@@ -24,6 +31,7 @@ class TransferApplicantToOnboarding
                 'created_by_user_id' => auth()->id(),
                 'owned_by_user_id' => $applicant->owned_by_user_id,
                 'is_active' => true,
+                'source_position_title' => $positionTitle,
             ]);
 
             // 2. CRM-Kontakt-Link kopieren
