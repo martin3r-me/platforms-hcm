@@ -9,16 +9,14 @@ use Platform\Hcm\Livewire\Employer\Index as EmployerIndex;
 use Platform\Hcm\Livewire\Employer\Show as EmployerShow;
 use Platform\Hcm\Livewire\Tariff\Index as TariffIndex;
 use Platform\Hcm\Livewire\JobTitle\Index as JobTitleIndex;
+use Platform\Hcm\Livewire\JobTitle\Show as JobTitleShow;
 use Platform\Hcm\Livewire\JobActivity\Index as JobActivityIndex;
 use Platform\Hcm\Livewire\PayrollType\Index as PayrollTypeIndex;
 use Platform\Hcm\Livewire\PersonGroup\Index as PersonGroupIndex;
 use Platform\Hcm\Livewire\InsuranceStatus\Index as InsuranceStatusIndex;
-use Platform\Hcm\Livewire\Applicant\Index as ApplicantIndex;
-use Platform\Hcm\Livewire\Applicant\Show as ApplicantShow;
 use Platform\Hcm\Livewire\Onboarding\Index as OnboardingIndex;
 use Platform\Hcm\Livewire\Onboarding\Show as OnboardingShow;
 use Platform\Hcm\Livewire\Onboarding\Dashboard as OnboardingDashboard;
-use Platform\Hcm\Livewire\ApplicantStatus\Index as ApplicantStatusIndex;
 use Platform\Hcm\Livewire\PensionType\Index as PensionTypeIndex;
 use Platform\Hcm\Livewire\EmploymentRelationship\Index as EmploymentRelationshipIndex;
 use Platform\Hcm\Livewire\LevyType\Index as LevyTypeIndex;
@@ -68,6 +66,7 @@ Route::get('/tariff-rates/{tariffRate}', \Platform\Hcm\Livewire\TariffRate\Show:
 
 // Stellenbezeichnungen & Tätigkeiten
 Route::get('/job-titles', JobTitleIndex::class)->name('hcm.job-titles.index');
+Route::get('/job-titles/{jobTitle}', JobTitleShow::class)->name('hcm.job-titles.show');
 Route::get('/job-activities', JobActivityIndex::class)->name('hcm.job-activities.index');
 
 // Lohnarten
@@ -83,17 +82,10 @@ Route::get('/person-groups', PersonGroupIndex::class)->name('hcm.person-groups.i
 // Versicherungsstatus (Lookup)
 Route::get('/insurance-statuses', InsuranceStatusIndex::class)->name('hcm.insurance-statuses.index');
 
-// Bewerber-Verwaltung
-Route::get('/applicants', ApplicantIndex::class)->name('hcm.applicants.index');
-Route::get('/applicants/{applicant}', ApplicantShow::class)->name('hcm.applicants.show');
-
 // Onboarding-Verwaltung
 Route::get('/onboardings/dashboard', OnboardingDashboard::class)->name('hcm.onboardings.dashboard');
 Route::get('/onboardings', OnboardingIndex::class)->name('hcm.onboardings.index');
 Route::get('/onboardings/{onboarding}', OnboardingShow::class)->name('hcm.onboardings.show');
-
-// Bewerbungsstatus (Lookup)
-Route::get('/applicant-statuses', ApplicantStatusIndex::class)->name('hcm.applicant-statuses.index');
 
 // Rentenarten (Lookup)
 Route::get('/pension-types', PensionTypeIndex::class)->name('hcm.pension-types.index');

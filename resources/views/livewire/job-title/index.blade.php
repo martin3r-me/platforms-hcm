@@ -22,7 +22,7 @@
                     </thead>
                     <tbody class="divide-y divide-[var(--ui-border)]/60">
                         @forelse($titles as $title)
-                            <tr>
+                            <tr class="cursor-pointer hover:bg-[var(--ui-muted-5)] transition-colors" wire:click="$navigate('{{ route('hcm.job-titles.show', $title) }}')">
                                 <td class="px-4 py-2 font-medium text-[var(--ui-secondary)]">{{ $title->code }}</td>
                                 <td class="px-4 py-2">{{ $title->name }}</td>
                                 <td class="px-4 py-2">

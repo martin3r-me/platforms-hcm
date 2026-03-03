@@ -3,11 +3,12 @@
 namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Platform\Core\Contracts\InheritsExtraFields;
 use Platform\Core\Traits\HasExtraFields;
 use Platform\Hcm\Traits\HasEmployeeContact;
 use Symfony\Component\Uid\UuidV7;
 
-class HcmOnboarding extends Model
+class HcmOnboarding extends Model implements InheritsExtraFields
 {
     use HasEmployeeContact;
     use HasExtraFields;
@@ -22,6 +23,7 @@ class HcmOnboarding extends Model
         'auto_pilot_completed_at',
         'preferred_comms_channel_id',
         'source_position_title',
+        'hcm_job_title_id',
         'notes',
         'is_active',
         'team_id',
@@ -75,6 +77,20 @@ class HcmOnboarding extends Model
     public function preferredCommsChannel()
     {
         return $this->belongsTo(\Platform\Crm\Models\CommsChannel::class, 'preferred_comms_channel_id');
+    }
+
+    public function jobTitle()
+    {
+        return $this->belongsTo(HcmJobTitle::class, 'hcm_job_title_id');
+    }
+
+    public function extraFieldParents(): array
+    {
+        $parents = [];
+        if ($this->jobTitle) {
+            $parents[] = $this->jobTitle;
+        }
+        return $parents;
     }
 
     /**

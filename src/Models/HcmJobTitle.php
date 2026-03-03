@@ -4,10 +4,14 @@ namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Platform\Core\Traits\HasExtraFields;
 use Symfony\Component\Uid\UuidV7;
 
 class HcmJobTitle extends Model
 {
+    use HasExtraFields;
+
     protected $table = 'hcm_job_titles';
 
     protected $fillable = [
@@ -38,6 +42,11 @@ class HcmJobTitle extends Model
             'job_title_id',
             'contract_id'
         );
+    }
+
+    public function onboardings(): HasMany
+    {
+        return $this->hasMany(HcmOnboarding::class, 'hcm_job_title_id');
     }
 }
 
