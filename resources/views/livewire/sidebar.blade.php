@@ -37,18 +37,6 @@
         </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
-    {{-- Abschnitt: Bewerbermanagement --}}
-    <x-ui-sidebar-list label="Bewerbermanagement">
-        <x-ui-sidebar-item :href="route('hcm.applicants.index')">
-            @svg('heroicon-o-document-plus', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Bewerber</span>
-        </x-ui-sidebar-item>
-        <x-ui-sidebar-item :href="route('hcm.applicant-statuses.index')">
-            @svg('heroicon-o-tag', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Bewerbungsstatus</span>
-        </x-ui-sidebar-item>
-    </x-ui-sidebar-list>
-
     {{-- Abschnitt: Tarife --}}
     <x-ui-sidebar-list label="Tarife">
         <x-ui-sidebar-item :href="route('hcm.tariff-overview')">
@@ -169,11 +157,6 @@
                 @svg('heroicon-o-user-group', 'w-5 h-5')
             </a>
 
-            {{-- Bewerbermanagement --}}
-            <a href="{{ route('hcm.applicants.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Bewerber">
-                @svg('heroicon-o-document-plus', 'w-5 h-5')
-            </a>
-
             {{-- Tarife --}}
             <a href="{{ route('hcm.tariff-agreements.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Tarifverträge">
                 @svg('heroicon-o-document-text', 'w-5 h-5')
@@ -263,20 +246,19 @@
         </div>
     </div>
 
-    {{-- Abschnitt: Bewerber --}}
+    {{-- Abschnitt: Onboarding-Boards --}}
     <div>
         <div class="mt-2" x-show="!collapsed">
-            @if($this->recentApplicants->count() > 0)
-                <x-ui-sidebar-list label="Neueste Bewerber">
-                    @foreach($this->recentApplicants as $applicant)
-                        <x-ui-sidebar-item :href="route('hcm.applicants.show', ['applicant' => $applicant->id])">
-                            @svg('heroicon-o-document-plus', 'w-5 h-5 flex-shrink-0 text-[var(--ui-secondary)]')
-                            <span class="truncate text-sm ml-2">{{ $applicant->crmContactLinks->first()?->contact?->full_name ?? 'Unbekannt' }}</span>
+            @if($this->onboardingPositions->isNotEmpty())
+                <x-ui-sidebar-list label="Onboarding-Boards">
+                    @foreach($this->onboardingPositions as $pos)
+                        <x-ui-sidebar-item :href="route('hcm.onboardings.dashboard', ['position' => $pos->source_position_title])">
+                            @svg('heroicon-o-squares-2x2', 'w-4 h-4 text-[var(--ui-secondary)]')
+                            <span class="ml-2 text-sm truncate">{{ $pos->source_position_title }}</span>
+                            <span class="ml-auto inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-medium rounded-full bg-[var(--ui-muted-5)] text-[var(--ui-secondary)]">{{ $pos->onboarding_count }}</span>
                         </x-ui-sidebar-item>
                     @endforeach
                 </x-ui-sidebar-list>
-            @else
-                <div class="px-3 py-1 text-xs text-[var(--ui-muted)]">Keine Bewerber</div>
             @endif
         </div>
     </div>
@@ -304,14 +286,6 @@
             <div class="flex justify-between items-center text-sm">
                 <span class="text-[var(--ui-muted)]">Aktive Onboardings</span>
                 <span class="font-medium text-green-600">{{ $this->stats['active_onboardings'] }}</span>
-            </div>
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-[var(--ui-muted)]">Bewerber</span>
-                <span class="font-medium text-[var(--ui-secondary)]">{{ $this->stats['total_applicants'] }}</span>
-            </div>
-            <div class="flex justify-between items-center text-sm">
-                <span class="text-[var(--ui-muted)]">Aktive Bewerber</span>
-                <span class="font-medium text-green-600">{{ $this->stats['active_applicants'] }}</span>
             </div>
         </div>
     </div>

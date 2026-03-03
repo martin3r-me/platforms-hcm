@@ -14,6 +14,11 @@ class Dashboard extends Component
 {
     public ?string $positionFilter = null;
 
+    public function mount(): void
+    {
+        $this->positionFilter = request()->query('position');
+    }
+
     #[Computed]
     public function onboardingCount()
     {

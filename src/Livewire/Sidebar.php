@@ -5,7 +5,6 @@ namespace Platform\Hcm\Livewire;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Platform\Core\Models\Team;
-use Platform\Hcm\Models\HcmApplicant;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Hcm\Models\HcmEmployer;
 use Platform\Hcm\Models\HcmOnboarding;
@@ -41,20 +40,14 @@ class Sidebar extends Component
     }
 
     #[Computed]
-    public function recentApplicants()
+    public function onboardingPositions()
     {
-        $teamId = auth()->user()->currentTeam->id;
-        $allowedTeamIds = $this->getAllowedTeamIds($teamId);
-
-        return HcmApplicant::with([
-            'crmContactLinks' => fn ($q) => $q->whereIn('team_id', $allowedTeamIds),
-            'crmContactLinks.contact',
-            'applicantStatus',
-        ])
-            ->forTeam($teamId)
+        return HcmOnboarding::forTeam(auth()->user()->currentTeam->id)
             ->active()
-            ->latest()
-            ->take(5)
+            ->whereNotNull('source_position_title')
+            ->selectRaw('source_position_title, count(*) as onboarding_count')
+            ->groupBy('source_position_title')
+            ->orderBy('source_position_title')
             ->get();
     }
 
@@ -85,8 +78,6 @@ class Sidebar extends Component
             'active_employees' => HcmEmployee::forTeam($teamId)->active()->count(),
             'total_employers' => HcmEmployer::forTeam($teamId)->count(),
             'active_employers' => HcmEmployer::forTeam($teamId)->active()->count(),
-            'total_applicants' => HcmApplicant::forTeam($teamId)->count(),
-            'active_applicants' => HcmApplicant::forTeam($teamId)->active()->count(),
             'total_onboardings' => HcmOnboarding::forTeam($teamId)->count(),
             'active_onboardings' => HcmOnboarding::forTeam($teamId)->active()->count(),
         ];

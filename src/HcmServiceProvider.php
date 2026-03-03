@@ -32,7 +32,6 @@ class HcmServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'hcm_employee' => \Platform\Hcm\Models\HcmEmployee::class,
-            'hcm_applicant' => \Platform\Hcm\Models\HcmApplicant::class,
             'hcm_onboarding' => \Platform\Hcm\Models\HcmOnboarding::class,
         ]);
 
@@ -106,6 +105,8 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\ImportMonthlyHoursFromCsv::class,
                 \Platform\Hcm\Console\Commands\DispatchEnrichInboxOnboardings::class,
                 \Platform\Hcm\Console\Commands\EnrichInboxOnboardings::class,
+                \Platform\Hcm\Console\Commands\DispatchAutoPilotOnboardings::class,
+                \Platform\Hcm\Console\Commands\ProcessAutoPilotOnboardings::class,
             ]);
         }
 
@@ -121,6 +122,11 @@ class HcmServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
             $schedule->command('hcm:dispatch-enrich-inbox-onboardings')
+                ->everyMinute()
+                ->withoutOverlapping()
+                ->runInBackground();
+
+            $schedule->command('hcm:dispatch-auto-pilot-onboardings')
                 ->everyMinute()
                 ->withoutOverlapping()
                 ->runInBackground();
