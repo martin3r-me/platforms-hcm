@@ -145,3 +145,124 @@ class Dashboard extends Component
                 if (!$phone->is_active) continue;
                 $phoneNumber = $phone->international ?: $phone->raw_input;
                 $whatsappStatus = $phone->whatsapp_status ?? CrmPhoneNumber::WHATSAPP_UNKNOWN;
+                if ($whatsappStatus !== CrmPhoneNumber::WHATSAPP_UNKNOWN) {
+                    break 2;
+                }
+            }
+        }
+
+        if (!$phoneNumber) {
+            return ['color' => 'none', 'status' => 'no_phone', 'window_open' => false];
+        }
+
+        $isWhatsAppAvailable = in_array($whatsappStatus, [
+            CrmPhoneNumber::WHATSAPP_AVAILABLE,
+            CrmPhoneNumber::WHATSAPP_OPTED_IN,
+        ]);
+
+        if (!$isWhatsAppAvailable) {
+            return [
+                'color' => 'gray',
+                'status' => $whatsappStatus,
+                'window_open' => false,
+            ];
+        }
+
+        $windowOpen = false;
+        $morphClass = $onboarding->getMorphClass();
+        $fullClass = get_class($onboarding);
+
+        $thread = CommsWhatsAppThread::query()
+            ->where(function ($q) use ($morphClass, $fullClass, $onboarding) {
+                $q->where(function ($q2) use ($morphClass, $onboarding) {
+                    $q2->where('context_model', $morphClass)
+                        ->where('context_model_id', $onboarding->id);
+                })->orWhere(function ($q2) use ($fullClass, $onboarding) {
+                    $q2->where('context_model', $fullClass)
+                        ->where('context_model_id', $onboarding->id);
+                });
+            })
+            ->orderByDesc('last_inbound_at')
+            ->first();
+
+        if ($thread && $thread->isWindowOpen()) {
+            $windowOpen = true;
+        }
+
+        return [
+            'color' => $windowOpen ? 'green' : 'yellow',
+            'status' => $whatsappStatus,
+            'window_open' => $windowOpen,
+        ];
+    }
+
+    public function toggleAutoPilot(int $id, string $channelType): void
+    {
+        $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
+
+        $currentChannel = $onboarding->preferredCommsChannel;
+        if ($onboarding->auto_pilot && $currentChannel?->type === $channelType) {
+            $onboarding->update([
+                'auto_pilot' => false,
+                'preferred_comms_channel_id' => null,
+            ]);
+        } else {
+            $channel = CommsChannel::where('team_id', auth()->user()->currentTeam->id)
+                ->where('type', $channelType)
+                ->where('is_active', true)
+                ->first();
+            if ($channel) {
+                $onboarding->update([
+                    'auto_pilot' => true,
+                    'preferred_comms_channel_id' => $channel->id,
+                    'owned_by_user_id' => auth()->user()->id,
+                ]);
+            }
+        }
+
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->autoPilotProcessingIds);
+    }
+
+    public function markAsEnriched(int $id): void
+    {
+        $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
+        $onboarding->update(['enrichment_status' => 'enriched']);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
+    }
+
+    public function transferToEmployee(int $id): void
+    {
+        $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
+        $onboarding->update(['is_active' => false]);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
+    }
+
+    public function dismissOnboarding(int $id): void
+    {
+        $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
+        $onboarding->update([
+            'is_active' => false,
+            'auto_pilot' => false,
+        ]);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
+    }
+
+    public function refreshDashboard(): void
+    {
+        unset(
+            $this->onboardingCount,
+            $this->inboxOnboardings,
+            $this->inProgressOnboardings,
+            $this->completedOnboardings,
+            $this->teamChannels,
+            $this->autoPilotProcessingIds,
+            $this->enrichingOnboardingIds,
+        );
+    }
+
+    public function render()
+    {
+        return view('hcm::livewire.onboarding.dashboard')
+            ->layout('platform::layouts.app');
+    }
+}
