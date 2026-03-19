@@ -30,27 +30,6 @@
             </div>
         </div>
 
-        {{-- Stellen-Filter --}}
-        @if($this->positionGroups->isNotEmpty())
-            <div class="flex flex-wrap gap-2">
-                <button
-                    wire:click="$set('positionFilter', null)"
-                    class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors {{ !$this->positionFilter ? 'bg-[var(--ui-primary)] text-white' : 'bg-[var(--ui-muted-5)] text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-10)]' }}"
-                >
-                    Alle
-                </button>
-                @foreach($this->positionGroups as $title => $count)
-                    <button
-                        wire:click="$set('positionFilter', '{{ $title }}')"
-                        class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors {{ $this->positionFilter === $title ? 'bg-[var(--ui-primary)] text-white' : 'bg-[var(--ui-muted-5)] text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-10)]' }}"
-                    >
-                        {{ $title }}
-                        <span class="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full text-[10px] {{ $this->positionFilter === $title ? 'bg-white/20 text-white' : 'bg-[var(--ui-muted-10)] text-[var(--ui-muted)]' }}">{{ $count }}</span>
-                    </button>
-                @endforeach
-            </div>
-        @endif
-
         {{-- Eingang --}}
         <x-ui-panel title="Eingang" subtitle="Neue Onboardings ohne Enrichment">
             <div class="overflow-x-auto">
