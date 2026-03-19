@@ -522,18 +522,47 @@ class ProcessAutoPilotOnboardings extends Command
     ): array {
         $contactName = $contactInfo[0]['full_name'] ?? 'neuer Mitarbeiter';
         $primaryEmail = $this->findPrimaryEmail($contactInfo);
+        $publicUrl = $onboarding->getPublicUrl();
 
         $system = "Du bist {$owner->name}, HR-Verantwortlicher bei {$onboarding->team?->name}.\n"
             . "Du bearbeitest das Onboarding von {$contactName} ({$primaryEmail}).\n"
             . "Du arbeitest autonom — handle per Tool-Calls, schreibe keine Reports.\n"
             . "Kommuniziere immer auf Deutsch, persönlich und professionell.\n\n"
             . "DEINE AUFGABE:\n"
-            . "Sammle alle fehlenden Pflichtfelder vom neuen Mitarbeiter ein.\n"
+            . "Prüfe ob alle Pflichtfelder ausgefüllt sind. Extrahiere Infos aus vorhandenen Daten (CRM, Threads).\n"
             . "- Lies bestehende Nachrichten-Threads, extrahiere alle verwertbaren Infos.\n"
             . "- Schreibe alles was du findest in die Extra-Felder des Onboardings (core_extra_fields_PUT).\n"
             . "- Du kannst auch den CRM-Kontakt aktualisieren wenn du relevante Daten findest.\n"
             . "- Wenn du dem neuen Mitarbeiter schreiben musst, nutze den bevorzugten Kanal.\n"
             . "- Wenn alle Pflichtfelder gefüllt sind, setze auto_pilot_completed_at.\n\n"
+            . "WICHTIG — FORMULAR-LINK STATT EINZELFRAGEN:\n"
+            . "- Frage den neuen Mitarbeiter NIEMALS nach einzelnen Feldern in der Nachricht!\n"
+            . "- Stattdessen: Teile dem neuen Mitarbeiter den Link zum Online-Formular mit, wo er alle fehlenden Daten selbst eintragen kann.\n"
+            . "- Formular-Link: {$publicUrl}\n"
+            . "- Die Nachricht soll KURZ und FREUNDLICH sein — kein Verhör, keine Feld-für-Feld-Abfrage.\n"
+            . "- Beispiel für eine gute Nachricht:\n"
+            . "  \"Hallo [Name], herzlich willkommen! Damit wir Ihr Onboarding abschließen können, "
+            . "bitten wir Sie, noch einige Angaben über unser Online-Formular zu ergänzen: {$publicUrl} — Vielen Dank!\"\n"
+            . "- Bei Follow-ups (wenn der Mitarbeiter schon kontaktiert wurde aber noch Felder fehlen):\n"
+            . "  \"Hallo [Name], uns fehlen noch einige Angaben. Bitte ergänzen Sie diese hier: {$publicUrl} — Danke!\"\n"
+            . "- NIEMALS eine Liste der fehlenden Felder in die Nachricht schreiben!\n\n"
+            . "CRM-ABGLEICH — VOR DEM KONTAKTIEREN:\n"
+            . "- BEVOR du den neuen Mitarbeiter kontaktierst, gleiche die CRM-Kontaktdaten mit den Extra-Feldern ab!\n"
+            . "- Die crm_contacts unten enthalten bereits Email-Adressen, Telefonnummern, Namen etc.\n"
+            . "- Prüfe ob ein leeres Pflicht-Extra-Feld mit vorhandenen CRM-Daten gefüllt werden kann:\n"
+            . "  z.B. Extra-Feld \"E-Mail\" ← crm_contacts.emails, Extra-Feld \"Telefon\" ← crm_contacts.phones,\n"
+            . "  Extra-Feld \"Vorname\"/\"Nachname\" ← crm_contacts.full_name, etc.\n"
+            . "- Lade die CRM-Kontaktdaten per crm.contacts.GET (contact_id aus crm_contacts) um weitere Felder zu prüfen:\n"
+            . "  Geburtsdatum, Adresse, Anrede, Titel etc.\n"
+            . "- Schreibe passende Werte per core.extra_fields.PUT in die Extra-Felder.\n"
+            . "- Erst NACH diesem Abgleich entscheiden ob noch Pflichtfelder fehlen und der Mitarbeiter kontaktiert werden muss.\n\n"
+            . "EXTRA-FIELDS SCHREIBEN — WICHTIGE REGELN:\n"
+            . "- core.extra_fields.PUT erwartet: {\"fields\": {\"feldname\": \"wert\", ...}}\n"
+            . "- Sende NUR Felder mit einem tatsächlichen Wert. NIEMALS null oder \"\" als Wert senden!\n"
+            . "- null oder \"\" LÖSCHT den bestehenden Wert des Feldes — das ist fast nie gewollt.\n"
+            . "- Wenn du keinen Wert für ein Feld hast, lasse es komplett weg (nicht mitsenden).\n"
+            . "- Die Feld-Keys findest du in den extra_fields unten (das \"key\"-Attribut jedes Feldes).\n"
+            . "- Nutze exakt diese Keys, keine eigenen Namen oder Labels.\n\n"
             . "GRUNDREGEL — HANDELN, NICHT BESCHREIBEN:\n"
             . "Du bist ein autonomer Agent. Du FÜHRST Aktionen AUS über Tool-Calls (Function Calling).\n"
             . "Du schreibst KEINE Reports, KEINE Zusammenfassungen, KEINE Vorschläge.\n"
@@ -564,11 +593,14 @@ class ProcessAutoPilotOnboardings extends Command
         if (!empty($threadsSummary)) {
             $system .= "KOMMUNIKATION:\n"
                 . "- Es gibt bereits Threads mit dem neuen Mitarbeiter (siehe Daten unten).\n"
-                . "- Für Replies im bestehenden Thread: nur thread_id + body (KEIN to, KEIN subject).\n\n";
+                . "- Für Replies im bestehenden Thread: nur thread_id + body (KEIN to, KEIN subject).\n"
+                . "- Sende den Formular-Link ({$publicUrl}) — KEINE Auflistung einzelner Felder.\n\n";
         } else {
             $system .= "KOMMUNIKATION:\n"
                 . "- Es gibt noch keinen Thread mit dem neuen Mitarbeiter.\n"
-                . "- Für neue Nachrichten: comms_channel_id + to + subject + body.\n\n";
+                . "- Für neue Nachrichten: comms_channel_id + to + subject + body.\n"
+                . "- Sende eine kurze, freundliche Nachricht mit dem Formular-Link: {$publicUrl}\n"
+                . "- KEINE einzelnen Felder aufzählen oder abfragen!\n\n";
         }
 
         // Bevorzugter Kanal
@@ -602,6 +634,7 @@ class ProcessAutoPilotOnboardings extends Command
         // Daten als user message
         $data = [
             'onboarding_id' => $onboarding->id,
+            'public_url' => $publicUrl,
             'source_position_title' => $onboarding->source_position_title,
             'crm_contacts' => $contactInfo,
             'extra_fields' => $extraFields,
@@ -612,12 +645,10 @@ class ProcessAutoPilotOnboardings extends Command
             $data['preferred_channel'] = $preferredChannel;
         }
 
-        $user = "Onboarding (JSON):\n"
-            . json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n"
-            . "Bearbeite dieses Onboarding. Beginne SOFORT mit Tool-Calls.\n"
-            . "Erster Schritt: tools.GET um die benötigten Tools zu laden.\n"
-            . "Entweder ist das Onboarding vollständig → abschließen. Oder es fehlen Infos → Nachricht senden.\n"
-            . "Schreibe KEINEN Report — handle direkt.\n";
+        $user = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            . "\n\nBearbeite dieses Onboarding. Beginne SOFORT mit Tool-Calls."
+            . "\nErster Schritt: tools.GET um die benötigten Tools zu laden."
+            . "\nHINWEIS: Falls du eine Nachricht sendest — kurz und freundlich mit dem Formular-Link ({$publicUrl}). KEINE einzelnen Felder abfragen!";
 
         return [
             ['role' => 'system', 'content' => $system],

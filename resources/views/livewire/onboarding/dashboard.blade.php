@@ -231,30 +231,21 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-2.5">
-                                    <div class="flex items-center gap-1">
-                                        @foreach(['whatsapp', 'email'] as $type)
-                                            @php
-                                                $isActive = $onboarding->auto_pilot
-                                                    && $onboarding->preferredCommsChannel?->type === $type;
-                                                $hasChannel = $this->teamChannels->contains(fn ($c) => $c->type === $type);
-                                            @endphp
-                                            @if($hasChannel)
-                                                <button
-                                                    wire:click="toggleAutoPilot({{ $onboarding->id }}, '{{ $type }}')"
-                                                    class="inline-flex items-center gap-1 rounded px-1.5 py-1 text-xs transition-colors {{ $isActive ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-[var(--ui-muted-5)] text-[var(--ui-muted)] hover:bg-[var(--ui-muted-10)] hover:text-[var(--ui-secondary)]' }}"
-                                                    title="{{ $type === 'whatsapp' ? 'WhatsApp AutoPilot' : 'Email AutoPilot' }}"
-                                                >
-                                                    @if($isActive)
-                                                        <span class="relative flex h-2 w-2">
-                                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                                            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                                        </span>
-                                                    @endif
-                                                    @svg($type === 'whatsapp' ? 'heroicon-o-chat-bubble-left' : 'heroicon-o-envelope', 'w-3.5 h-3.5')
-                                                </button>
-                                            @endif
-                                        @endforeach
-                                    </div>
+                                    @php $isAutoPilotActive = $onboarding->auto_pilot; @endphp
+                                    <button
+                                        wire:click="toggleAutoPilot({{ $onboarding->id }})"
+                                        class="inline-flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors {{ $isAutoPilotActive ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' : 'bg-[var(--ui-muted-5)] text-[var(--ui-muted)] hover:bg-[var(--ui-muted-10)] hover:text-[var(--ui-secondary)]' }}"
+                                        title="AutoPilot {{ $isAutoPilotActive ? 'deaktivieren' : 'aktivieren' }}"
+                                    >
+                                        @if($isAutoPilotActive)
+                                            <span class="relative flex h-2 w-2">
+                                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                        @endif
+                                        @svg('heroicon-o-bolt', 'w-3.5 h-3.5')
+                                        <span>AutoPilot</span>
+                                    </button>
                                 </td>
                                 <td class="px-4 py-2.5 text-right">
                                     <div class="flex items-center justify-end gap-2">

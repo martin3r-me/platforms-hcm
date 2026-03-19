@@ -5,14 +5,17 @@ namespace Platform\Hcm\Livewire\Onboarding;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Core\Livewire\Concerns\ResolvesAutoPilotChannel;
 use Platform\Crm\Models\CommsChannel;
 use Platform\Crm\Models\CommsWhatsAppThread;
 use Platform\Crm\Models\CrmPhoneNumber;
+use Platform\Hcm\Actions\TransferOnboardingToEmployee;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
 
 class Dashboard extends Component
 {
+    use ResolvesAutoPilotChannel;
     public HcmJobTitle $jobTitle;
 
     public function mount(HcmJobTitle $jobTitle): void
@@ -196,21 +199,17 @@ class Dashboard extends Component
         ];
     }
 
-    public function toggleAutoPilot(int $id, string $channelType): void
+    public function toggleAutoPilot(int $id): void
     {
         $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
 
-        $currentChannel = $onboarding->preferredCommsChannel;
-        if ($onboarding->auto_pilot && $currentChannel?->type === $channelType) {
+        if ($onboarding->auto_pilot) {
             $onboarding->update([
                 'auto_pilot' => false,
                 'preferred_comms_channel_id' => null,
             ]);
         } else {
-            $channel = CommsChannel::where('team_id', auth()->user()->currentTeam->id)
-                ->where('type', $channelType)
-                ->where('is_active', true)
-                ->first();
+            $channel = $this->resolvePreferredChannel($onboarding);
             if ($channel) {
                 $onboarding->update([
                     'auto_pilot' => true,
@@ -233,7 +232,8 @@ class Dashboard extends Component
     public function transferToEmployee(int $id): void
     {
         $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
-        $onboarding->update(['is_active' => false]);
+        $action = new TransferOnboardingToEmployee();
+        $action->execute($onboarding);
         unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
     }
 

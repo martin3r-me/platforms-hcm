@@ -5,6 +5,7 @@ namespace Platform\Hcm\Models;
 use Illuminate\Database\Eloquent\Model;
 use Platform\Core\Contracts\InheritsExtraFields;
 use Platform\Core\Traits\HasExtraFields;
+use Platform\Core\Traits\HasPublicFormLink;
 use Platform\Hcm\Traits\HasEmployeeContact;
 use Symfony\Component\Uid\UuidV7;
 
@@ -12,6 +13,7 @@ class HcmOnboarding extends Model implements InheritsExtraFields
 {
     use HasEmployeeContact;
     use HasExtraFields;
+    use HasPublicFormLink;
 
     protected $table = 'hcm_onboardings';
 
@@ -82,6 +84,11 @@ class HcmOnboarding extends Model implements InheritsExtraFields
     public function jobTitle()
     {
         return $this->belongsTo(HcmJobTitle::class, 'hcm_job_title_id');
+    }
+
+    public function getPublicUrl(): string
+    {
+        return $this->getOrCreatePublicFormLink()->getUrl();
     }
 
     public function extraFieldParents(): array
