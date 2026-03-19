@@ -91,6 +91,7 @@ class Employee extends Component
             'employee.employer_id' => 'nullable|exists:hcm_employers,id',
             'employee.children_count' => 'nullable|integer|min:0',
             'employee.is_active' => 'boolean',
+            'employee.rating' => 'nullable|integer|min:1|max:5',
         ], $this->getExtraFieldValidationRules());
     }
 
@@ -275,6 +276,12 @@ class Employee extends Component
     public function isDirty()
     {
         return $this->employee->isDirty() || $this->isExtraFieldsDirty();
+    }
+
+    public function setRating(int $rating): void
+    {
+        $this->employee->rating = $this->employee->rating === $rating ? null : $rating;
+        $this->employee->save();
     }
 
     public function addContract(): void

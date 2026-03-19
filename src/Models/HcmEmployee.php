@@ -31,6 +31,7 @@ class HcmEmployee extends Model implements EmployeeInterface
         'owned_by_user_id',
         'team_id',
         'is_active',
+        'rating',
         // Core person fields
         'birth_date',
         'gender',
@@ -87,6 +88,7 @@ class HcmEmployee extends Model implements EmployeeInterface
     
     protected $casts = [
         'is_active' => 'boolean',
+        'rating' => 'integer',
         'schooling_level' => 'integer',
         'vocational_training_level' => 'integer',
         'birth_date' => 'date',

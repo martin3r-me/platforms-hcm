@@ -57,6 +57,22 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
+                    {{-- Sterne-Bewertung --}}
+                    <div class="flex items-center gap-0.5" title="Bewertung: {{ $employee->rating ?? 'Keine' }}">
+                        @for($i = 1; $i <= 5; $i++)
+                            <button
+                                type="button"
+                                wire:click="setRating({{ $i }})"
+                                class="focus:outline-none transition-colors duration-150 hover:scale-110"
+                            >
+                                @if($employee->rating && $i <= $employee->rating)
+                                    @svg('heroicon-s-star', 'w-5 h-5 text-amber-400')
+                                @else
+                                    @svg('heroicon-o-star', 'w-5 h-5 text-gray-300 hover:text-amber-300')
+                                @endif
+                            </button>
+                        @endfor
+                    </div>
                     <x-ui-badge variant="{{ $employee->is_active ? 'success' : 'secondary' }}" size="lg">
                         {{ $employee->is_active ? 'Aktiv' : 'Inaktiv' }}
                     </x-ui-badge>
