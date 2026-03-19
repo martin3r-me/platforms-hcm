@@ -10,26 +10,16 @@ use Platform\Crm\Models\CommsChannel;
 use Platform\Crm\Models\CommsWhatsAppThread;
 use Platform\Crm\Models\CrmPhoneNumber;
 use Platform\Hcm\Actions\TransferOnboardingToEmployee;
-use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
 
 class Dashboard extends Component
 {
     use ResolvesAutoPilotChannel;
-    public HcmJobTitle $jobTitle;
-
-    public function mount(HcmJobTitle $jobTitle): void
-    {
-        $this->jobTitle = $jobTitle;
-    }
 
     private function onboardingBaseQuery()
     {
-        $teamId = auth()->user()->currentTeam->id;
-
-        return HcmOnboarding::forTeam($teamId)
-            ->active()
-            ->where('hcm_job_title_id', $this->jobTitle->id);
+        return HcmOnboarding::forTeam(auth()->user()->currentTeam->id)
+            ->active();
     }
 
     #[Computed]
