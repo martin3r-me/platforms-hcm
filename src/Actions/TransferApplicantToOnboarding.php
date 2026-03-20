@@ -55,7 +55,8 @@ class TransferApplicantToOnboarding
             // 3. Extra-Field-Werte übertragen (inkl. fehlende Definitionen kopieren)
             $this->transferExtraFields($applicant, $onboarding);
 
-            // 4. Fortschritt berechnen
+            // 4. Fortschritt berechnen (Cache invalidieren, da transferExtraFields neue Definitionen erstellt haben kann)
+            $onboarding->clearExtraFieldDefinitionsCache();
             $onboarding->progress = $onboarding->calculateProgress();
             $onboarding->save();
 
@@ -73,6 +74,42 @@ class TransferApplicantToOnboarding
         $targetDefinitions = $to->getExtraFieldDefinitions();
         $targetByName = $targetDefinitions->keyBy('name');
 
+        // 1. Geerbte und type-level Definitionen als instanz-spezifisch materialisieren
+        //    Damit hängen sie permanent am Onboarding, unabhängig von JobTitle-Änderungen.
+        $materializedByName = collect();
+        foreach ($targetDefinitions as $def) {
+            // Nur geerbte oder type-level Definitionen materialisieren (nicht bereits instanz-spezifische)
+            if ($def->context_type === get_class($to) && $def->context_id === $to->id) {
+                continue;
+            }
+
+            $materialized = CoreExtraFieldDefinition::create([
+                'team_id' => $to->team_id,
+                'created_by_user_id' => $def->created_by_user_id,
+                'context_type' => get_class($to),
+                'context_id' => $to->id,
+                'name' => $def->name,
+                'label' => $def->label,
+                'description' => $def->description,
+                'type' => $def->type,
+                'is_required' => $def->is_required,
+                'is_mandatory' => $def->is_mandatory,
+                'is_encrypted' => $def->is_encrypted,
+                'order' => $def->order,
+                'options' => $def->options,
+                'visibility_config' => $def->visibility_config,
+                'verify_by_llm' => $def->verify_by_llm,
+                'verify_instructions' => $def->verify_instructions,
+            ]);
+            $materializedByName->put($def->name, $materialized);
+        }
+
+        // targetByName mit materialisierten Definitionen aktualisieren
+        foreach ($materializedByName as $name => $def) {
+            $targetByName->put($name, $def);
+        }
+
+        // 2. Werte vom Bewerber übertragen
         $sourceValues = $from->extraFieldValues()->with('definition')->get();
 
         foreach ($sourceValues as $sourceValue) {
@@ -96,6 +133,7 @@ class TransferApplicantToOnboarding
                     'context_id' => $to->id,
                     'name' => $sourceDef->name,
                     'label' => $sourceDef->label,
+                    'description' => $sourceDef->description,
                     'type' => $sourceDef->type,
                     'is_required' => $sourceDef->is_required,
                     'is_mandatory' => $sourceDef->is_mandatory,
