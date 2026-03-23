@@ -8,6 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('hcm_interviews');
+
         Schema::create('hcm_interviews', function (Blueprint $table) {
             $table->id();
             $table->string('uuid', 36)->unique();

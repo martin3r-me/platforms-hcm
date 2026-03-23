@@ -8,6 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Clean up from any previous partial migration run
+        Schema::dropIfExists('hcm_interview_bookings');
+        Schema::dropIfExists('hcm_interview_user');
+        Schema::dropIfExists('hcm_interviews');
+        Schema::dropIfExists('hcm_interview_types');
+
         Schema::create('hcm_interview_types', function (Blueprint $table) {
             $table->id();
             $table->string('uuid', 36)->unique();
