@@ -16,6 +16,7 @@
                     <thead>
                         <tr class="text-left text-[var(--ui-muted)] border-b border-[var(--ui-border)]/60 text-xs uppercase tracking-wide">
                             <th class="px-4 py-3">Name & Kontakt</th>
+                            <th class="px-4 py-3">Stelle</th>
                             <th class="px-4 py-3">E-Mail</th>
                             <th class="px-4 py-3">Verantwortlicher</th>
                             <th class="px-4 py-3">Fortschritt</th>
@@ -42,6 +43,13 @@
                                         </div>
                                     @else
                                         <span class="text-[var(--ui-muted)] italic">Kein Kontakt verknüpft</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if($onboarding->jobTitle)
+                                        <span class="text-sm">{{ $onboarding->jobTitle->name }}</span>
+                                    @else
+                                        <span class="text-[var(--ui-muted)]">–</span>
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
@@ -93,7 +101,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-12 text-center">
+                                <td colspan="7" class="px-4 py-12 text-center">
                                     <div class="flex flex-col items-center justify-center">
                                         @svg('heroicon-o-clipboard-document-check', 'w-16 h-16 text-[var(--ui-muted)] mb-4')
                                         <div class="text-lg font-medium text-[var(--ui-secondary)] mb-1">Keine Onboardings gefunden</div>
@@ -119,6 +127,17 @@
                 </div>
                 <p class="text-blue-700 text-sm">Erstelle ein neues Onboarding und verknüpfe optional einen CRM-Kontakt.</p>
             </div>
+
+            <x-ui-input-select
+                name="hcm_job_title_id"
+                label="Stellenbezeichnung (optional)"
+                :options="$this->availableJobTitles"
+                optionValue="id"
+                optionLabel="name"
+                :nullable="true"
+                nullLabel="Keine Stellenbezeichnung"
+                wire:model.live="hcm_job_title_id"
+            />
 
             <x-ui-input-select
                 name="contact_id"

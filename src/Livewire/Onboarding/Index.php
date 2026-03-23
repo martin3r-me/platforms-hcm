@@ -5,6 +5,7 @@ namespace Platform\Hcm\Livewire\Onboarding;
 use Livewire\Component;
 use Livewire\Attributes\Computed;
 use Platform\Core\Models\Team;
+use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
 use Platform\Crm\Models\CrmContact;
 
@@ -22,9 +23,11 @@ class Index extends Component
 
     // Form Data
     public $contact_id = null;
+    public $hcm_job_title_id = null;
     public $notes = '';
 
     protected $rules = [
+        'hcm_job_title_id' => 'nullable|integer|exists:hcm_job_titles,id',
         'notes' => 'nullable|string',
     ];
 
@@ -42,6 +45,7 @@ class Index extends Component
                     ->orderBy('id');
             },
             'ownedByUser',
+            'jobTitle',
         ])
             ->forTeam($teamId);
 
@@ -80,6 +84,16 @@ class Index extends Component
             ->get();
     }
 
+    #[Computed]
+    public function availableJobTitles()
+    {
+        return HcmJobTitle::where('team_id', auth()->user()->currentTeam->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($jt) => ['id' => $jt->id, 'name' => $jt->name]);
+    }
+
     public function sortBy($field)
     {
         if ($this->sortField === $field) {
@@ -110,6 +124,7 @@ class Index extends Component
 
         $onboarding = HcmOnboarding::create([
             'notes' => $this->notes,
+            'hcm_job_title_id' => $this->hcm_job_title_id ?: null,
             'team_id' => auth()->user()->currentTeam->id,
             'created_by_user_id' => auth()->id(),
             'is_active' => true,
@@ -129,7 +144,7 @@ class Index extends Component
 
     public function resetForm()
     {
-        $this->reset(['contact_id', 'notes']);
+        $this->reset(['contact_id', 'hcm_job_title_id', 'notes']);
     }
 
     public function openCreateModal()

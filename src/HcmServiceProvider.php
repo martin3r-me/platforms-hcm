@@ -32,6 +32,7 @@ class HcmServiceProvider extends ServiceProvider
     {
         Relation::morphMap([
             'hcm_employee' => \Platform\Hcm\Models\HcmEmployee::class,
+            'hcm_job_title' => \Platform\Hcm\Models\HcmJobTitle::class,
             'hcm_onboarding' => \Platform\Hcm\Models\HcmOnboarding::class,
         ]);
 

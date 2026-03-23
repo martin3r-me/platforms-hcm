@@ -8,6 +8,7 @@ use Platform\Core\Livewire\Concerns\WithExtraFields;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Platform\Core\Models\Team;
+use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
 use Platform\Crm\Models\CrmContact;
 
@@ -63,6 +64,7 @@ class Show extends Component
     public function rules(): array
     {
         return array_merge([
+            'onboarding.hcm_job_title_id' => 'nullable|integer|exists:hcm_job_titles,id',
             'onboarding.owned_by_user_id' => 'nullable|exists:users,id',
             'onboarding.notes' => 'nullable|string',
             'onboarding.is_active' => 'boolean',
@@ -95,6 +97,24 @@ class Show extends Component
         $this->onboarding->save();
 
         session()->flash('message', 'Onboarding erfolgreich aktualisiert.');
+    }
+
+    public function updatedOnboardingHcmJobTitleId($value): void
+    {
+        $this->onboarding->hcm_job_title_id = $value ?: null;
+        $this->onboarding->load('jobTitle');
+        $this->onboarding->clearExtraFieldDefinitionsCache();
+        $this->loadExtraFieldValues($this->onboarding);
+    }
+
+    #[Computed]
+    public function availableJobTitles()
+    {
+        return HcmJobTitle::where('team_id', $this->onboarding->team_id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($jt) => ['id' => $jt->id, 'name' => $jt->name]);
     }
 
     #[Computed]

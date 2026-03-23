@@ -58,6 +58,17 @@
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <x-ui-input-select
+                    name="onboarding.hcm_job_title_id"
+                    label="Stellenbezeichnung"
+                    :options="$this->availableJobTitles"
+                    optionValue="id"
+                    optionLabel="name"
+                    :nullable="true"
+                    nullLabel="Keine Stellenbezeichnung"
+                    wire:model.live="onboarding.hcm_job_title_id"
+                />
+
+                <x-ui-input-select
                     name="onboarding.owned_by_user_id"
                     label="Verantwortlicher"
                     :options="$this->teamUsers"
