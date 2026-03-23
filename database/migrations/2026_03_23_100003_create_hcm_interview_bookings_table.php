@@ -17,7 +17,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->dateTime('booked_at')->nullable()->useCurrent();
             $table->boolean('is_active')->default(true);
-            $table->foreignId('team_id')->constrained('teams')->nullOnDelete();
+            $table->foreignId('team_id')->constrained('teams')->cascadeOnDelete();
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('owned_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();

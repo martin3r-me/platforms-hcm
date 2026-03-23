@@ -22,7 +22,7 @@ return new class extends Migration
             $table->unsignedInteger('max_participants')->nullable();
             $table->string('status')->default('planned');
             $table->boolean('is_active')->default(true);
-            $table->foreignId('team_id')->constrained('teams')->nullOnDelete();
+            $table->foreignId('team_id')->constrained('teams')->cascadeOnDelete();
             $table->foreignId('created_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('owned_by_user_id')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
