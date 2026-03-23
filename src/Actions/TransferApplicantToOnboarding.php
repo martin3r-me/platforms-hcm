@@ -211,6 +211,17 @@ class TransferApplicantToOnboarding
     {
         $values = $applicant->extraFieldValues()->with('definition')->get();
 
+        // 1. Type-based: look for email-type extra fields
+        foreach ($values as $value) {
+            if ($value->definition?->type === 'email') {
+                $email = $value->typed_value;
+                if (is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    return $email;
+                }
+            }
+        }
+
+        // 2. Fallback: name-based regex
         foreach ($values as $value) {
             $name = strtolower($value->definition?->name ?? '');
             if (preg_match('/e[\-_]?mail/', $name) && filter_var($value->value, FILTER_VALIDATE_EMAIL)) {
@@ -225,6 +236,17 @@ class TransferApplicantToOnboarding
     {
         $values = $applicant->extraFieldValues()->with('definition')->get();
 
+        // 1. Type-based: look for phone-type extra fields (JSON value with e164)
+        foreach ($values as $value) {
+            if ($value->definition?->type === 'phone') {
+                $typed = $value->typed_value;
+                if (is_array($typed) && !empty($typed['e164'])) {
+                    return $typed['international'] ?? $typed['e164'];
+                }
+            }
+        }
+
+        // 2. Fallback: name-based regex
         foreach ($values as $value) {
             $name = strtolower($value->definition?->name ?? '');
             if (preg_match('/phone|telefon|mobil|handy|rufnummer/', $name)) {

@@ -7,6 +7,7 @@ use Platform\Core\Contracts\InheritsExtraFields;
 use Platform\Core\Traits\HasExtraFields;
 use Platform\Core\Traits\HasPublicFormLink;
 use Platform\Hcm\Traits\HasEmployeeContact;
+use Platform\Hcm\Traits\SyncsCrmContactFields;
 use Symfony\Component\Uid\UuidV7;
 
 class HcmOnboarding extends Model implements InheritsExtraFields
@@ -14,6 +15,7 @@ class HcmOnboarding extends Model implements InheritsExtraFields
     use HasEmployeeContact;
     use HasExtraFields;
     use HasPublicFormLink;
+    use SyncsCrmContactFields;
 
     protected $table = 'hcm_onboardings';
 
@@ -84,6 +86,11 @@ class HcmOnboarding extends Model implements InheritsExtraFields
     public function jobTitle()
     {
         return $this->belongsTo(HcmJobTitle::class, 'hcm_job_title_id');
+    }
+
+    public function interviewBookings()
+    {
+        return $this->hasMany(HcmInterviewBooking::class, 'hcm_onboarding_id');
     }
 
     public function getPublicUrl(): string
