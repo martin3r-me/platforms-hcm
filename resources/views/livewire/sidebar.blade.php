@@ -23,6 +23,14 @@
             @svg('heroicon-o-clipboard-document-check', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Onboardings</span>
         </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.interview-schedule.index')">
+            @svg('heroicon-o-calendar-days', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Interview-Termine</span>
+        </x-ui-sidebar-item>
+        <x-ui-sidebar-item :href="route('hcm.interview-types.index')">
+            @svg('heroicon-o-chat-bubble-left-right', 'w-4 h-4 text-[var(--ui-secondary)]')
+            <span class="ml-2 text-sm">Gesprächsarten</span>
+        </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
     {{-- Abschnitt: Organisation --}}
@@ -147,6 +155,9 @@
             </a>
             <a href="{{ route('hcm.onboardings.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Onboardings">
                 @svg('heroicon-o-clipboard-document-check', 'w-5 h-5')
+            </a>
+            <a href="{{ route('hcm.interview-schedule.index') }}" wire:navigate class="flex items-center justify-center p-2 rounded-md text-[var(--ui-secondary)] hover:bg-[var(--ui-muted-5)]" title="Interview-Termine">
+                @svg('heroicon-o-calendar-days', 'w-5 h-5')
             </a>
 
             {{-- Organisation --}}

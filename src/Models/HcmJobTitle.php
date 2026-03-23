@@ -48,6 +48,11 @@ class HcmJobTitle extends Model
     {
         return $this->hasMany(HcmOnboarding::class, 'hcm_job_title_id');
     }
+
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(HcmInterview::class, 'hcm_job_title_id');
+    }
 }
 
 
