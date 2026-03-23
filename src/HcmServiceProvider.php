@@ -219,6 +219,25 @@ class HcmServiceProvider extends ServiceProvider
             $registry->register(new \Platform\Hcm\Tools\CreateJobTitleTool());
             $registry->register(new \Platform\Hcm\Tools\UpdateJobTitleTool());
             $registry->register(new \Platform\Hcm\Tools\DeleteJobTitleTool());
+
+            // Interview Types / Gesprächsarten (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListInterviewTypesTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateInterviewTypeTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateInterviewTypeTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteInterviewTypeTool());
+
+            // Interviews / Termine (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListInterviewsTool());
+            $registry->register(new \Platform\Hcm\Tools\GetInterviewTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateInterviewTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateInterviewTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteInterviewTool());
+
+            // Interview Bookings / Buchungen (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListInterviewBookingsTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateInterviewBookingTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateInterviewBookingTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteInterviewBookingTool());
         } catch (\Throwable $e) {
             \Log::warning('HCM: Tool-Registrierung fehlgeschlagen', ['error' => $e->getMessage()]);
         }
