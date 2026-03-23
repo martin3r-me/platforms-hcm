@@ -168,6 +168,10 @@ trait SyncsCrmContactFields
             return;
         }
 
+        if ($contact->birth_date !== null) {
+            return;
+        }
+
         $contact->birth_date = $date;
         $contact->save();
     }
