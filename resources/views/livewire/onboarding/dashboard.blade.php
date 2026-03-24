@@ -84,6 +84,21 @@
                                             @if($onboarding->source_position_title)
                                                 <div class="text-xs text-[var(--ui-muted)] truncate">{{ $onboarding->source_position_title }}</div>
                                             @endif
+                                            @if(!empty($waStatus['recent_messages']))
+                                                <div class="mt-1 space-y-0.5">
+                                                    @foreach($waStatus['recent_messages'] as $msg)
+                                                        <div class="flex items-center gap-1 text-[10px] leading-tight {{ $msg['direction'] === 'inbound' ? 'text-green-600' : 'text-[var(--ui-muted)]' }}">
+                                                            @if($msg['direction'] === 'inbound')
+                                                                @svg('heroicon-o-arrow-down-left', 'w-2.5 h-2.5 flex-shrink-0')
+                                                            @else
+                                                                @svg('heroicon-o-arrow-up-right', 'w-2.5 h-2.5 flex-shrink-0')
+                                                            @endif
+                                                            <span class="truncate">{{ $msg['body'] ?: '—' }}</span>
+                                                            <span class="flex-shrink-0 text-[var(--ui-muted)]/60">{{ $msg['at'] }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -197,6 +212,21 @@
                                             @if($primaryEmail)
                                                 <div class="text-xs text-[var(--ui-muted)] truncate">{{ $primaryEmail }}</div>
                                             @endif
+                                            @if(!empty($waStatus['recent_messages']))
+                                                <div class="mt-1 space-y-0.5">
+                                                    @foreach($waStatus['recent_messages'] as $msg)
+                                                        <div class="flex items-center gap-1 text-[10px] leading-tight {{ $msg['direction'] === 'inbound' ? 'text-green-600' : 'text-[var(--ui-muted)]' }}">
+                                                            @if($msg['direction'] === 'inbound')
+                                                                @svg('heroicon-o-arrow-down-left', 'w-2.5 h-2.5 flex-shrink-0')
+                                                            @else
+                                                                @svg('heroicon-o-arrow-up-right', 'w-2.5 h-2.5 flex-shrink-0')
+                                                            @endif
+                                                            <span class="truncate">{{ $msg['body'] ?: '—' }}</span>
+                                                            <span class="flex-shrink-0 text-[var(--ui-muted)]/60">{{ $msg['at'] }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
                                 </td>
@@ -298,6 +328,21 @@
                                             </div>
                                             @if($primaryEmail)
                                                 <div class="text-xs text-[var(--ui-muted)] truncate">{{ $primaryEmail }}</div>
+                                            @endif
+                                            @if(!empty($waStatus['recent_messages']))
+                                                <div class="mt-1 space-y-0.5">
+                                                    @foreach($waStatus['recent_messages'] as $msg)
+                                                        <div class="flex items-center gap-1 text-[10px] leading-tight {{ $msg['direction'] === 'inbound' ? 'text-green-600' : 'text-[var(--ui-muted)]' }}">
+                                                            @if($msg['direction'] === 'inbound')
+                                                                @svg('heroicon-o-arrow-down-left', 'w-2.5 h-2.5 flex-shrink-0')
+                                                            @else
+                                                                @svg('heroicon-o-arrow-up-right', 'w-2.5 h-2.5 flex-shrink-0')
+                                                            @endif
+                                                            <span class="truncate">{{ $msg['body'] ?: '—' }}</span>
+                                                            <span class="flex-shrink-0 text-[var(--ui-muted)]/60">{{ $msg['at'] }}</span>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
                                             @endif
                                         </div>
                                     </div>

@@ -179,11 +179,25 @@ class Dashboard extends Component
             ->first();
 
         $lastMessage = null;
+        $recentMessages = [];
         if ($thread) {
             if ($thread->isWindowOpen()) {
                 $windowOpen = true;
             }
             $lastMessage = $thread->last_message_preview;
+
+            $recentMessages = $thread->messages()
+                ->orderByDesc('sent_at')
+                ->limit(2)
+                ->get()
+                ->reverse()
+                ->map(fn ($m) => [
+                    'direction' => $m->direction,
+                    'body' => \Illuminate\Support\Str::limit($m->body ?? '', 60),
+                    'at' => $m->sent_at?->format('d.m. H:i'),
+                ])
+                ->values()
+                ->all();
         }
 
         return [
@@ -191,6 +205,7 @@ class Dashboard extends Component
             'status' => $whatsappStatus,
             'window_open' => $windowOpen,
             'last_message' => $lastMessage,
+            'recent_messages' => $recentMessages,
         ];
     }
 
