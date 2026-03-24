@@ -75,13 +75,22 @@ class SendInterviewReminders extends Command
 
                 try {
                     $service = app(WhatsAppMetaService::class);
-                    $service->sendTemplate(
+                    $message = $service->sendTemplate(
                         channel: $channel,
                         to: $phoneNumber->international,
                         templateName: $template->name,
                         components: [],
                         languageCode: $template->language ?? 'de',
                     );
+
+                    // Link thread to onboarding context
+                    if ($message->thread && $booking->onboarding) {
+                        $message->thread->addContext(
+                            get_class($booking->onboarding),
+                            $booking->onboarding->id,
+                            'interview_reminder',
+                        );
+                    }
 
                     $booking->update(['reminder_sent_at' => now()]);
                     $sent++;
