@@ -117,12 +117,14 @@ class HcmInterview extends Model
             return [];
         }
 
-        // Count body variables
+        // Parse body variables and detect named vs positional params
         $bodyText = '';
+        $namedParamDefs = [];
         $hasUrlButton = false;
         foreach ($templateComponents as $comp) {
             if (strtolower((string) ($comp['type'] ?? '')) === 'body') {
                 $bodyText = (string) ($comp['text'] ?? '');
+                $namedParamDefs = $comp['example']['body_text_named_params'] ?? [];
             }
             if (($comp['type'] ?? '') === 'BUTTONS') {
                 foreach ($comp['buttons'] ?? [] as $btn) {
@@ -133,6 +135,8 @@ class HcmInterview extends Model
             }
         }
 
+        $isNamed = !empty($namedParamDefs);
+
         preg_match_all('/\{\{(\d+)\}\}/', $bodyText, $numMatches);
         preg_match_all('/\{\{(\w+)\}\}/', $bodyText, $namedMatches);
         $varCount = !empty($numMatches[1]) ? (int) max($numMatches[1]) : count(array_unique($namedMatches[1] ?? []));
@@ -141,12 +145,26 @@ class HcmInterview extends Model
 
         if ($varCount > 0) {
             $parameters = [];
-            for ($i = 1; $i <= $varCount; $i++) {
-                $source = $mapping["body_{$i}"] ?? '';
-                $parameters[] = [
-                    'type' => 'text',
-                    'text' => $this->resolveVariableValue($source, $booking),
-                ];
+            if ($isNamed) {
+                // Named parameters: include parameter_name for Meta API
+                foreach ($namedParamDefs as $i => $paramDef) {
+                    $paramName = $paramDef['param_name'] ?? '';
+                    $source = $mapping['body_' . ($i + 1)] ?? '';
+                    $parameters[] = [
+                        'type' => 'text',
+                        'parameter_name' => $paramName,
+                        'text' => $this->resolveVariableValue($source, $booking),
+                    ];
+                }
+            } else {
+                // Positional parameters
+                for ($i = 1; $i <= $varCount; $i++) {
+                    $source = $mapping["body_{$i}"] ?? '';
+                    $parameters[] = [
+                        'type' => 'text',
+                        'text' => $this->resolveVariableValue($source, $booking),
+                    ];
+                }
             }
             $components[] = [
                 'type' => 'body',
