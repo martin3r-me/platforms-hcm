@@ -31,6 +31,7 @@ class HcmInterview extends Model
         'team_id',
         'reminder_wa_template_id',
         'reminder_hours_before',
+        'reminder_wa_template_variables',
         'created_by_user_id',
         'owned_by_user_id',
     ];
@@ -42,6 +43,7 @@ class HcmInterview extends Model
         'max_participants' => 'integer',
         'is_active' => 'boolean',
         'reminder_hours_before' => 'integer',
+        'reminder_wa_template_variables' => 'array',
     ];
 
     protected static function booted(): void
@@ -84,6 +86,110 @@ class HcmInterview extends Model
     public function team(): BelongsTo
     {
         return $this->belongsTo(\Platform\Core\Models\Team::class, 'team_id');
+    }
+
+    /**
+     * Available variable sources for template mapping.
+     */
+    public const TEMPLATE_VARIABLE_SOURCES = [
+        'start_date' => 'Start-Datum (z.B. 25.03.2026)',
+        'start_time' => 'Start-Uhrzeit (z.B. 14:00)',
+        'start_date_time' => 'Start Datum + Uhrzeit',
+        'end_date' => 'End-Datum (z.B. 25.03.2026)',
+        'end_time' => 'End-Uhrzeit (z.B. 16:00)',
+        'end_date_time' => 'End Datum + Uhrzeit',
+        'interview_location' => 'Ort',
+        'interview_title' => 'Titel',
+        'job_title' => 'Stellenbezeichnung',
+        'candidate_name' => 'Kandidatenname',
+        'form_link' => 'Public-Form Link',
+    ];
+
+    /**
+     * Resolve template components for the Meta API based on stored variable mapping.
+     */
+    public function resolveTemplateComponents(
+        array $templateComponents,
+        ?HcmInterviewBooking $booking = null,
+    ): array {
+        $mapping = $this->reminder_wa_template_variables ?? [];
+        if (empty($mapping)) {
+            return [];
+        }
+
+        // Count body variables
+        $bodyText = '';
+        $hasUrlButton = false;
+        foreach ($templateComponents as $comp) {
+            if (strtolower((string) ($comp['type'] ?? '')) === 'body') {
+                $bodyText = (string) ($comp['text'] ?? '');
+            }
+            if (($comp['type'] ?? '') === 'BUTTONS') {
+                foreach ($comp['buttons'] ?? [] as $btn) {
+                    if (($btn['type'] ?? '') === 'URL' && str_contains($btn['url'] ?? '', '{{')) {
+                        $hasUrlButton = true;
+                    }
+                }
+            }
+        }
+
+        preg_match_all('/\{\{(\d+)\}\}/', $bodyText, $numMatches);
+        preg_match_all('/\{\{(\w+)\}\}/', $bodyText, $namedMatches);
+        $varCount = !empty($numMatches[1]) ? (int) max($numMatches[1]) : count(array_unique($namedMatches[1] ?? []));
+
+        $components = [];
+
+        if ($varCount > 0) {
+            $parameters = [];
+            for ($i = 1; $i <= $varCount; $i++) {
+                $source = $mapping["body_{$i}"] ?? '';
+                $parameters[] = [
+                    'type' => 'text',
+                    'text' => $this->resolveVariableValue($source, $booking),
+                ];
+            }
+            $components[] = [
+                'type' => 'body',
+                'parameters' => $parameters,
+            ];
+        }
+
+        // URL button parameter
+        if ($hasUrlButton) {
+            $urlSource = $mapping['url_button'] ?? '';
+            $urlValue = $this->resolveVariableValue($urlSource, $booking);
+            if ($urlValue !== '') {
+                $components[] = [
+                    'type' => 'button',
+                    'sub_type' => 'url',
+                    'index' => 0,
+                    'parameters' => [['type' => 'text', 'text' => $urlValue]],
+                ];
+            }
+        }
+
+        return $components;
+    }
+
+    /**
+     * Resolve a single variable value from its source key.
+     */
+    private function resolveVariableValue(string $source, ?HcmInterviewBooking $booking = null): string
+    {
+        return match ($source) {
+            'start_date' => $this->starts_at?->format('d.m.Y') ?? '',
+            'start_time' => $this->starts_at?->format('H:i') ?? '',
+            'start_date_time' => $this->starts_at?->format('d.m.Y H:i') ?? '',
+            'end_date' => $this->ends_at?->format('d.m.Y') ?? '',
+            'end_time' => $this->ends_at?->format('H:i') ?? '',
+            'end_date_time' => $this->ends_at?->format('d.m.Y H:i') ?? '',
+            'interview_location' => $this->location ?? '',
+            'interview_title' => $this->title ?? '',
+            'job_title' => $this->jobTitle?->name ?? '',
+            'candidate_name' => $booking?->onboarding?->crmContactLinks?->first()?->contact?->full_name ?? '',
+            'form_link' => $booking?->onboarding?->public_form_url ?? '',
+            default => '',
+        };
     }
 
     public function scopeActive($query)

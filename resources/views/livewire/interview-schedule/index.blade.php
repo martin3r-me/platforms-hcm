@@ -224,7 +224,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">WA-Template</label>
-                            <select wire:model="reminder_wa_template_id" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                            <select wire:model.live="reminder_wa_template_id" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
                                 <option value="">— Keine Erinnerung —</option>
                                 @foreach($this->availableWhatsAppTemplates as $tpl)
                                     <option value="{{ $tpl->id }}">{{ $tpl->name }} ({{ $tpl->language }})</option>
@@ -233,6 +233,68 @@
                         </div>
                         <x-ui-input-text name="reminder_hours_before" label="Stunden vorher" wire:model="reminder_hours_before" type="number" min="1" placeholder="z.B. 24" />
                     </div>
+                    @if($this->selectedTemplateInfo && ($this->selectedTemplateInfo['body_var_count'] > 0 || $this->selectedTemplateInfo['has_url_button']))
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <label class="block text-xs font-bold text-blue-800 mb-2">Template-Variablen zuordnen</label>
+                            <div class="space-y-2">
+                                @for($i = 1; $i <= $this->selectedTemplateInfo['body_var_count']; $i++)
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-700 w-28 shrink-0">
+                                            @{{ {{ $this->selectedTemplateInfo['param_labels'][$i] ?? $i }} }}
+                                        </span>
+                                        <select wire:model="reminder_wa_template_variables.body_{{ $i }}" class="flex-1 text-xs border border-blue-300 rounded px-2 py-1">
+                                            <option value="">— Nicht zugeordnet —</option>
+                                            @foreach(\Platform\Hcm\Models\HcmInterview::TEMPLATE_VARIABLE_SOURCES as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endfor
+                                @if($this->selectedTemplateInfo['has_url_button'])
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-700 w-28 shrink-0">URL-Button</span>
+                                        <select wire:model="reminder_wa_template_variables.url_button" class="flex-1 text-xs border border-blue-300 rounded px-2 py-1">
+                                            <option value="">— Nicht zugeordnet —</option>
+                                            @foreach(\Platform\Hcm\Models\HcmInterview::TEMPLATE_VARIABLE_SOURCES as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                    @if($this->selectedTemplateInfo && ($this->selectedTemplateInfo['body_var_count'] > 0 || $this->selectedTemplateInfo['has_url_button']))
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <label class="block text-xs font-bold text-blue-800 mb-2">Template-Variablen zuordnen</label>
+                            <div class="space-y-2">
+                                @for($i = 1; $i <= $this->selectedTemplateInfo['body_var_count']; $i++)
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-700 w-28 shrink-0">
+                                            @{{ {{ $this->selectedTemplateInfo['param_labels'][$i] ?? $i }} }}
+                                        </span>
+                                        <select wire:model="reminder_wa_template_variables.body_{{ $i }}" class="flex-1 text-xs border border-blue-300 rounded px-2 py-1">
+                                            <option value="">— Nicht zugeordnet —</option>
+                                            @foreach(\Platform\Hcm\Models\HcmInterview::TEMPLATE_VARIABLE_SOURCES as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endfor
+                                @if($this->selectedTemplateInfo['has_url_button'])
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-700 w-28 shrink-0">URL-Button</span>
+                                        <select wire:model="reminder_wa_template_variables.url_button" class="flex-1 text-xs border border-blue-300 rounded px-2 py-1">
+                                            <option value="">— Nicht zugeordnet —</option>
+                                            @foreach(\Platform\Hcm\Models\HcmInterview::TEMPLATE_VARIABLE_SOURCES as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
             <div>
@@ -304,7 +366,7 @@
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">WA-Template</label>
-                            <select wire:model="reminder_wa_template_id" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                            <select wire:model.live="reminder_wa_template_id" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
                                 <option value="">— Keine Erinnerung —</option>
                                 @foreach($this->availableWhatsAppTemplates as $tpl)
                                     <option value="{{ $tpl->id }}">{{ $tpl->name }} ({{ $tpl->language }})</option>
@@ -313,6 +375,37 @@
                         </div>
                         <x-ui-input-text name="reminder_hours_before" label="Stunden vorher" wire:model="reminder_hours_before" type="number" min="1" placeholder="z.B. 24" />
                     </div>
+                    @if($this->selectedTemplateInfo && ($this->selectedTemplateInfo['body_var_count'] > 0 || $this->selectedTemplateInfo['has_url_button']))
+                        <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <label class="block text-xs font-bold text-blue-800 mb-2">Template-Variablen zuordnen</label>
+                            <div class="space-y-2">
+                                @for($i = 1; $i <= $this->selectedTemplateInfo['body_var_count']; $i++)
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-700 w-28 shrink-0">
+                                            @{{ {{ $this->selectedTemplateInfo['param_labels'][$i] ?? $i }} }}
+                                        </span>
+                                        <select wire:model="reminder_wa_template_variables.body_{{ $i }}" class="flex-1 text-xs border border-blue-300 rounded px-2 py-1">
+                                            <option value="">— Nicht zugeordnet —</option>
+                                            @foreach(\Platform\Hcm\Models\HcmInterview::TEMPLATE_VARIABLE_SOURCES as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endfor
+                                @if($this->selectedTemplateInfo['has_url_button'])
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs text-blue-700 w-28 shrink-0">URL-Button</span>
+                                        <select wire:model="reminder_wa_template_variables.url_button" class="flex-1 text-xs border border-blue-300 rounded px-2 py-1">
+                                            <option value="">— Nicht zugeordnet —</option>
+                                            @foreach(\Platform\Hcm\Models\HcmInterview::TEMPLATE_VARIABLE_SOURCES as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
             <div>

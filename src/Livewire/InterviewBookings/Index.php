@@ -181,12 +181,17 @@ class Index extends Component
         }
 
         try {
+            $components = $interview->resolveTemplateComponents(
+                $template->components ?? [],
+                $booking,
+            );
+
             $service = app(WhatsAppMetaService::class);
             $message = $service->sendTemplate(
                 channel: $channel,
                 to: $phoneNumber->international,
                 templateName: $template->name,
-                components: [],
+                components: $components,
                 languageCode: $template->language ?? 'de',
                 sender: auth()->user(),
             );

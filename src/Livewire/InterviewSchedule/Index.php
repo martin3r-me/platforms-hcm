@@ -33,6 +33,7 @@ class Index extends Component
     public $selectedInterviewers = [];
     public $reminder_wa_template_id = '';
     public $reminder_hours_before = null;
+    public $reminder_wa_template_variables = [];
 
     protected $rules = [
         'title' => 'nullable|string|max:255',
@@ -49,6 +50,7 @@ class Index extends Component
         'selectedInterviewers' => 'array',
         'reminder_wa_template_id' => 'nullable|integer',
         'reminder_hours_before' => 'nullable|integer|min:1',
+        'reminder_wa_template_variables' => 'array',
     ];
 
     public function render()
@@ -109,6 +111,67 @@ class Index extends Component
     }
 
     #[Computed]
+    public function selectedTemplateInfo()
+    {
+        if (!$this->reminder_wa_template_id) {
+            return null;
+        }
+
+        if (!class_exists(\Platform\Integrations\Models\IntegrationsWhatsAppTemplate::class)) {
+            return null;
+        }
+
+        $template = \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::find($this->reminder_wa_template_id);
+        if (!$template) {
+            return null;
+        }
+
+        $components = $template->components ?? [];
+        $bodyText = '';
+        $hasUrlButton = false;
+
+        foreach ($components as $comp) {
+            if (strtolower((string) ($comp['type'] ?? '')) === 'body') {
+                $bodyText = (string) ($comp['text'] ?? '');
+            }
+            if (($comp['type'] ?? '') === 'BUTTONS') {
+                foreach ($comp['buttons'] ?? [] as $btn) {
+                    if (($btn['type'] ?? '') === 'URL' && str_contains($btn['url'] ?? '', '{{')) {
+                        $hasUrlButton = true;
+                    }
+                }
+            }
+        }
+
+        // Count variables (support both {{1}} and {{name}} patterns)
+        preg_match_all('/\{\{(\d+)\}\}/', $bodyText, $numMatches);
+        preg_match_all('/\{\{(\w+)\}\}/', $bodyText, $namedMatches);
+        $bodyVarCount = !empty($numMatches[1]) ? (int) max($numMatches[1]) : count(array_unique($namedMatches[1] ?? []));
+
+        // Extract named param labels if available
+        $paramLabels = [];
+        foreach ($components as $comp) {
+            if (strtolower((string) ($comp['type'] ?? '')) === 'body' && isset($comp['example']['body_text_named_params'])) {
+                foreach ($comp['example']['body_text_named_params'] as $i => $param) {
+                    $paramLabels[$i + 1] = $param['param_name'] ?? "Variable " . ($i + 1);
+                }
+            }
+        }
+
+        return [
+            'body_text' => $bodyText,
+            'body_var_count' => $bodyVarCount,
+            'has_url_button' => $hasUrlButton,
+            'param_labels' => $paramLabels,
+        ];
+    }
+
+    public function updatedReminderWaTemplateId(): void
+    {
+        unset($this->selectedTemplateInfo);
+    }
+
+    #[Computed]
     public function teamUsers()
     {
         return auth()->user()->currentTeam->users()->orderBy('name')->get();
@@ -138,6 +201,7 @@ class Index extends Component
         $this->selectedInterviewers = $m->interviewers->pluck('id')->toArray();
         $this->reminder_wa_template_id = $m->reminder_wa_template_id ?? '';
         $this->reminder_hours_before = $m->reminder_hours_before;
+        $this->reminder_wa_template_variables = $m->reminder_wa_template_variables ?? [];
         $this->showEditModal = true;
     }
 
@@ -159,6 +223,7 @@ class Index extends Component
             'is_active' => $this->is_active,
             'reminder_wa_template_id' => $this->reminder_wa_template_id ?: null,
             'reminder_hours_before' => $this->reminder_hours_before,
+            'reminder_wa_template_variables' => $this->reminder_wa_template_id ? array_filter($this->reminder_wa_template_variables) : null,
             'team_id' => auth()->user()->currentTeam->id,
         ];
 
@@ -209,5 +274,6 @@ class Index extends Component
         $this->selectedInterviewers = [];
         $this->reminder_wa_template_id = '';
         $this->reminder_hours_before = null;
+        $this->reminder_wa_template_variables = [];
     }
 }
