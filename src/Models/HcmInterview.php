@@ -29,6 +29,8 @@ class HcmInterview extends Model
         'status',
         'is_active',
         'team_id',
+        'reminder_wa_template_id',
+        'reminder_hours_before',
         'created_by_user_id',
         'owned_by_user_id',
     ];
@@ -39,6 +41,7 @@ class HcmInterview extends Model
         'min_participants' => 'integer',
         'max_participants' => 'integer',
         'is_active' => 'boolean',
+        'reminder_hours_before' => 'integer',
     ];
 
     protected static function booted(): void

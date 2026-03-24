@@ -38,6 +38,7 @@
                                 <th class="px-4 py-3">Stelle</th>
                                 <th class="px-4 py-3">Ort</th>
                                 <th class="px-4 py-3">Teilnehmer</th>
+                                <th class="px-4 py-3">Erinnerung</th>
                                 <th class="px-4 py-3">Status</th>
                                 <th class="px-4 py-3"></th>
                             </tr>
@@ -71,6 +72,13 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3">
+                                        @if($interview->reminder_wa_template_id && $interview->reminder_hours_before)
+                                            <x-ui-badge variant="info" size="xs">WA {{ $interview->reminder_hours_before }}h</x-ui-badge>
+                                        @else
+                                            <span class="text-[var(--ui-muted)]">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
                                         @if($interview->status === 'planned')
                                             <x-ui-badge variant="warning" size="xs">Geplant</x-ui-badge>
                                         @elseif($interview->status === 'confirmed')
@@ -101,7 +109,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-4 py-8 text-center text-[var(--ui-muted)]">
+                                    <td colspan="9" class="px-4 py-8 text-center text-[var(--ui-muted)]">
                                         @svg('heroicon-o-calendar-days', 'w-10 h-10 text-[var(--ui-muted)] mx-auto mb-2')
                                         <div class="text-sm">Keine Termine gefunden</div>
                                     </td>
@@ -210,6 +218,23 @@
                     @endforeach
                 </div>
             </div>
+            @if($this->availableWhatsAppTemplates->isNotEmpty())
+                <div class="border-t border-[var(--ui-border)]/60 pt-4">
+                    <label class="block text-sm font-bold text-[var(--ui-secondary)] mb-2">WhatsApp-Erinnerung</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">WA-Template</label>
+                            <select wire:model="reminder_wa_template_id" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                                <option value="">— Keine Erinnerung —</option>
+                                @foreach($this->availableWhatsAppTemplates as $tpl)
+                                    <option value="{{ $tpl->id }}">{{ $tpl->name }} ({{ $tpl->language }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <x-ui-input-text name="reminder_hours_before" label="Stunden vorher" wire:model="reminder_hours_before" type="number" min="1" placeholder="z.B. 24" />
+                    </div>
+                </div>
+            @endif
             <div>
                 <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">Status</label>
                 <select wire:model="status" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
@@ -273,6 +298,23 @@
                     @endforeach
                 </div>
             </div>
+            @if($this->availableWhatsAppTemplates->isNotEmpty())
+                <div class="border-t border-[var(--ui-border)]/60 pt-4">
+                    <label class="block text-sm font-bold text-[var(--ui-secondary)] mb-2">WhatsApp-Erinnerung</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">WA-Template</label>
+                            <select wire:model="reminder_wa_template_id" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">
+                                <option value="">— Keine Erinnerung —</option>
+                                @foreach($this->availableWhatsAppTemplates as $tpl)
+                                    <option value="{{ $tpl->id }}">{{ $tpl->name }} ({{ $tpl->language }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <x-ui-input-text name="reminder_hours_before" label="Stunden vorher" wire:model="reminder_hours_before" type="number" min="1" placeholder="z.B. 24" />
+                    </div>
+                </div>
+            @endif
             <div>
                 <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">Status</label>
                 <select wire:model="status" class="w-full text-sm border border-[var(--ui-border)] rounded-md px-3 py-2">

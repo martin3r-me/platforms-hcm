@@ -80,6 +80,14 @@ class CreateInterviewTool implements ToolContract, ToolMetadataContract
                     'items' => ['type' => 'integer'],
                     'description' => 'Optional: Array von User-IDs als Interviewer.',
                 ],
+                'reminder_wa_template_id' => [
+                    'type' => 'integer',
+                    'description' => 'Optional: ID eines APPROVED WhatsApp-Templates für Erinnerung.',
+                ],
+                'reminder_hours_before' => [
+                    'type' => 'integer',
+                    'description' => 'Optional: Stunden vor dem Termin, zu denen die Erinnerung gesendet wird (z.B. 24).',
+                ],
             ],
             'required' => ['starts_at'],
         ]);
@@ -125,6 +133,8 @@ class CreateInterviewTool implements ToolContract, ToolMetadataContract
                 'max_participants' => $arguments['max_participants'] ?? null,
                 'status' => $arguments['status'] ?? 'planned',
                 'is_active' => (bool)($arguments['is_active'] ?? true),
+                'reminder_wa_template_id' => isset($arguments['reminder_wa_template_id']) ? (int)$arguments['reminder_wa_template_id'] : null,
+                'reminder_hours_before' => isset($arguments['reminder_hours_before']) ? (int)$arguments['reminder_hours_before'] : null,
                 'team_id' => $teamId,
                 'created_by_user_id' => $context->user?->id,
             ]);

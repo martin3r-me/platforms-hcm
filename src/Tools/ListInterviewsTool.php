@@ -133,6 +133,8 @@ class ListInterviewsTool implements ToolContract, ToolMetadataContract
                     'bookings_count' => $i->bookings_count,
                     'status' => $i->status,
                     'is_active' => (bool)$i->is_active,
+                    'reminder_wa_template_id' => $i->reminder_wa_template_id,
+                    'reminder_hours_before' => $i->reminder_hours_before,
                     'created_at' => $i->created_at?->toISOString(),
                 ];
 

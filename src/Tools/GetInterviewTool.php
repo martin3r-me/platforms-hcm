@@ -84,6 +84,8 @@ class GetInterviewTool implements ToolContract, ToolMetadataContract
                 'max_participants' => $interview->max_participants,
                 'status' => $interview->status,
                 'is_active' => (bool)$interview->is_active,
+                'reminder_wa_template_id' => $interview->reminder_wa_template_id,
+                'reminder_hours_before' => $interview->reminder_hours_before,
                 'interviewers' => $interview->interviewers->map(fn($u) => [
                     'id' => $u->id,
                     'name' => $u->name,

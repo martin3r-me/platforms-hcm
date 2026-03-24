@@ -31,6 +31,8 @@ class Index extends Component
     public $status = 'planned';
     public $is_active = true;
     public $selectedInterviewers = [];
+    public $reminder_wa_template_id = '';
+    public $reminder_hours_before = null;
 
     protected $rules = [
         'title' => 'nullable|string|max:255',
@@ -45,6 +47,8 @@ class Index extends Component
         'status' => 'required|in:planned,confirmed,cancelled,completed',
         'is_active' => 'boolean',
         'selectedInterviewers' => 'array',
+        'reminder_wa_template_id' => 'nullable|integer',
+        'reminder_hours_before' => 'nullable|integer|min:1',
     ];
 
     public function render()
@@ -93,6 +97,18 @@ class Index extends Component
     }
 
     #[Computed]
+    public function availableWhatsAppTemplates()
+    {
+        if (!class_exists(\Platform\Integrations\Models\IntegrationsWhatsAppTemplate::class)) {
+            return collect();
+        }
+
+        return \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::where('status', 'APPROVED')
+            ->orderBy('name')
+            ->get();
+    }
+
+    #[Computed]
     public function teamUsers()
     {
         return auth()->user()->currentTeam->users()->orderBy('name')->get();
@@ -120,6 +136,8 @@ class Index extends Component
         $this->status = $m->status;
         $this->is_active = $m->is_active;
         $this->selectedInterviewers = $m->interviewers->pluck('id')->toArray();
+        $this->reminder_wa_template_id = $m->reminder_wa_template_id ?? '';
+        $this->reminder_hours_before = $m->reminder_hours_before;
         $this->showEditModal = true;
     }
 
@@ -139,6 +157,8 @@ class Index extends Component
             'max_participants' => $this->max_participants,
             'status' => $this->status,
             'is_active' => $this->is_active,
+            'reminder_wa_template_id' => $this->reminder_wa_template_id ?: null,
+            'reminder_hours_before' => $this->reminder_hours_before,
             'team_id' => auth()->user()->currentTeam->id,
         ];
 
@@ -187,5 +207,7 @@ class Index extends Component
         $this->status = 'planned';
         $this->is_active = true;
         $this->selectedInterviewers = [];
+        $this->reminder_wa_template_id = '';
+        $this->reminder_hours_before = null;
     }
 }

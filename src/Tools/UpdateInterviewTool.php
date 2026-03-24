@@ -86,6 +86,14 @@ class UpdateInterviewTool implements ToolContract, ToolMetadataContract
                     'items' => ['type' => 'integer'],
                     'description' => 'Optional: Array von User-IDs als Interviewer (ersetzt bestehende).',
                 ],
+                'reminder_wa_template_id' => [
+                    'type' => 'integer',
+                    'description' => 'Optional: ID eines APPROVED WhatsApp-Templates für Erinnerung. Auf null setzen zum Entfernen.',
+                ],
+                'reminder_hours_before' => [
+                    'type' => 'integer',
+                    'description' => 'Optional: Stunden vor dem Termin für Erinnerung.',
+                ],
             ],
             'required' => ['interview_id'],
         ]);
@@ -110,7 +118,7 @@ class UpdateInterviewTool implements ToolContract, ToolMetadataContract
                 return ToolResult::error('ACCESS_DENIED', 'Kein Zugriff auf dieses Interview.');
             }
 
-            $fields = ['interview_type_id', 'hcm_job_title_id', 'title', 'description', 'location', 'starts_at', 'ends_at', 'min_participants', 'max_participants', 'status', 'is_active'];
+            $fields = ['interview_type_id', 'hcm_job_title_id', 'title', 'description', 'location', 'starts_at', 'ends_at', 'min_participants', 'max_participants', 'status', 'is_active', 'reminder_wa_template_id', 'reminder_hours_before'];
             foreach ($fields as $field) {
                 if (array_key_exists($field, $arguments)) {
                     $interview->{$field} = $arguments[$field] === '' ? null : $arguments[$field];

@@ -22,12 +22,14 @@ class HcmInterviewBooking extends Model
         'booked_at',
         'is_active',
         'team_id',
+        'reminder_sent_at',
         'created_by_user_id',
         'owned_by_user_id',
     ];
 
     protected $casts = [
         'booked_at' => 'datetime',
+        'reminder_sent_at' => 'datetime',
         'is_active' => 'boolean',
     ];
 

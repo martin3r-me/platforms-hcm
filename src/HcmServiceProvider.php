@@ -108,6 +108,7 @@ class HcmServiceProvider extends ServiceProvider
                 \Platform\Hcm\Console\Commands\EnrichInboxOnboardings::class,
                 \Platform\Hcm\Console\Commands\DispatchAutoPilotOnboardings::class,
                 \Platform\Hcm\Console\Commands\ProcessAutoPilotOnboardings::class,
+                \Platform\Hcm\Console\Commands\SendInterviewReminders::class,
             ]);
         }
 
@@ -129,6 +130,11 @@ class HcmServiceProvider extends ServiceProvider
 
             $schedule->command('hcm:dispatch-auto-pilot-onboardings')
                 ->everyMinute()
+                ->withoutOverlapping()
+                ->runInBackground();
+
+            $schedule->command('hcm:send-interview-reminders')
+                ->everyFiveMinutes()
                 ->withoutOverlapping()
                 ->runInBackground();
         });
