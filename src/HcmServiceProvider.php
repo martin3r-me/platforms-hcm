@@ -240,6 +240,12 @@ class HcmServiceProvider extends ServiceProvider
             $registry->register(new \Platform\Hcm\Tools\UpdateInterviewTool());
             $registry->register(new \Platform\Hcm\Tools\DeleteInterviewTool());
 
+            // Onboarding ↔ CRM Contact Links
+            $registry->register(new \Platform\Hcm\Tools\LinkOnboardingContactTool());
+
+            // Onboarding Extra Fields (auch inherited)
+            $registry->register(new \Platform\Hcm\Tools\FillOnboardingFieldsTool());
+
             // Interview Bookings / Buchungen (Read + Write)
             $registry->register(new \Platform\Hcm\Tools\ListInterviewBookingsTool());
             $registry->register(new \Platform\Hcm\Tools\CreateInterviewBookingTool());

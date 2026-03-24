@@ -146,6 +146,7 @@ class TransferOnboardingToEmployee
                     'context_id' => $to->id,
                     'name' => $sourceDef->name,
                     'label' => $sourceDef->label,
+                    'description' => $sourceDef->description,
                     'type' => $sourceDef->type,
                     'is_required' => $sourceDef->is_required,
                     'is_mandatory' => $sourceDef->is_mandatory,
