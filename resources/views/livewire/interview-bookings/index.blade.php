@@ -81,6 +81,7 @@
                                     <th class="px-4 py-3">Stelle</th>
                                     <th class="px-4 py-3">Gebucht am</th>
                                     <th class="px-4 py-3">Notizen</th>
+                                    <th class="px-4 py-3">Erinnerung</th>
                                     <th class="px-4 py-3">Status</th>
                                     <th class="px-4 py-3"></th>
                                 </tr>
@@ -96,6 +97,20 @@
                                         <td class="px-4 py-3">{{ $booking->onboarding->source_position_title ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ $booking->booked_at?->format('d.m.Y H:i') ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ Str::limit($booking->notes, 40) ?? '—' }}</td>
+                                        <td class="px-4 py-3">
+                                            @if($booking->reminder_sent_at)
+                                                <span class="text-xs text-green-600 flex items-center gap-1">
+                                                    @svg('heroicon-o-check-circle', 'w-3.5 h-3.5')
+                                                    {{ $booking->reminder_sent_at->format('d.m. H:i') }}
+                                                </span>
+                                            @elseif($this->interview->reminder_wa_template_id && $booking->status !== 'cancelled')
+                                                <x-ui-button variant="secondary-outline" size="xs" wire:click="sendReminder({{ $booking->id }})" wire:confirm="Erinnerung jetzt senden?">
+                                                    @svg('heroicon-o-paper-airplane', 'w-3 h-3') Senden
+                                                </x-ui-button>
+                                            @else
+                                                <span class="text-[var(--ui-muted)]">—</span>
+                                            @endif
+                                        </td>
                                         <td class="px-4 py-3">
                                             <select wire:change="updateStatus({{ $booking->id }}, $event.target.value)" class="text-xs border border-[var(--ui-border)] rounded px-2 py-1">
                                                 <option value="registered" @selected($booking->status === 'registered')>Registriert</option>
@@ -113,7 +128,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="px-4 py-8 text-center text-[var(--ui-muted)]">
+                                        <td colspan="7" class="px-4 py-8 text-center text-[var(--ui-muted)]">
                                             @svg('heroicon-o-clipboard-document-list', 'w-10 h-10 text-[var(--ui-muted)] mx-auto mb-2')
                                             <div class="text-sm">Keine Buchungen vorhanden</div>
                                         </td>

@@ -4,6 +4,9 @@ namespace Platform\Hcm\Livewire\InterviewBookings;
 
 use Livewire\Component;
 use Livewire\Attributes\Computed;
+use Platform\Crm\Models\CommsChannel;
+use Platform\Crm\Models\CrmPhoneNumber;
+use Platform\Crm\Services\Comms\WhatsAppMetaService;
 use Platform\Hcm\Models\HcmInterview;
 use Platform\Hcm\Models\HcmInterviewBooking;
 use Platform\Hcm\Models\HcmOnboarding;
@@ -140,5 +143,106 @@ class Index extends Component
         $booking = HcmInterviewBooking::findOrFail($bookingId);
         $booking->delete();
         session()->flash('success', 'Buchung erfolgreich gelöscht!');
+    }
+
+    public function sendReminder(int $bookingId): void
+    {
+        $booking = HcmInterviewBooking::with(['onboarding.crmContactLinks.contact.phoneNumbers'])
+            ->findOrFail($bookingId);
+
+        $interview = $this->interview;
+
+        if (!$interview->reminder_wa_template_id) {
+            session()->flash('error', 'Kein WhatsApp-Template am Termin konfiguriert.');
+            return;
+        }
+
+        if (!class_exists(\Platform\Integrations\Models\IntegrationsWhatsAppTemplate::class)) {
+            session()->flash('error', 'WhatsApp-Integrations-Modul nicht verfügbar.');
+            return;
+        }
+
+        $template = \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::find($interview->reminder_wa_template_id);
+        if (!$template || $template->status !== 'APPROVED') {
+            session()->flash('error', 'Template nicht gefunden oder nicht freigegeben.');
+            return;
+        }
+
+        $channel = $this->resolveWhatsAppChannel($template);
+        if (!$channel) {
+            session()->flash('error', 'Kein aktiver WhatsApp-Kanal gefunden.');
+            return;
+        }
+
+        $phoneNumber = $this->findPhoneNumber($booking);
+        if (!$phoneNumber) {
+            session()->flash('error', 'Keine Telefonnummer für diesen Kandidaten gefunden.');
+            return;
+        }
+
+        try {
+            $service = app(WhatsAppMetaService::class);
+            $service->sendTemplate(
+                channel: $channel,
+                to: $phoneNumber->international,
+                templateName: $template->name,
+                components: [],
+                languageCode: $template->language ?? 'de',
+            );
+
+            $booking->update(['reminder_sent_at' => now()]);
+            session()->flash('success', 'Erinnerung gesendet an ' . $phoneNumber->international);
+        } catch (\Throwable $e) {
+            session()->flash('error', 'Versand fehlgeschlagen: ' . $e->getMessage());
+        }
+    }
+
+    private function resolveWhatsAppChannel($template): ?CommsChannel
+    {
+        $account = $template->whatsappAccount;
+        if (!$account || !$account->active) {
+            return null;
+        }
+
+        return CommsChannel::where('type', 'whatsapp')
+            ->where('is_active', true)
+            ->where('sender_identifier', $account->phone_number)
+            ->first();
+    }
+
+    private function findPhoneNumber(HcmInterviewBooking $booking): ?CrmPhoneNumber
+    {
+        $onboarding = $booking->onboarding;
+        if (!$onboarding) {
+            return null;
+        }
+
+        foreach ($onboarding->crmContactLinks as $link) {
+            $contact = $link->contact;
+            if (!$contact) {
+                continue;
+            }
+
+            $primary = $contact->phoneNumbers
+                ->where('is_active', true)
+                ->where('is_primary', true)
+                ->whereNotNull('international')
+                ->first();
+
+            if ($primary) {
+                return $primary;
+            }
+
+            $fallback = $contact->phoneNumbers
+                ->where('is_active', true)
+                ->whereNotNull('international')
+                ->first();
+
+            if ($fallback) {
+                return $fallback;
+            }
+        }
+
+        return null;
     }
 }
