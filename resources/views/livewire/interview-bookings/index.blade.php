@@ -99,10 +99,17 @@
                                         <td class="px-4 py-3">{{ Str::limit($booking->notes, 40) ?? '—' }}</td>
                                         <td class="px-4 py-3">
                                             @if($booking->reminder_sent_at)
-                                                <span class="text-xs text-green-600 flex items-center gap-1">
-                                                    @svg('heroicon-o-check-circle', 'w-3.5 h-3.5')
-                                                    {{ $booking->reminder_sent_at->format('d.m. H:i') }}
-                                                </span>
+                                                <div class="flex items-center gap-2">
+                                                    <span class="text-xs text-green-600 flex items-center gap-1">
+                                                        @svg('heroicon-o-check-circle', 'w-3.5 h-3.5')
+                                                        {{ $booking->reminder_sent_at->format('d.m. H:i') }}
+                                                    </span>
+                                                    @if($this->interview->reminder_wa_template_id && $booking->status !== 'cancelled')
+                                                        <x-ui-button variant="secondary-outline" size="xs" wire:click="sendReminder({{ $booking->id }})" wire:confirm="Erneut senden?">
+                                                            @svg('heroicon-o-arrow-path', 'w-3 h-3')
+                                                        </x-ui-button>
+                                                    @endif
+                                                </div>
                                             @elseif($this->interview->reminder_wa_template_id && $booking->status !== 'cancelled')
                                                 <x-ui-button variant="secondary-outline" size="xs" wire:click="sendReminder({{ $booking->id }})" wire:confirm="Erinnerung jetzt senden?">
                                                     @svg('heroicon-o-paper-airplane', 'w-3 h-3') Senden
