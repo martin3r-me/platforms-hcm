@@ -166,6 +166,17 @@
             @endif
         </x-ui-panel>
 
+        {{-- Inline Kommunikation (Email + WhatsApp) --}}
+        @if(class_exists(\Platform\Crm\Livewire\InlineComms::class))
+            <livewire:crm.inline-comms
+                :context-type="get_class($onboarding)"
+                :context-id="$onboarding->id"
+                :subject="($primaryContact?->full_name ?? 'Onboarding #' . $onboarding->id)"
+                :recipients="$primaryEmail ? [$primaryEmail] : []"
+                :key="'inline-comms-' . $onboarding->id"
+            />
+        @endif
+
     <!-- Contact Link Modal -->
     <x-ui-modal
         size="sm"
