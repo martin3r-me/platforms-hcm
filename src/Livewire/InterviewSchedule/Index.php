@@ -95,7 +95,7 @@ class Index extends Component
     #[Computed]
     public function teamUsers()
     {
-        return auth()->user()->currentTeam->allUsers()->sortBy('name')->values();
+        return auth()->user()->currentTeam->users()->orderBy('name')->get();
     }
 
     public function openCreateModal(): void
