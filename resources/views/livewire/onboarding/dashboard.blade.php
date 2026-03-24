@@ -68,7 +68,7 @@
                                                     <x-ui-badge variant="danger" size="xs">Enrichment</x-ui-badge>
                                                 @endif
                                                 @if($waStatus['color'] !== 'none')
-                                                    <span title="{{ $waStatus['window_open'] ? 'WhatsApp Fenster offen' : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' : 'WhatsApp unbekannt') }}"
+                                                    <span title="{{ $waStatus['window_open'] ? '💬 Fenster offen' . ($waStatus['last_message'] ? ' — ' . $waStatus['last_message'] : '') : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' . ($waStatus['last_message'] ? ' — ' . $waStatus['last_message'] : '') : 'WhatsApp unbekannt') }}"
                                                           class="inline-flex items-center {{ $waStatus['color'] === 'green' ? 'text-green-500' : ($waStatus['color'] === 'yellow' ? 'text-yellow-500' : 'text-gray-400') }}">
                                                         @if($waStatus['color'] === 'green')
                                                             <span class="relative flex h-3.5 w-3.5">
@@ -178,7 +178,7 @@
                                                     {{ $primaryContact?->full_name ?? 'Onboarding #' . $onboarding->id }}
                                                 </span>
                                                 @if($waStatus['color'] !== 'none')
-                                                    <span title="{{ $waStatus['window_open'] ? 'WhatsApp Fenster offen' : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' : 'WhatsApp unbekannt') }}"
+                                                    <span title="{{ $waStatus['window_open'] ? '💬 Fenster offen' . ($waStatus['last_message'] ? ' — ' . $waStatus['last_message'] : '') : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' . ($waStatus['last_message'] ? ' — ' . $waStatus['last_message'] : '') : 'WhatsApp unbekannt') }}"
                                                           class="inline-flex items-center flex-shrink-0 {{ $waStatus['color'] === 'green' ? 'text-green-500' : ($waStatus['color'] === 'yellow' ? 'text-yellow-500' : 'text-gray-400') }}">
                                                         @if($waStatus['color'] === 'green')
                                                             <span class="relative flex h-3.5 w-3.5">
@@ -283,7 +283,7 @@
                                                     {{ $primaryContact?->full_name ?? 'Onboarding #' . $onboarding->id }}
                                                 </span>
                                                 @if($waStatus['color'] !== 'none')
-                                                    <span title="{{ $waStatus['window_open'] ? 'WhatsApp Fenster offen' : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' : 'WhatsApp unbekannt') }}"
+                                                    <span title="{{ $waStatus['window_open'] ? '💬 Fenster offen' . ($waStatus['last_message'] ? ' — ' . $waStatus['last_message'] : '') : ($waStatus['color'] === 'yellow' ? 'WhatsApp verfügbar' . ($waStatus['last_message'] ? ' — ' . $waStatus['last_message'] : '') : 'WhatsApp unbekannt') }}"
                                                           class="inline-flex items-center flex-shrink-0 {{ $waStatus['color'] === 'green' ? 'text-green-500' : ($waStatus['color'] === 'yellow' ? 'text-yellow-500' : 'text-gray-400') }}">
                                                         @if($waStatus['color'] === 'green')
                                                             <span class="relative flex h-3.5 w-3.5">

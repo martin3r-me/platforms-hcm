@@ -178,14 +178,19 @@ class Dashboard extends Component
             ->orderByDesc('last_inbound_at')
             ->first();
 
-        if ($thread && $thread->isWindowOpen()) {
-            $windowOpen = true;
+        $lastMessage = null;
+        if ($thread) {
+            if ($thread->isWindowOpen()) {
+                $windowOpen = true;
+            }
+            $lastMessage = $thread->last_message_preview;
         }
 
         return [
             'color' => $windowOpen ? 'green' : 'yellow',
             'status' => $whatsappStatus,
             'window_open' => $windowOpen,
+            'last_message' => $lastMessage,
         ];
     }
 
