@@ -128,6 +128,66 @@ class Dashboard extends Component
         return ['filled' => $filled, 'total' => $total];
     }
 
+    /**
+     * Preload all WhatsApp threads for onboarding IDs in a single query.
+     */
+    #[Computed]
+    public function whatsAppThreadMap(): array
+    {
+        $allOnboardings = collect()
+            ->merge($this->inboxOnboardings)
+            ->merge($this->inProgressOnboardings)
+            ->merge($this->completedOnboardings);
+
+        $onboardingIds = $allOnboardings->pluck('id')->unique()->all();
+        if (empty($onboardingIds)) {
+            return [];
+        }
+
+        $morphClass = (new HcmOnboarding)->getMorphClass();
+        $fullClass = HcmOnboarding::class;
+
+        $threads = CommsWhatsAppThread::query()
+            ->where(function ($q) use ($morphClass, $fullClass, $onboardingIds) {
+                $q->where(function ($q2) use ($morphClass, $onboardingIds) {
+                    $q2->where('context_model', $morphClass)
+                        ->whereIn('context_model_id', $onboardingIds);
+                })->orWhere(function ($q2) use ($fullClass, $onboardingIds) {
+                    $q2->where('context_model', $fullClass)
+                        ->whereIn('context_model_id', $onboardingIds);
+                });
+            })
+            ->get();
+
+        // Build map: onboarding_id => thread (prefer the one with latest inbound)
+        $map = [];
+        foreach ($threads as $thread) {
+            $oid = $thread->context_model_id;
+            if (!isset($map[$oid]) || ($thread->last_inbound_at && $thread->last_inbound_at > ($map[$oid]->last_inbound_at ?? null))) {
+                $map[$oid] = $thread;
+            }
+        }
+
+        // Batch-load recent messages for all threads in one query
+        $threadIds = collect($map)->pluck('id')->all();
+        if (!empty($threadIds)) {
+            $allMessages = \Platform\Crm\Models\CommsWhatsAppMessage::query()
+                ->whereIn('comms_whatsapp_thread_id', $threadIds)
+                ->select(['id', 'comms_whatsapp_thread_id', 'direction', 'body', 'sent_at'])
+                ->orderByDesc('sent_at')
+                ->get()
+                ->groupBy('comms_whatsapp_thread_id');
+
+            foreach ($map as $oid => $thread) {
+                // Take last 2, then reverse for chronological order
+                $msgs = ($allMessages->get($thread->id) ?? collect())->take(2)->reverse()->values();
+                $thread->setRelation('recentMessages', $msgs);
+            }
+        }
+
+        return $map;
+    }
+
     public function getWhatsAppStatus(HcmOnboarding $onboarding): array
     {
         $phoneNumber = null;
@@ -145,7 +205,7 @@ class Dashboard extends Component
         }
 
         if (!$phoneNumber) {
-            return ['color' => 'none', 'status' => 'no_phone', 'window_open' => false];
+            return ['color' => 'none', 'status' => 'no_phone', 'window_open' => false, 'last_message' => null, 'recent_messages' => []];
         }
 
         $isWhatsAppAvailable = in_array($whatsappStatus, [
@@ -158,25 +218,13 @@ class Dashboard extends Component
                 'color' => 'gray',
                 'status' => $whatsappStatus,
                 'window_open' => false,
+                'last_message' => null,
+                'recent_messages' => [],
             ];
         }
 
         $windowOpen = false;
-        $morphClass = $onboarding->getMorphClass();
-        $fullClass = get_class($onboarding);
-
-        $thread = CommsWhatsAppThread::query()
-            ->where(function ($q) use ($morphClass, $fullClass, $onboarding) {
-                $q->where(function ($q2) use ($morphClass, $onboarding) {
-                    $q2->where('context_model', $morphClass)
-                        ->where('context_model_id', $onboarding->id);
-                })->orWhere(function ($q2) use ($fullClass, $onboarding) {
-                    $q2->where('context_model', $fullClass)
-                        ->where('context_model_id', $onboarding->id);
-                });
-            })
-            ->orderByDesc('last_inbound_at')
-            ->first();
+        $thread = $this->whatsAppThreadMap[$onboarding->id] ?? null;
 
         $lastMessage = null;
         $recentMessages = [];
@@ -186,11 +234,7 @@ class Dashboard extends Component
             }
             $lastMessage = $thread->last_message_preview;
 
-            $recentMessages = $thread->messages()
-                ->orderByDesc('sent_at')
-                ->limit(2)
-                ->get()
-                ->reverse()
+            $recentMessages = ($thread->recentMessages ?? collect())
                 ->map(fn ($m) => [
                     'direction' => $m->direction,
                     'body' => \Illuminate\Support\Str::limit($m->body ?? '', 60),
@@ -229,14 +273,14 @@ class Dashboard extends Component
             }
         }
 
-        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->autoPilotProcessingIds);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->autoPilotProcessingIds, $this->whatsAppThreadMap);
     }
 
     public function markAsEnriched(int $id): void
     {
         $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
         $onboarding->update(['enrichment_status' => 'enriched']);
-        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount, $this->whatsAppThreadMap);
     }
 
     public function transferToEmployee(int $id): void
@@ -244,7 +288,7 @@ class Dashboard extends Component
         $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
         $action = new TransferOnboardingToEmployee();
         $action->execute($onboarding);
-        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount, $this->whatsAppThreadMap);
     }
 
     public function dismissOnboarding(int $id): void
@@ -254,7 +298,7 @@ class Dashboard extends Component
             'is_active' => false,
             'auto_pilot' => false,
         ]);
-        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount, $this->whatsAppThreadMap);
     }
 
     public function refreshDashboard(): void
@@ -267,6 +311,7 @@ class Dashboard extends Component
             $this->teamChannels,
             $this->autoPilotProcessingIds,
             $this->enrichingOnboardingIds,
+            $this->whatsAppThreadMap,
         );
     }
 
