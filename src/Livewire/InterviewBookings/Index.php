@@ -126,6 +126,12 @@ class Index extends Component
         $this->bookingNotes = '';
     }
 
+    public function updateNotes(int $bookingId, ?string $notes): void
+    {
+        $booking = HcmInterviewBooking::findOrFail($bookingId);
+        $booking->update(['notes' => $notes ?: null]);
+    }
+
     public function updateStatus(int $bookingId, string $status): void
     {
         $validStatuses = ['registered', 'confirmed', 'attended', 'cancelled', 'no_show'];

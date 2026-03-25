@@ -96,7 +96,14 @@
                                         </td>
                                         <td class="px-4 py-3">{{ $booking->onboarding->source_position_title ?? '—' }}</td>
                                         <td class="px-4 py-3">{{ $booking->booked_at?->format('d.m.Y H:i') ?? '—' }}</td>
-                                        <td class="px-4 py-3">{{ Str::limit($booking->notes, 40) ?? '—' }}</td>
+                                        <td class="px-4 py-2">
+                                            <textarea
+                                                class="w-full text-xs border border-transparent hover:border-[var(--ui-border)] focus:border-blue-400 rounded px-2 py-1 bg-transparent resize-none focus:bg-white transition-colors"
+                                                rows="1"
+                                                placeholder="Notiz…"
+                                                wire:blur="updateNotes({{ $booking->id }}, $event.target.value)"
+                                            >{{ $booking->notes }}</textarea>
+                                        </td>
                                         <td class="px-4 py-3">
                                             @if($booking->reminder_sent_at)
                                                 <div class="flex items-center gap-2">
