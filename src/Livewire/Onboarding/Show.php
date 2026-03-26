@@ -24,6 +24,9 @@ class Show extends Component
     public $assignContractModalShow = false;
     public $selectedTemplateId = null;
 
+    // Vertrag versenden
+    public ?string $contractLinkUrl = null;
+
     // Kontakt-Verknüpfungs-Modals
     public $contactLinkModalShow = false;
     public $contactCreateModalShow = false;
@@ -182,6 +185,25 @@ class Show extends Component
         $this->onboarding->load('onboardingContracts.contractTemplate');
         $this->closeAssignContractModal();
         session()->flash('message', 'Vertrag erfolgreich zugewiesen.');
+    }
+
+    public function sendContract(int $contractId): void
+    {
+        $contract = HcmOnboardingContract::where('id', $contractId)
+            ->where('hcm_onboarding_id', $this->onboarding->id)
+            ->firstOrFail();
+
+        $link = $contract->getOrCreatePublicFormLink();
+
+        $contract->update([
+            'status' => 'sent',
+            'sent_at' => now(),
+        ]);
+
+        $this->contractLinkUrl = route('hcm.public.contract-signing', ['token' => $link->token]);
+        $this->onboarding->load('onboardingContracts.contractTemplate');
+
+        $this->dispatch('contract-link-generated');
     }
 
     #[Computed]

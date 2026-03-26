@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Platform\Core\Contracts\InheritsExtraFields;
 use Platform\Core\Traits\HasExtraFields;
+use Platform\Core\Traits\HasPublicFormLink;
 use Symfony\Component\Uid\UuidV7;
 
 class HcmOnboardingContract extends Model implements InheritsExtraFields
 {
     use HasExtraFields;
+    use HasPublicFormLink;
 
     protected $table = 'hcm_onboarding_contracts';
 
@@ -26,6 +28,7 @@ class HcmOnboardingContract extends Model implements InheritsExtraFields
         'sent_at',
         'completed_at',
         'notes',
+        'pre_signing_data',
         'created_by_user_id',
     ];
 
@@ -33,6 +36,7 @@ class HcmOnboardingContract extends Model implements InheritsExtraFields
         'signed_at' => 'datetime',
         'sent_at' => 'datetime',
         'completed_at' => 'datetime',
+        'pre_signing_data' => 'array',
     ];
 
     protected static function booted(): void

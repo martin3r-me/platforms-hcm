@@ -126,6 +126,7 @@
                                 <th class="px-4 py-3">Unterschrift</th>
                                 <th class="px-4 py-3">Versendet</th>
                                 <th class="px-4 py-3">Abgeschlossen</th>
+                                <th class="px-4 py-3">Aktionen</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-[var(--ui-border)]/60">
@@ -175,11 +176,47 @@
                                     <td class="px-4 py-3 text-xs">
                                         {{ $contract->completed_at?->format('d.m.Y H:i') ?? '—' }}
                                     </td>
+                                    <td class="px-4 py-3">
+                                        @if($contract->status === 'pending')
+                                            <x-ui-button size="xs" variant="primary" wire:click="sendContract({{ $contract->id }})">
+                                                @svg('heroicon-o-paper-airplane', 'w-3.5 h-3.5') Versenden
+                                            </x-ui-button>
+                                        @elseif($contract->status === 'sent')
+                                            <x-ui-button size="xs" variant="secondary-outline" wire:click="sendContract({{ $contract->id }})">
+                                                @svg('heroicon-o-link', 'w-3.5 h-3.5') Link kopieren
+                                            </x-ui-button>
+                                        @else
+                                            <span class="text-[var(--ui-muted)]">—</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
+                @if($contractLinkUrl)
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg" x-data="{ copied: false }"
+                         x-init="$wire.on('contract-link-generated', () => { copied = false; })">
+                        <div class="flex items-center gap-2 mb-2">
+                            @svg('heroicon-o-link', 'w-4 h-4 text-blue-600')
+                            <span class="text-sm font-medium text-blue-900">Vertragslink</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" value="{{ $contractLinkUrl }}" readonly
+                                class="flex-1 text-xs bg-white border border-blue-200 rounded px-3 py-2 text-gray-700 font-mono">
+                            <button type="button"
+                                x-on:click="navigator.clipboard.writeText('{{ $contractLinkUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-white border border-blue-200 rounded hover:bg-blue-100 transition">
+                                <template x-if="!copied">
+                                    <span class="inline-flex items-center gap-1">@svg('heroicon-o-clipboard', 'w-4 h-4') Kopieren</span>
+                                </template>
+                                <template x-if="copied">
+                                    <span class="inline-flex items-center gap-1 text-green-600">@svg('heroicon-o-check', 'w-4 h-4') Kopiert!</span>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+                @endif
             @else
                 <div class="text-center py-8">
                     @svg('heroicon-o-document-duplicate', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
