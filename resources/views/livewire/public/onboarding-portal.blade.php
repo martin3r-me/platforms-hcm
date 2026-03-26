@@ -1,4 +1,8 @@
-<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+<style>
+    .onboarding-portal input, .onboarding-portal select, .onboarding-portal textarea { color: #111827 !important; }
+    .onboarding-portal label { color: #4b5563 !important; }
+</style>
+<div class="onboarding-portal min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
 
         {{-- Ungültiger Token --}}
@@ -221,27 +225,27 @@
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Beginn</label>
                                                 <input type="date" wire:model="par15Entries.{{ $index }}.beginn"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.beginn") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Ende</label>
                                                 <input type="date" wire:model="par15Entries.{{ $index }}.ende"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.ende") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Arbeitgeber</label>
                                                 <input type="text" wire:model="par15Entries.{{ $index }}.arbeitgeber"
                                                     placeholder="Firma, Ort"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.arbeitgeber") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Anzahl Arbeitstage</label>
                                                 <input type="number" wire:model="par15Entries.{{ $index }}.tage" min="1"
                                                     placeholder="z.B. 30"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.tage") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                         </div>
@@ -312,20 +316,20 @@
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Beginn</label>
                                                 <input type="date" wire:model="par16Entries.{{ $index }}.beginn"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par16Entries.{$index}.beginn") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Ende</label>
                                                 <input type="date" wire:model="par16Entries.{{ $index }}.ende"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par16Entries.{$index}.ende") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Arbeitsagentur</label>
                                                 <input type="text" wire:model="par16Entries.{{ $index }}.arbeitsagentur"
                                                     placeholder="Ort/Name der Agentur"
-                                                    class="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                                    class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par16Entries.{$index}.arbeitsagentur") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                         </div>
@@ -386,10 +390,10 @@
                                         <tbody>
                                             @foreach($par15Entries as $entry)
                                                 <tr>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['beginn'] ?? '' }}</td>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['ende'] ?? '' }}</td>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['arbeitgeber'] ?? '' }}</td>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['tage'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['beginn'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['ende'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['arbeitgeber'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['tage'] ?? '' }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -413,9 +417,9 @@
                                         <tbody>
                                             @foreach($par16Entries as $entry)
                                                 <tr>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['beginn'] ?? '' }}</td>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['ende'] ?? '' }}</td>
-                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['arbeitsagentur'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['beginn'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['ende'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['arbeitsagentur'] ?? '' }}</td>
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -441,6 +445,61 @@
                             </button>
                         </div>
                     @else
+                        {{-- §15/§16 Zusammenfassung vor Unterschrift --}}
+                        @if($par15HasPrevious && count($par15Entries) > 0)
+                            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4">Ihre Angaben nach &sect;15 &mdash; Kurzfristige Beschäftigungen</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Beginn</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Ende</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Arbeitgeber</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Tage</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($par15Entries as $entry)
+                                                <tr>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['beginn'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['ende'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['arbeitgeber'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['tage'] ?? '' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if($par16WasJobseeking && count($par16Entries) > 0)
+                            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4">Ihre Angaben nach &sect;16 &mdash; Beschäftigungslose Zeiten</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Beginn</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Ende</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Arbeitsagentur</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($par16Entries as $entry)
+                                                <tr>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['beginn'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['ende'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2 text-gray-900">{{ $entry['arbeitsagentur'] ?? '' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="bg-white rounded-lg border border-gray-200 p-8">
                             <h3 class="text-lg font-bold text-gray-900 mb-4">Unterschrift</h3>
                             <p class="text-sm text-gray-500 mb-4">
