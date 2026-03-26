@@ -11,6 +11,7 @@ use Platform\Core\Models\Team;
 use Platform\Crm\Models\CommsChannel;
 use Platform\Crm\Models\CrmContact;
 use Platform\Crm\Services\Comms\WhatsAppMetaService;
+use Platform\Crm\Models\CommsLog;
 use Platform\Hcm\Models\HcmApplicantSettings;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
@@ -237,7 +238,18 @@ class Show extends Component
     public function sendContract(int $contractId): void
     {
         try {
-            \Log::info('[HCM] sendContract aufgerufen', ['contractId' => $contractId, 'onboardingId' => $this->onboarding->id]);
+            CommsLog::log(
+                event: 'hcm_send_contract',
+                status: 'info',
+                summary: "sendContract aufgerufen für Contract #{$contractId}, Onboarding #{$this->onboarding->id}",
+                details: ['contractId' => $contractId, 'onboardingId' => $this->onboarding->id, 'step' => 'entry'],
+                extra: [
+                    'team_id' => $this->onboarding->team_id,
+                    'channel_type' => 'whatsapp',
+                    'source' => 'hcm_onboarding',
+                    'triggered_by_user_id' => auth()->id(),
+                ],
+            );
 
             $contract = HcmOnboardingContract::where('id', $contractId)
                 ->where('hcm_onboarding_id', $this->onboarding->id)
@@ -248,7 +260,18 @@ class Show extends Component
             $templateId = $settings->getSetting('onboarding_wa_template_id');
             $accountId = $settings->getSetting('onboarding_wa_account_id');
 
-            \Log::info('[HCM] WA Settings', ['templateId' => $templateId, 'accountId' => $accountId]);
+            CommsLog::log(
+                event: 'hcm_send_contract',
+                status: 'info',
+                summary: "WA Settings geladen: templateId={$templateId}, accountId={$accountId}",
+                details: ['templateId' => $templateId, 'accountId' => $accountId, 'step' => 'settings'],
+                extra: [
+                    'team_id' => $this->onboarding->team_id,
+                    'channel_type' => 'whatsapp',
+                    'source' => 'hcm_onboarding',
+                    'triggered_by_user_id' => auth()->id(),
+                ],
+            );
 
             if ($templateId && $accountId) {
                 $this->sendPortalViaWhatsApp();
@@ -268,7 +291,18 @@ class Show extends Component
 
             $this->dispatch('contract-link-generated');
         } catch (\Throwable $e) {
-            \Log::error('[HCM] sendContract Fehler', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            CommsLog::log(
+                event: 'hcm_send_contract',
+                status: 'error',
+                summary: "sendContract FEHLER: {$e->getMessage()}",
+                details: ['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine(), 'step' => 'exception'],
+                extra: [
+                    'team_id' => $this->onboarding->team_id,
+                    'channel_type' => 'whatsapp',
+                    'source' => 'hcm_onboarding',
+                    'triggered_by_user_id' => auth()->id(),
+                ],
+            );
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Fehler: ' . $e->getMessage()]);
         }
     }
@@ -421,7 +455,20 @@ class Show extends Component
 
     public function sendPortalViaWhatsApp(): void
     {
-        \Log::info('[HCM] sendPortalViaWhatsApp gestartet', ['onboardingId' => $this->onboarding->id]);
+        $logExtra = [
+            'team_id' => $this->onboarding->team_id,
+            'channel_type' => 'whatsapp',
+            'source' => 'hcm_onboarding',
+            'triggered_by_user_id' => auth()->id(),
+        ];
+
+        CommsLog::log(
+            event: 'hcm_wa_send',
+            status: 'info',
+            summary: "sendPortalViaWhatsApp gestartet für Onboarding #{$this->onboarding->id}",
+            details: ['step' => 'start', 'onboardingId' => $this->onboarding->id],
+            extra: $logExtra,
+        );
 
         $settings = HcmApplicantSettings::getOrCreateForTeam($this->onboarding->team_id);
         $templateId = $settings->getSetting('onboarding_wa_template_id');
@@ -429,24 +476,28 @@ class Show extends Component
         $variableMapping = $settings->getSetting('onboarding_wa_template_variables', []);
 
         if (!$templateId || !$accountId) {
+            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "WA Settings fehlen: templateId={$templateId}, accountId={$accountId}", details: ['step' => 'settings_missing', 'templateId' => $templateId, 'accountId' => $accountId], extra: $logExtra);
             $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp-Einstellungen nicht konfiguriert. Bitte in den Onboarding-Einstellungen Template und Account auswählen.']);
             return;
         }
 
         $template = \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::find($templateId);
         if (!$template || $template->status !== 'APPROVED') {
+            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "Template #{$templateId} nicht gefunden oder nicht APPROVED", details: ['step' => 'template_invalid', 'templateId' => $templateId, 'status' => $template?->status], extra: $logExtra);
             $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp Template nicht gefunden oder nicht genehmigt.']);
             return;
         }
 
         $phoneNumber = $this->findPhoneNumber();
         if (!$phoneNumber) {
+            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "Keine Telefonnummer für Onboarding #{$this->onboarding->id}", details: ['step' => 'no_phone'], extra: $logExtra);
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Kein Kontakt mit Telefonnummer gefunden. Bitte zuerst einen Kontakt mit Telefonnummer verknüpfen.']);
             return;
         }
 
         $channel = $this->resolveWhatsAppChannel($accountId);
         if (!$channel) {
+            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "Kein WA-Kanal für Account #{$accountId}", details: ['step' => 'no_channel', 'accountId' => $accountId], extra: $logExtra);
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Kein aktiver WhatsApp-Kanal konfiguriert.']);
             return;
         }
@@ -518,11 +569,13 @@ class Show extends Component
         }
 
         try {
-            \Log::info('[HCM] WA Template senden', [
-                'to' => $phoneNumber->international,
-                'template' => $template->name,
-                'components' => $components,
-            ]);
+            CommsLog::log(
+                event: 'hcm_wa_send',
+                status: 'info',
+                summary: "Sende Template '{$template->name}' an {$phoneNumber->international}",
+                details: ['step' => 'sending', 'to' => $phoneNumber->international, 'template' => $template->name, 'components' => $components, 'bodyParams' => $bodyParams ?? []],
+                extra: array_merge($logExtra, ['recipient' => $phoneNumber->international]),
+            );
 
             $service = app(WhatsAppMetaService::class);
             $message = $service->sendTemplate(
@@ -559,6 +612,13 @@ class Show extends Component
             $this->onboarding->load('onboardingContracts.contractTemplate');
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Portal-Link erfolgreich per WhatsApp gesendet.']);
         } catch (\Throwable $e) {
+            CommsLog::log(
+                event: 'hcm_wa_send',
+                status: 'error',
+                summary: "WA Senden FEHLER: {$e->getMessage()}",
+                details: ['step' => 'exception', 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()],
+                extra: $logExtra,
+            );
             $this->dispatch('notify', ['type' => 'error', 'message' => 'Fehler beim Senden: ' . $e->getMessage()]);
         }
     }
