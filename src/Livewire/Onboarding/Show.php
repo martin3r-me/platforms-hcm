@@ -236,33 +236,41 @@ class Show extends Component
 
     public function sendContract(int $contractId): void
     {
-        $contract = HcmOnboardingContract::where('id', $contractId)
-            ->where('hcm_onboarding_id', $this->onboarding->id)
-            ->firstOrFail();
+        try {
+            \Log::info('[HCM] sendContract aufgerufen', ['contractId' => $contractId, 'onboardingId' => $this->onboarding->id]);
 
-        // Try WhatsApp first, fall back to link generation
-        $settings = HcmApplicantSettings::getOrCreateForTeam($this->onboarding->team_id);
-        $templateId = $settings->getSetting('onboarding_wa_template_id');
-        $accountId = $settings->getSetting('onboarding_wa_account_id');
+            $contract = HcmOnboardingContract::where('id', $contractId)
+                ->where('hcm_onboarding_id', $this->onboarding->id)
+                ->firstOrFail();
 
-        if ($templateId && $accountId) {
-            // Send via WhatsApp (portal link with all contracts)
-            $this->sendPortalViaWhatsApp();
-            return;
+            // Try WhatsApp first, fall back to link generation
+            $settings = HcmApplicantSettings::getOrCreateForTeam($this->onboarding->team_id);
+            $templateId = $settings->getSetting('onboarding_wa_template_id');
+            $accountId = $settings->getSetting('onboarding_wa_account_id');
+
+            \Log::info('[HCM] WA Settings', ['templateId' => $templateId, 'accountId' => $accountId]);
+
+            if ($templateId && $accountId) {
+                $this->sendPortalViaWhatsApp();
+                return;
+            }
+
+            // Fallback: generate link
+            $link = $contract->getOrCreatePublicFormLink();
+
+            $contract->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+
+            $this->contractLinkUrl = route('hcm.public.contract-signing', ['token' => $link->token]);
+            $this->onboarding->load('onboardingContracts.contractTemplate');
+
+            $this->dispatch('contract-link-generated');
+        } catch (\Throwable $e) {
+            \Log::error('[HCM] sendContract Fehler', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Fehler: ' . $e->getMessage()]);
         }
-
-        // Fallback: generate link
-        $link = $contract->getOrCreatePublicFormLink();
-
-        $contract->update([
-            'status' => 'sent',
-            'sent_at' => now(),
-        ]);
-
-        $this->contractLinkUrl = route('hcm.public.contract-signing', ['token' => $link->token]);
-        $this->onboarding->load('onboardingContracts.contractTemplate');
-
-        $this->dispatch('contract-link-generated');
     }
 
     #[Computed]
@@ -413,6 +421,8 @@ class Show extends Component
 
     public function sendPortalViaWhatsApp(): void
     {
+        \Log::info('[HCM] sendPortalViaWhatsApp gestartet', ['onboardingId' => $this->onboarding->id]);
+
         $settings = HcmApplicantSettings::getOrCreateForTeam($this->onboarding->team_id);
         $templateId = $settings->getSetting('onboarding_wa_template_id');
         $accountId = $settings->getSetting('onboarding_wa_account_id');
@@ -508,6 +518,12 @@ class Show extends Component
         }
 
         try {
+            \Log::info('[HCM] WA Template senden', [
+                'to' => $phoneNumber->international,
+                'template' => $template->name,
+                'components' => $components,
+            ]);
+
             $service = app(WhatsAppMetaService::class);
             $message = $service->sendTemplate(
                 channel: $channel,
