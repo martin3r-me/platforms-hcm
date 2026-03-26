@@ -193,9 +193,9 @@
                                                 <x-ui-button size="xs" variant="primary" wire:click="sendContract({{ $contract->id }})">
                                                     @svg('heroicon-o-paper-airplane', 'w-3.5 h-3.5') Versenden
                                                 </x-ui-button>
-                                            @elseif($contract->status === 'sent')
+                                            @else
                                                 <x-ui-button size="xs" variant="secondary-outline" wire:click="sendContract({{ $contract->id }})">
-                                                    @svg('heroicon-o-link', 'w-3.5 h-3.5') Link kopieren
+                                                    @svg('heroicon-o-arrow-path', 'w-3.5 h-3.5') Erneut senden
                                                 </x-ui-button>
                                             @endif
                                         </div>
@@ -524,7 +524,7 @@
                                 label="{{ $field['label'] }}"
                                 wire:model.live="contractFieldValues.{{ $field['name'] }}"
                                 :nullable="true"
-                                :required="$field['is_required'] ?? false"
+                                :required="false"
                             />
                         @elseif($field['type'] === 'textarea')
                             <x-ui-input-textarea

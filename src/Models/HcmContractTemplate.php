@@ -118,7 +118,11 @@ class HcmContractTemplate extends Model
                 return (string) ($address?->{$addressField} ?? '');
             }
 
-            return (string) ($contact->{$field} ?? '');
+            $value = $contact->{$field} ?? '';
+            if ($value instanceof Carbon) {
+                return $value->format('d.m.Y');
+            }
+            return (string) $value;
         }
 
         if (str_starts_with($source, 'onboarding.')) {

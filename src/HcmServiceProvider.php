@@ -268,6 +268,9 @@ class HcmServiceProvider extends ServiceProvider
 
             // Onboarding Contract Extra Fields
             $registry->register(new \Platform\Hcm\Tools\FillOnboardingContractFieldsTool());
+
+            // Re-Personalize Contracts
+            $registry->register(new \Platform\Hcm\Tools\RePersonalizeContractsTool());
         } catch (\Throwable $e) {
             \Log::warning('HCM: Tool-Registrierung fehlgeschlagen', ['error' => $e->getMessage()]);
         }
