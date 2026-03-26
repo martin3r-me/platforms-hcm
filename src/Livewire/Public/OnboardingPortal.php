@@ -187,11 +187,20 @@ class OnboardingPortal extends Component
 
         $contract = HcmOnboardingContract::where('id', $this->activeContractId)
             ->where('hcm_onboarding_id', $this->onboardingId)
+            ->with(['contractTemplate', 'onboarding'])
             ->first();
 
         if (! $contract || ! in_array($contract->status, ['sent', 'in_progress'])) {
             $this->state = 'invalid';
             return;
+        }
+
+        // Re-personalize contract with latest extra field values before signing
+        if ($contract->contractTemplate) {
+            $contract->personalized_content = $contract->contractTemplate->personalizeContent(
+                $contract->onboarding,
+                $contract
+            );
         }
 
         $preSigningData = [
