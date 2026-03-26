@@ -186,14 +186,16 @@
 
                     <div class="space-y-4">
                         <div class="flex items-center gap-6">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" wire:model.live="par15HasPrevious" value="1" class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-700">Ja</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" wire:model.live="par15HasPrevious" value="" class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-700">Nein</span>
-                            </label>
+                            <button type="button" wire:click="$set('par15HasPrevious', true)"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition
+                                {{ $par15HasPrevious ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
+                                Ja
+                            </button>
+                            <button type="button" wire:click="$set('par15HasPrevious', false)"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition
+                                {{ !$par15HasPrevious ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
+                                Nein
+                            </button>
                         </div>
 
                         @if($par15HasPrevious)
@@ -275,14 +277,16 @@
 
                     <div class="space-y-4">
                         <div class="flex items-center gap-6">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" wire:model.live="par16WasJobseeking" value="1" class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-700">Ja</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="radio" wire:model.live="par16WasJobseeking" value="" class="text-blue-600 focus:ring-blue-500">
-                                <span class="text-sm font-medium text-gray-700">Nein</span>
-                            </label>
+                            <button type="button" wire:click="$set('par16WasJobseeking', true)"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition
+                                {{ $par16WasJobseeking ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
+                                Ja
+                            </button>
+                            <button type="button" wire:click="$set('par16WasJobseeking', false)"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition
+                                {{ !$par16WasJobseeking ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
+                                Nein
+                            </button>
                         </div>
 
                         @if($par16WasJobseeking)

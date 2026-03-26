@@ -613,11 +613,27 @@ class Show extends Component
                 ]);
 
             // Link thread to onboarding
-            $thread = $message->thread ?? null;
+            $message->load('thread');
+            $thread = $message->thread;
+
+            CommsLog::log(
+                event: 'hcm_wa_send',
+                status: 'info',
+                summary: "Thread-Linking: thread_id=" . ($thread?->id ?? 'NULL') . ", message_id=" . ($message->id ?? 'NULL'),
+                details: [
+                    'step' => 'thread_link',
+                    'thread_id' => $thread?->id,
+                    'message_id' => $message->id ?? null,
+                    'morph_class' => $this->onboarding->getMorphClass(),
+                    'onboarding_id' => $this->onboarding->id,
+                    'has_addContext' => $thread ? method_exists($thread, 'addContext') : false,
+                ],
+                extra: $logExtra,
+            );
+
             if ($thread) {
-                if (method_exists($thread, 'addContext')) {
-                    $thread->addContext($this->onboarding->getMorphClass(), $this->onboarding->id, 'onboarding_portal');
-                }
+                $thread->addContext($this->onboarding->getMorphClass(), $this->onboarding->id, 'onboarding_portal');
+
                 if (!$thread->context_model) {
                     $thread->updateQuietly([
                         'context_model' => $this->onboarding->getMorphClass(),
