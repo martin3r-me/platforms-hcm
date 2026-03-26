@@ -154,8 +154,8 @@
                 </button>
             </div>
 
-            {{-- Fortschrittsanzeige (nur beim Unterschreiben, nicht bei Ansicht) --}}
-            @if(! $isViewOnly)
+            {{-- Fortschrittsanzeige (nur beim Unterschreiben von AV, nicht bei Ansicht) --}}
+            @if(! $isViewOnly && $contractTemplateCode === 'AV')
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-2">
                         @foreach([1 => '§15 Angaben', 2 => '§16 Angaben', 3 => 'Vertrag & Unterschrift'] as $num => $label)
@@ -515,7 +515,7 @@
                             />
 
                             <div class="flex justify-between mt-8">
-                                <button type="button" wire:click="previousStep"
+                                <button type="button" wire:click="{{ $contractTemplateCode === 'AV' ? 'previousStep' : 'backToOverview' }}"
                                     class="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
                                     @svg('heroicon-o-arrow-left', 'w-4 h-4') Zurück
                                 </button>

@@ -20,6 +20,7 @@ class OnboardingPortal extends Component
     public int $step = 1;
     public string $contractContent = '';
     public string $contractTemplateName = '';
+    public string $contractTemplateCode = '';
 
     // §15 - Kurzfristige Beschäftigungen
     public bool $par15HasPrevious = false;
@@ -106,6 +107,9 @@ class OnboardingPortal extends Component
         $this->activeContractId = $contract->id;
         $this->contractContent = $contract->personalized_content ?? '';
         $this->contractTemplateName = $contract->contractTemplate?->name ?? 'Vertrag';
+        $this->contractTemplateCode = $contract->contractTemplate?->code ?? '';
+
+        $hasPreSigningSteps = $this->contractTemplateCode === 'AV';
 
         if ($contract->status === 'completed') {
             $this->isViewOnly = true;
@@ -120,7 +124,7 @@ class OnboardingPortal extends Component
             $this->par16Entries = $preData['par16_entries'] ?? [];
         } else {
             $this->isViewOnly = false;
-            $this->step = 1;
+            $this->step = $hasPreSigningSteps ? 1 : 3;
             $this->par15HasPrevious = false;
             $this->par15Entries = [];
             $this->par16WasJobseeking = false;
