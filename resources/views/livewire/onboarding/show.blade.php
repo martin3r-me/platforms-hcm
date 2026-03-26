@@ -4,6 +4,20 @@
     </x-slot>
 
     <x-ui-page-container spacing="space-y-8">
+        {{-- Flash Messages --}}
+        @if(session()->has('message'))
+            <div class="p-4 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-center gap-2">
+                @svg('heroicon-o-check-circle', 'w-5 h-5 text-green-600')
+                {{ session('message') }}
+            </div>
+        @endif
+        @if(session()->has('error'))
+            <div class="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 flex items-center gap-2">
+                @svg('heroicon-o-exclamation-triangle', 'w-5 h-5 text-red-600')
+                {{ session('error') }}
+            </div>
+        @endif
+
         {{-- Header --}}
         @php
             $primaryContact = $onboarding->crmContactLinks->first()?->contact;

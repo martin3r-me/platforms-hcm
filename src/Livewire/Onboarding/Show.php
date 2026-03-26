@@ -240,6 +240,18 @@ class Show extends Component
             ->where('hcm_onboarding_id', $this->onboarding->id)
             ->firstOrFail();
 
+        // Try WhatsApp first, fall back to link generation
+        $settings = HcmApplicantSettings::getOrCreateForTeam($this->onboarding->team_id);
+        $templateId = $settings->getSetting('onboarding_wa_template_id');
+        $accountId = $settings->getSetting('onboarding_wa_account_id');
+
+        if ($templateId && $accountId) {
+            // Send via WhatsApp (portal link with all contracts)
+            $this->sendPortalViaWhatsApp();
+            return;
+        }
+
+        // Fallback: generate link
         $link = $contract->getOrCreatePublicFormLink();
 
         $contract->update([
