@@ -218,7 +218,7 @@ class OnboardingPortal extends Component
             event: 'hcm_portal_sign',
             status: 'debug',
             summary: 'Pre-signing data beim Unterschreiben',
-            details: json_encode([
+            details: [
                 'contract_id' => $contract->id,
                 'par15HasPrevious' => $this->par15HasPrevious,
                 'par15Entries_count' => count($this->par15Entries),
@@ -227,7 +227,7 @@ class OnboardingPortal extends Component
                 'par16Entries_count' => count($this->par16Entries),
                 'par16Entries' => $this->par16Entries,
                 'preSigningData' => $preSigningData,
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+            ],
         );
 
         // Embed §15/§16 data at correct positions in contract (after §15/§16 sections)
