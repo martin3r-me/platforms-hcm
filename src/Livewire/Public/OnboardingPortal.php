@@ -55,6 +55,15 @@ class OnboardingPortal extends Component
 
         $this->onboardingId = $onboarding->id;
         $this->candidateName = $onboarding->getContact()?->full_name ?? '';
+
+        // Auto-set pending contracts to sent when candidate opens portal
+        $onboarding->onboardingContracts()
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+
         $this->state = 'overview';
     }
 
