@@ -251,40 +251,12 @@ class OnboardingPortal extends Component
 
     private function validateStep1(): void
     {
-        if ($this->par15HasPrevious) {
-            $this->validate([
-                'par15Entries' => 'required|array|min:1',
-                'par15Entries.*.beginn' => 'required|string',
-                'par15Entries.*.ende' => 'required|string',
-                'par15Entries.*.arbeitgeber' => 'required|string',
-                'par15Entries.*.tage' => 'required|integer|min:1',
-            ], [
-                'par15Entries.required' => 'Bitte mindestens einen Eintrag hinzufuegen.',
-                'par15Entries.min' => 'Bitte mindestens einen Eintrag hinzufuegen.',
-                'par15Entries.*.beginn.required' => 'Beginn ist erforderlich.',
-                'par15Entries.*.ende.required' => 'Ende ist erforderlich.',
-                'par15Entries.*.arbeitgeber.required' => 'Arbeitgeber ist erforderlich.',
-                'par15Entries.*.tage.required' => 'Anzahl Tage ist erforderlich.',
-            ]);
-        }
+        // Validation optional — entries are informational
     }
 
     private function validateStep2(): void
     {
-        if ($this->par16WasJobseeking) {
-            $this->validate([
-                'par16Entries' => 'required|array|min:1',
-                'par16Entries.*.beginn' => 'required|string',
-                'par16Entries.*.ende' => 'required|string',
-                'par16Entries.*.arbeitsagentur' => 'required|string',
-            ], [
-                'par16Entries.required' => 'Bitte mindestens einen Eintrag hinzufuegen.',
-                'par16Entries.min' => 'Bitte mindestens einen Eintrag hinzufuegen.',
-                'par16Entries.*.beginn.required' => 'Beginn ist erforderlich.',
-                'par16Entries.*.ende.required' => 'Ende ist erforderlich.',
-                'par16Entries.*.arbeitsagentur.required' => 'Arbeitsagentur ist erforderlich.',
-            ]);
-        }
+        // Validation optional — entries are informational
     }
 
     public function render()
