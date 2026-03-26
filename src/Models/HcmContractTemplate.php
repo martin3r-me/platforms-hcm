@@ -137,6 +137,10 @@ class HcmContractTemplate extends Model
             return (string) ($contract->getExtraField($efName) ?? '');
         }
 
+        if (str_starts_with($source, 'text:')) {
+            return substr($source, strlen('text:'));
+        }
+
         if (str_starts_with($source, 'meta.')) {
             $metaKey = substr($source, strlen('meta.'));
             return match ($metaKey) {

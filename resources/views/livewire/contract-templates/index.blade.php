@@ -167,7 +167,7 @@
                 {{-- Field Mappings --}}
                 <div>
                     <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">Platzhalter-Zuordnungen</label>
-                    <p class="text-xs text-[var(--ui-muted)] mb-3">Platzhalter im Vertragstext (z.B. <code class="bg-gray-100 px-1 rounded">&#123;&#123;vorname&#125;&#125;</code>) werden beim Zuweisen automatisch ersetzt.</p>
+                    <p class="text-xs text-[var(--ui-muted)] mb-3">Platzhalter im Vertragstext (z.B. <code class="bg-gray-100 px-1 rounded">&#123;&#123;vorname&#125;&#125;</code>) werden beim Zuweisen automatisch ersetzt. Quelle kann ein Datenfeld oder ein fixer Text sein.</p>
 
                     <div class="space-y-2">
                         @foreach($field_mappings as $index => $mapping)
@@ -187,13 +187,32 @@
                                     @php $currentSource = $field_mappings[$index]['source'] ?? ''; @endphp
                                     @php
                                         $isPreset = false;
-                                        foreach ($sourceOptions as $options) {
-                                            if (array_key_exists($currentSource, $options)) { $isPreset = true; break; }
+                                        $isFixedText = str_starts_with($currentSource, 'text:');
+                                        if (!$isFixedText) {
+                                            foreach ($sourceOptions as $options) {
+                                                if (array_key_exists($currentSource, $options)) { $isPreset = true; break; }
+                                            }
                                         }
-                                        $isCustom = filled($currentSource) && !$isPreset;
+                                        $isCustomPath = filled($currentSource) && !$isPreset && !$isFixedText;
                                     @endphp
 
-                                    @if($isCustom)
+                                    @if($isFixedText)
+                                        <div class="flex gap-1">
+                                            <div class="flex-1 relative">
+                                                <span class="absolute left-2 top-2 text-xs text-[var(--ui-muted)] bg-gray-100 px-1.5 py-0.5 rounded">Fix</span>
+                                                <input
+                                                    type="text"
+                                                    value="{{ substr($currentSource, 5) }}"
+                                                    wire:change="$set('field_mappings.{{ $index }}.source', 'text:' + $event.target.value)"
+                                                    placeholder="Fixer Wert eingeben"
+                                                    class="w-full rounded-md border border-[var(--ui-border)] pl-12 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ui-primary)]/50"
+                                                />
+                                            </div>
+                                            <button type="button" wire:click="$set('field_mappings.{{ $index }}.source', '')" class="text-[var(--ui-muted)] hover:text-[var(--ui-secondary)] px-1" title="Zur Auswahl wechseln">
+                                                @svg('heroicon-o-list-bullet', 'w-4 h-4')
+                                            </button>
+                                        </div>
+                                    @elseif($isCustomPath)
                                         <div class="flex gap-1">
                                             <input
                                                 type="text"
@@ -219,14 +238,18 @@
                                                         @endforeach
                                                     </optgroup>
                                                 @endforeach
-                                                <optgroup label="Extra Fields">
+                                                <optgroup label="Sonstiges">
                                                     <option value="__custom__">Eigener Pfad…</option>
+                                                    <option value="__fixed__">Fixer Text…</option>
                                                 </optgroup>
                                             </select>
                                             @if($currentSource === '__custom__')
                                                 <script>
-                                                    // Switch to custom input immediately
                                                     @this.set('field_mappings.{{ $index }}.source', 'onboarding.extra_field.');
+                                                </script>
+                                            @elseif($currentSource === '__fixed__')
+                                                <script>
+                                                    @this.set('field_mappings.{{ $index }}.source', 'text:');
                                                 </script>
                                             @endif
                                         </div>
