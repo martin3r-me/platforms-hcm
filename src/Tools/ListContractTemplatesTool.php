@@ -73,6 +73,7 @@ class ListContractTemplatesTool implements ToolContract, ToolMetadataContract
                 'name' => $t->name,
                 'code' => $t->code,
                 'description' => $t->description,
+                'field_mappings' => $t->field_mappings,
                 'requires_signature' => (bool)$t->requires_signature,
                 'sort_order' => $t->sort_order,
                 'is_active' => (bool)$t->is_active,

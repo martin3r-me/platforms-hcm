@@ -47,7 +47,11 @@ class CreateContractTemplateTool implements ToolContract, ToolMetadataContract
                 ],
                 'content' => [
                     'type' => 'string',
-                    'description' => 'Optional: Vertragstext (HTML/Markdown mit Platzhaltern).',
+                    'description' => 'Optional: Vertragstext (HTML/Markdown mit Platzhaltern wie {{vorname}}, {{nachname}}).',
+                ],
+                'field_mappings' => [
+                    'type' => 'object',
+                    'description' => 'Optional: JSON-Mapping von Platzhalter-Namen auf Datenquellen. Beispiel: {"vorname": "contact.first_name", "nachname": "contact.last_name"}. Quellen: contact.*, contact.email, contact.phone, contact.address.*, onboarding.*, onboarding.extra_field.*, contract.extra_field.*, meta.datum_heute.',
                 ],
                 'requires_signature' => [
                     'type' => 'boolean',
@@ -85,6 +89,7 @@ class CreateContractTemplateTool implements ToolContract, ToolMetadataContract
                 'code' => isset($arguments['code']) ? trim((string)$arguments['code']) : null,
                 'description' => $arguments['description'] ?? null,
                 'content' => $arguments['content'] ?? null,
+                'field_mappings' => $arguments['field_mappings'] ?? null,
                 'requires_signature' => (bool)($arguments['requires_signature'] ?? true),
                 'sort_order' => (int)($arguments['sort_order'] ?? 0),
                 'is_active' => (bool)($arguments['is_active'] ?? true),

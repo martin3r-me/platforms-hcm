@@ -53,6 +53,10 @@ class UpdateContractTemplateTool implements ToolContract, ToolMetadataContract
                     'type' => 'string',
                     'description' => 'Optional: Vertragstext.',
                 ],
+                'field_mappings' => [
+                    'type' => 'object',
+                    'description' => 'Optional: JSON-Mapping von Platzhalter-Namen auf Datenquellen. Beispiel: {"vorname": "contact.first_name", "nachname": "contact.last_name", "geboren_am": "contact.birth_date", "strasse": "contact.address.street", "plz": "contact.address.postal_code", "ort": "contact.address.city", "entgelt": "contract.extra_field.entgelt", "datum_heute": "meta.datum_heute"}. Quellen: contact.*, contact.email, contact.phone, contact.address.*, onboarding.*, onboarding.extra_field.*, contract.extra_field.*, meta.datum_heute.',
+                ],
                 'requires_signature' => [
                     'type' => 'boolean',
                     'description' => 'Optional: Unterschrift erforderlich?',
@@ -89,7 +93,7 @@ class UpdateContractTemplateTool implements ToolContract, ToolMetadataContract
                 return ToolResult::error('ACCESS_DENIED', 'Kein Zugriff auf diese Vertragsvorlage.');
             }
 
-            $fields = ['name', 'code', 'description', 'content', 'requires_signature', 'sort_order', 'is_active'];
+            $fields = ['name', 'code', 'description', 'content', 'field_mappings', 'requires_signature', 'sort_order', 'is_active'];
             foreach ($fields as $field) {
                 if (array_key_exists($field, $arguments)) {
                     $template->{$field} = $arguments[$field] === '' ? null : $arguments[$field];

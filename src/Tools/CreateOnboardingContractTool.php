@@ -24,7 +24,7 @@ class CreateOnboardingContractTool implements ToolContract, ToolMetadataContract
 
     public function getDescription(): string
     {
-        return 'POST /hcm/onboarding-contracts - Weist einem Onboarding einen Vertrag zu. ERFORDERLICH: onboarding_id, contract_template_id. Kopiert Template-Content in personalized_content wenn nicht explizit gesetzt.';
+        return 'POST /hcm/onboarding-contracts - Weist einem Onboarding einen Vertrag zu. ERFORDERLICH: onboarding_id, contract_template_id. Platzhalter im Template werden automatisch mit echten Werten ersetzt (field_mappings), außer personalized_content wird explizit gesetzt.';
     }
 
     public function getSchema(): array
@@ -89,7 +89,7 @@ class CreateOnboardingContractTool implements ToolContract, ToolMetadataContract
                 return ToolResult::error('NOT_FOUND', 'Vertragsvorlage nicht gefunden.');
             }
 
-            $personalizedContent = $arguments['personalized_content'] ?? $template->content;
+            $personalizedContent = $arguments['personalized_content'] ?? $template->personalizeContent($onboarding);
 
             $status = $arguments['status'] ?? 'pending';
             $validStatuses = ['pending', 'sent'];
