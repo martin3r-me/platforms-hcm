@@ -230,24 +230,11 @@ class OnboardingPortal extends Component
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
         );
 
-        // Embed §15/§16 data into personalized content
-        $personalizedContent = $contract->personalized_content ?? '';
-        $preSigningHtml = HcmOnboardingContract::buildPreSigningHtml($preSigningData);
-
-        \Platform\Crm\Models\CommsLog::log(
-            event: 'hcm_portal_sign',
-            status: 'debug',
-            summary: 'Pre-signing HTML generiert',
-            details: json_encode([
-                'html_length' => strlen($preSigningHtml),
-                'html_empty' => empty($preSigningHtml),
-                'html_preview' => substr($preSigningHtml, 0, 500),
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+        // Embed §15/§16 data at correct positions in contract (after §15/§16 sections)
+        $personalizedContent = HcmOnboardingContract::embedPreSigningData(
+            $contract->personalized_content ?? '',
+            $preSigningData
         );
-
-        if ($preSigningHtml) {
-            $personalizedContent .= $preSigningHtml;
-        }
 
         $contract->update([
             'pre_signing_data' => $preSigningData,

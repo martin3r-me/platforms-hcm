@@ -85,40 +85,162 @@ class HcmOnboardingContract extends Model implements InheritsExtraFields
      */
     public static function buildPreSigningHtml(array $data): string
     {
-        $html = '';
+        return self::buildPar15Html($data) . self::buildPar16Html($data);
+    }
+
+    public static function buildPar15Html(array $data): string
+    {
+        if (empty($data['par15_has_previous']) || empty($data['par15_entries'])) {
+            return '';
+        }
+
         $tableStyle = 'width:100%;border-collapse:collapse;margin-top:8px;margin-bottom:16px;';
         $thStyle = 'border:1px solid #d1d5db;padding:6px 10px;background:#f3f4f6;text-align:left;font-size:13px;';
         $tdStyle = 'border:1px solid #d1d5db;padding:6px 10px;font-size:13px;';
 
-        if (!empty($data['par15_has_previous']) && !empty($data['par15_entries'])) {
-            $html .= '<div style="margin-top:24px;"><h3 style="font-size:15px;font-weight:bold;margin-bottom:4px;">Angaben nach &sect;15 &mdash; Kurzfristige Besch&auml;ftigungen</h3>';
-            $html .= '<table style="' . $tableStyle . '">';
-            $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitgeber</th><th style="' . $thStyle . '">Tage</th></tr></thead><tbody>';
-            foreach ($data['par15_entries'] as $entry) {
-                $html .= '<tr>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitgeber'] ?? '') . '</td>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['tage'] ?? '') . '</td>';
-                $html .= '</tr>';
-            }
-            $html .= '</tbody></table></div>';
+        $html = '<div style="margin-top:12px;"><p style="font-size:13px;font-weight:600;margin-bottom:4px;">Angaben des Arbeitnehmers:</p>';
+        $html .= '<table style="' . $tableStyle . '">';
+        $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitgeber</th><th style="' . $thStyle . '">Tage</th></tr></thead><tbody>';
+        foreach ($data['par15_entries'] as $entry) {
+            $html .= '<tr>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitgeber'] ?? '') . '</td>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['tage'] ?? '') . '</td>';
+            $html .= '</tr>';
         }
-
-        if (!empty($data['par16_was_jobseeking']) && !empty($data['par16_entries'])) {
-            $html .= '<div style="margin-top:24px;"><h3 style="font-size:15px;font-weight:bold;margin-bottom:4px;">Angaben nach &sect;16 &mdash; Besch&auml;ftigungslose Zeiten</h3>';
-            $html .= '<table style="' . $tableStyle . '">';
-            $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitsagentur</th></tr></thead><tbody>';
-            foreach ($data['par16_entries'] as $entry) {
-                $html .= '<tr>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
-                $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitsagentur'] ?? '') . '</td>';
-                $html .= '</tr>';
-            }
-            $html .= '</tbody></table></div>';
-        }
+        $html .= '</tbody></table></div>';
 
         return $html;
+    }
+
+    public static function buildPar16Html(array $data): string
+    {
+        if (empty($data['par16_was_jobseeking']) || empty($data['par16_entries'])) {
+            return '';
+        }
+
+        $tableStyle = 'width:100%;border-collapse:collapse;margin-top:8px;margin-bottom:16px;';
+        $thStyle = 'border:1px solid #d1d5db;padding:6px 10px;background:#f3f4f6;text-align:left;font-size:13px;';
+        $tdStyle = 'border:1px solid #d1d5db;padding:6px 10px;font-size:13px;';
+
+        $html = '<div style="margin-top:12px;"><p style="font-size:13px;font-weight:600;margin-bottom:4px;">Angaben des Arbeitnehmers:</p>';
+        $html .= '<table style="' . $tableStyle . '">';
+        $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitsagentur</th></tr></thead><tbody>';
+        foreach ($data['par16_entries'] as $entry) {
+            $html .= '<tr>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
+            $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitsagentur'] ?? '') . '</td>';
+            $html .= '</tr>';
+        }
+        $html .= '</tbody></table></div>';
+
+        return $html;
+    }
+
+    /**
+     * Embed §15/§16 pre-signing data at the correct positions in the contract content.
+     * §15 data is inserted after the §15 section (before §16), §16 data after §16 section.
+     * Falls back to appending at the end if markers are not found.
+     */
+    public static function embedPreSigningData(string $content, array $data): string
+    {
+        $par15Html = self::buildPar15Html($data);
+        $par16Html = self::buildPar16Html($data);
+
+        if (empty($par15Html) && empty($par16Html)) {
+            return $content;
+        }
+
+        // Find §16 position (search for common variants in HTML)
+        $par16Pos = self::findSectionPosition($content, '16');
+        // Find §15 position
+        $par15Pos = self::findSectionPosition($content, '15');
+
+        // Insert §15 data: after §15 section, before §16 section
+        if ($par15Html) {
+            if ($par16Pos !== false && $par15Pos !== false) {
+                // Insert before §16 heading
+                $content = substr($content, 0, $par16Pos) . $par15Html . substr($content, $par16Pos);
+                // Recalculate §16 position since we inserted content
+                $par16Pos = self::findSectionPosition($content, '16');
+            } elseif ($par15Pos !== false) {
+                // No §16 found, insert after §15's closing tag
+                $insertPos = self::findSectionEnd($content, $par15Pos);
+                $content = substr($content, 0, $insertPos) . $par15Html . substr($content, $insertPos);
+            } else {
+                // Fallback: append
+                $content .= $par15Html;
+            }
+        }
+
+        // Insert §16 data: after §16 section
+        if ($par16Html) {
+            // Re-find §16 position (may have shifted)
+            $par16Pos = self::findSectionPosition($content, '16');
+            if ($par16Pos !== false) {
+                $insertPos = self::findSectionEnd($content, $par16Pos);
+                $content = substr($content, 0, $insertPos) . $par16Html . substr($content, $insertPos);
+            } else {
+                // Fallback: append
+                $content .= $par16Html;
+            }
+        }
+
+        return $content;
+    }
+
+    /**
+     * Find the position of a § section heading in HTML content.
+     * Searches for variants like "§ 15", "§15", "&sect; 15", "&sect;15".
+     * Returns the position of the start of the HTML element containing the marker.
+     */
+    private static function findSectionPosition(string $content, string $number): int|false
+    {
+        // Search patterns for § markers
+        $patterns = [
+            '§\s*' . $number . '\b',
+            '&sect;\s*' . $number . '\b',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match('/' . $pattern . '/u', $content, $matches, PREG_OFFSET_CAPTURE)) {
+                $matchPos = $matches[0][1];
+                // Walk back to find the opening tag of the containing element
+                $tagStart = strrpos(substr($content, 0, $matchPos), '<');
+                return $tagStart !== false ? $tagStart : $matchPos;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Find the end of a section starting at a given position.
+     * Looks for the next § marker or end of content.
+     */
+    private static function findSectionEnd(string $content, int $startPos): int
+    {
+        // From the start of this section, find the next § section
+        $remaining = substr($content, $startPos + 1);
+
+        $patterns = [
+            '/§\s*\d+\b/u',
+            '/&sect;\s*\d+\b/u',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $remaining, $matches, PREG_OFFSET_CAPTURE)) {
+                $nextSectionOffset = $matches[0][1];
+                // Walk back to find the opening tag
+                $tagStart = strrpos(substr($remaining, 0, $nextSectionOffset), '<');
+                $insertPos = $startPos + 1 + ($tagStart !== false ? $tagStart : $nextSectionOffset);
+                return $insertPos;
+            }
+        }
+
+        // No next section found, append at end
+        return strlen($content);
     }
 }
