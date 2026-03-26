@@ -217,26 +217,6 @@ class OnboardingPortal extends Component
             'par16_entries' => $this->par16WasJobseeking ? $this->par16Entries : [],
         ];
 
-        \Platform\Crm\Models\CommsLog::log(
-            event: 'hcm_portal_sign',
-            status: 'debug',
-            summary: 'Pre-signing data beim Unterschreiben',
-            details: [
-                'contract_id' => $contract->id,
-                'par15HasPrevious' => $this->par15HasPrevious,
-                'par15Entries_count' => count($this->par15Entries),
-                'par15Entries' => $this->par15Entries,
-                'par16WasJobseeking' => $this->par16WasJobseeking,
-                'par16Entries_count' => count($this->par16Entries),
-                'par16Entries' => $this->par16Entries,
-                'preSigningData' => $preSigningData,
-            ],
-            extra: [
-                'team_id' => $contract->onboarding->team_id ?? $contract->team_id,
-                'source' => 'hcm_onboarding_portal',
-            ],
-        );
-
         // Embed §15/§16 data at correct positions in contract (after §15/§16 sections)
         $personalizedContent = HcmOnboardingContract::embedPreSigningData(
             $contract->personalized_content ?? '',
