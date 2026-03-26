@@ -210,9 +210,37 @@ class OnboardingPortal extends Component
             'par16_entries' => $this->par16WasJobseeking ? $this->par16Entries : [],
         ];
 
+        \Platform\Crm\Models\CommsLog::log(
+            event: 'hcm_portal_sign',
+            status: 'debug',
+            summary: 'Pre-signing data beim Unterschreiben',
+            details: json_encode([
+                'contract_id' => $contract->id,
+                'par15HasPrevious' => $this->par15HasPrevious,
+                'par15Entries_count' => count($this->par15Entries),
+                'par15Entries' => $this->par15Entries,
+                'par16WasJobseeking' => $this->par16WasJobseeking,
+                'par16Entries_count' => count($this->par16Entries),
+                'par16Entries' => $this->par16Entries,
+                'preSigningData' => $preSigningData,
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+        );
+
         // Embed §15/§16 data into personalized content
         $personalizedContent = $contract->personalized_content ?? '';
         $preSigningHtml = HcmOnboardingContract::buildPreSigningHtml($preSigningData);
+
+        \Platform\Crm\Models\CommsLog::log(
+            event: 'hcm_portal_sign',
+            status: 'debug',
+            summary: 'Pre-signing HTML generiert',
+            details: json_encode([
+                'html_length' => strlen($preSigningHtml),
+                'html_empty' => empty($preSigningHtml),
+                'html_preview' => substr($preSigningHtml, 0, 500),
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE),
+        );
+
         if ($preSigningHtml) {
             $personalizedContent .= $preSigningHtml;
         }
