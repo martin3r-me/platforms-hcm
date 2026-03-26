@@ -260,10 +260,16 @@ class Show extends Component
             $templateId = $settings->getSetting('onboarding_wa_template_id');
             $accountId = $settings->getSetting('onboarding_wa_account_id');
 
+            // Auto-resolve accountId from template
+            if ($templateId && !$accountId) {
+                $tmpl = \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::find($templateId);
+                $accountId = $tmpl?->whatsapp_account_id;
+            }
+
             CommsLog::log(
                 event: 'hcm_send_contract',
                 status: 'info',
-                summary: "WA Settings geladen: templateId={$templateId}, accountId={$accountId}",
+                summary: "WA Settings: templateId={$templateId}, accountId={$accountId}",
                 details: ['templateId' => $templateId, 'accountId' => $accountId, 'step' => 'settings'],
                 extra: [
                     'team_id' => $this->onboarding->team_id,
@@ -475,9 +481,9 @@ class Show extends Component
         $accountId = $settings->getSetting('onboarding_wa_account_id');
         $variableMapping = $settings->getSetting('onboarding_wa_template_variables', []);
 
-        if (!$templateId || !$accountId) {
-            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "WA Settings fehlen: templateId={$templateId}, accountId={$accountId}", details: ['step' => 'settings_missing', 'templateId' => $templateId, 'accountId' => $accountId], extra: $logExtra);
-            $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp-Einstellungen nicht konfiguriert. Bitte in den Onboarding-Einstellungen Template und Account auswählen.']);
+        if (!$templateId) {
+            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "WA Template nicht konfiguriert", details: ['step' => 'settings_missing'], extra: $logExtra);
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp-Template nicht konfiguriert. Bitte in den Onboarding-Einstellungen ein Template auswählen.']);
             return;
         }
 
@@ -485,6 +491,17 @@ class Show extends Component
         if (!$template || $template->status !== 'APPROVED') {
             CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "Template #{$templateId} nicht gefunden oder nicht APPROVED", details: ['step' => 'template_invalid', 'templateId' => $templateId, 'status' => $template?->status], extra: $logExtra);
             $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp Template nicht gefunden oder nicht genehmigt.']);
+            return;
+        }
+
+        // Auto-resolve accountId from template if not configured
+        if (!$accountId && $template->whatsapp_account_id) {
+            $accountId = $template->whatsapp_account_id;
+        }
+
+        if (!$accountId) {
+            CommsLog::log(event: 'hcm_wa_send', status: 'error', summary: "Kein WA Account konfiguriert und Template hat keinen Account", details: ['step' => 'no_account'], extra: $logExtra);
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Kein WhatsApp-Account konfiguriert.']);
             return;
         }
 
