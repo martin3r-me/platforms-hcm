@@ -9,15 +9,12 @@
             box-sizing: border-box;
         }
 
-        @page {
-            margin: 2cm 2.5cm;
-        }
-
         body {
             font-family: "DejaVu Sans", sans-serif;
             font-size: 11pt;
             line-height: 1.5;
             color: #111827;
+            margin: 2cm 2.5cm;
         }
 
         .contract-content {
