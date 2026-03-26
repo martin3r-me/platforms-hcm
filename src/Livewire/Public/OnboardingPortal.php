@@ -12,6 +12,7 @@ class OnboardingPortal extends Component
     // State: loading, invalid, expired, overview, signing
     public string $state = 'loading';
 
+    public string $token = '';
     public ?int $onboardingId = null;
     public string $candidateName = '';
 
@@ -38,6 +39,8 @@ class OnboardingPortal extends Component
 
     public function mount(string $token): void
     {
+        $this->token = $token;
+
         $link = CorePublicFormLink::where('token', $token)->first();
 
         if (! $link) {

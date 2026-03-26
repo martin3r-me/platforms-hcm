@@ -57,10 +57,16 @@
                                         </span>
                                     </div>
                                 </div>
-                                <button type="button" wire:click="startSigning({{ $contract->id }})"
-                                    class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
-                                    @svg('heroicon-o-eye', 'w-4 h-4') Ansehen
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <a href="{{ route('hcm.public.contract-pdf', ['token' => $token, 'contractId' => $contract->id]) }}"
+                                        class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                        @svg('heroicon-o-arrow-down-tray', 'w-4 h-4') PDF
+                                    </a>
+                                    <button type="button" wire:click="startSigning({{ $contract->id }})"
+                                        class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                        @svg('heroicon-o-eye', 'w-4 h-4') Ansehen
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -118,10 +124,16 @@
                                             @svg('heroicon-o-pencil', 'w-4 h-4') Unterschreiben
                                         </button>
                                     @elseif($contract->status === 'completed')
-                                        <button type="button" wire:click="startSigning({{ $contract->id }})"
-                                            class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
-                                            @svg('heroicon-o-eye', 'w-4 h-4') Ansehen
-                                        </button>
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('hcm.public.contract-pdf', ['token' => $token, 'contractId' => $contract->id]) }}"
+                                                class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                                @svg('heroicon-o-arrow-down-tray', 'w-4 h-4') PDF
+                                            </a>
+                                            <button type="button" wire:click="startSigning({{ $contract->id }})"
+                                                class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                                @svg('heroicon-o-eye', 'w-4 h-4') Ansehen
+                                            </button>
+                                        </div>
                                     @endif
                                 </div>
                             </div>
