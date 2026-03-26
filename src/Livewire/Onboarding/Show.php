@@ -187,6 +187,16 @@ class Show extends Component
         session()->flash('message', 'Vertrag erfolgreich zugewiesen.');
     }
 
+    public function toggleCompleted(): void
+    {
+        $this->onboarding->is_completed = !$this->onboarding->is_completed;
+        $this->onboarding->save();
+
+        session()->flash('message', $this->onboarding->is_completed
+            ? 'Onboarding als fertig markiert.'
+            : 'Onboarding als nicht fertig markiert.');
+    }
+
     public function sendContract(int $contractId): void
     {
         $contract = HcmOnboardingContract::where('id', $contractId)

@@ -259,6 +259,13 @@
                                 <td class="px-4 py-2.5 text-right">
                                     <div class="flex items-center justify-end gap-2">
                                         <button
+                                            wire:click="markAsCompleted({{ $onboarding->id }})"
+                                            class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                            title="Als fertig markieren"
+                                        >
+                                            @svg('heroicon-o-check-circle', 'w-3.5 h-3.5')
+                                        </button>
+                                        <button
                                             wire:click="dismissOnboarding({{ $onboarding->id }})"
                                             wire:confirm="Onboarding wirklich deaktivieren?"
                                             class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-red-50 text-red-600 hover:bg-red-100 transition-colors"

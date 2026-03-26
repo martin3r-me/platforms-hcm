@@ -112,6 +112,7 @@ class GetOnboardingTool implements ToolContract, ToolMetadataContract
                 'preferred_comms_channel_id' => $onboarding->preferred_comms_channel_id,
                 'notes' => $onboarding->notes,
                 'is_active' => (bool)$onboarding->is_active,
+                'is_completed' => (bool)$onboarding->is_completed,
                 'owned_by_user_id' => $onboarding->owned_by_user_id,
                 'owned_by_user_name' => $onboarding->ownedByUser?->name,
                 'team_id' => $onboarding->team_id,

@@ -472,6 +472,17 @@
                                 </span>
                             </x-ui-button>
                         @endif
+                        <x-ui-button
+                            variant="{{ $onboarding->is_completed ? 'success' : 'secondary' }}"
+                            size="sm"
+                            wire:click="toggleCompleted"
+                            class="w-full"
+                        >
+                            <span class="inline-flex items-center gap-2">
+                                @svg($onboarding->is_completed ? 'heroicon-o-check-circle' : 'heroicon-o-check', 'w-4 h-4')
+                                {{ $onboarding->is_completed ? 'Als fertig markiert' : 'Als fertig markieren' }}
+                            </span>
+                        </x-ui-button>
                         <x-ui-button variant="secondary" size="sm" wire:click="openAssignContractModal" class="w-full">
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-document-duplicate', 'w-4 h-4')

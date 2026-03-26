@@ -106,6 +106,10 @@ class Dashboard extends Component
 
     public function isOnboardingCompleted(HcmOnboarding $onboarding): bool
     {
+        if ($onboarding->is_completed) {
+            return true;
+        }
+
         if ($onboarding->crmContactLinks->isEmpty()) {
             return false;
         }
@@ -288,6 +292,13 @@ class Dashboard extends Component
         $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
         $action = new TransferOnboardingToEmployee();
         $action->execute($onboarding);
+        unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount, $this->whatsAppThreadMap);
+    }
+
+    public function markAsCompleted(int $id): void
+    {
+        $onboarding = HcmOnboarding::forTeam(auth()->user()->currentTeam->id)->findOrFail($id);
+        $onboarding->update(['is_completed' => true]);
         unset($this->inboxOnboardings, $this->inProgressOnboardings, $this->completedOnboardings, $this->onboardingCount, $this->whatsAppThreadMap);
     }
 

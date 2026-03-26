@@ -30,6 +30,7 @@ class HcmOnboarding extends Model implements InheritsExtraFields
         'hcm_job_title_id',
         'notes',
         'is_active',
+        'is_completed',
         'team_id',
         'created_by_user_id',
         'owned_by_user_id',
@@ -37,6 +38,7 @@ class HcmOnboarding extends Model implements InheritsExtraFields
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_completed' => 'boolean',
         'progress' => 'integer',
         'auto_pilot' => 'boolean',
         'auto_pilot_completed_at' => 'datetime',

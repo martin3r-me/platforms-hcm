@@ -55,6 +55,10 @@ class ListOnboardingsTool implements ToolContract, ToolMetadataContract
                         'type' => 'integer',
                         'description' => 'Optional: Filter nach Owner (User ID).',
                     ],
+                    'is_completed' => [
+                        'type' => 'boolean',
+                        'description' => 'Optional: Filter nach manuell als fertig markiert.',
+                    ],
                     'include_contacts' => [
                         'type' => 'boolean',
                         'description' => 'Optional: CRM-Kontaktdaten (über crm_contact_links) mitladen. Default: true.',
@@ -115,6 +119,9 @@ class ListOnboardingsTool implements ToolContract, ToolMetadataContract
             if (isset($arguments['owned_by_user_id'])) {
                 $query->where('owned_by_user_id', (int)$arguments['owned_by_user_id']);
             }
+            if (isset($arguments['is_completed'])) {
+                $query->where('is_completed', (bool)$arguments['is_completed']);
+            }
 
             $this->applyStandardFilters($query, $arguments, [
                 'is_active',
@@ -158,6 +165,7 @@ class ListOnboardingsTool implements ToolContract, ToolMetadataContract
                     'auto_pilot' => (bool)$o->auto_pilot,
                     'auto_pilot_completed_at' => $o->auto_pilot_completed_at?->toISOString(),
                     'is_active' => (bool)$o->is_active,
+                    'is_completed' => (bool)$o->is_completed,
                     'notes' => $o->notes,
                     'owned_by_user_id' => $o->owned_by_user_id,
                     'owned_by_user_name' => $o->ownedByUser?->name,

@@ -70,6 +70,10 @@ class UpdateOnboardingTool implements ToolContract, ToolMetadataContract
                     'type' => 'boolean',
                     'description' => 'Optional: Status.',
                 ],
+                'is_completed' => [
+                    'type' => 'boolean',
+                    'description' => 'Optional: Manuell als fertig markieren (true = erscheint in Fertig-Sektion, unabhängig von Extra-Feldern).',
+                ],
                 'owned_by_user_id' => [
                     'type' => 'integer',
                     'description' => 'Optional: Owner des Onboardings.',
@@ -130,6 +134,7 @@ class UpdateOnboardingTool implements ToolContract, ToolMetadataContract
                 'preferred_comms_channel_id',
                 'enrichment_status',
                 'is_active',
+                'is_completed',
                 'owned_by_user_id',
             ];
 
@@ -151,6 +156,7 @@ class UpdateOnboardingTool implements ToolContract, ToolMetadataContract
                 'auto_pilot' => (bool)$onboarding->auto_pilot,
                 'auto_pilot_completed_at' => $onboarding->auto_pilot_completed_at?->toISOString(),
                 'is_active' => (bool)$onboarding->is_active,
+                'is_completed' => (bool)$onboarding->is_completed,
                 'team_id' => $onboarding->team_id,
                 'message' => 'Onboarding erfolgreich aktualisiert.',
             ]);
