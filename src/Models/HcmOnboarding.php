@@ -93,6 +93,11 @@ class HcmOnboarding extends Model implements InheritsExtraFields
         return $this->hasMany(HcmInterviewBooking::class, 'hcm_onboarding_id');
     }
 
+    public function onboardingContracts()
+    {
+        return $this->hasMany(HcmOnboardingContract::class, 'hcm_onboarding_id');
+    }
+
     public function getPublicUrl(): string
     {
         return $this->getOrCreatePublicFormLink()->getUrl();

@@ -108,6 +108,9 @@ Route::get('/benefits', \Platform\Hcm\Livewire\Benefits\Index::class)->name('hcm
 Route::get('/trainings', \Platform\Hcm\Livewire\Trainings\Index::class)->name('hcm.trainings.index');
 Route::get('/training-types', \Platform\Hcm\Livewire\TrainingTypes\Index::class)->name('hcm.training-types.index');
 
+// Onboarding-Verträge
+Route::get('/onboarding-contracts', \Platform\Hcm\Livewire\OnboardingContracts\Index::class)->name('hcm.onboarding-contracts.index');
+
 // Interview-Termine (Onboarding)
 Route::get('/interview-types', \Platform\Hcm\Livewire\InterviewTypes\Index::class)->name('hcm.interview-types.index');
 Route::get('/interview-schedule', \Platform\Hcm\Livewire\InterviewSchedule\Index::class)->name('hcm.interview-schedule.index');

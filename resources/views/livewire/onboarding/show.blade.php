@@ -108,6 +108,75 @@
             :model="$onboarding"
         />
 
+        <!-- Verträge -->
+        @if($onboarding->onboardingContracts->count() > 0)
+            <x-ui-panel title="Verträge" subtitle="Zugewiesene Verträge für dieses Onboarding">
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto border-collapse text-sm">
+                        <thead>
+                            <tr class="text-left text-[var(--ui-muted)] border-b border-[var(--ui-border)]/60 text-xs uppercase tracking-wide">
+                                <th class="px-4 py-3">Vorlage</th>
+                                <th class="px-4 py-3">Status</th>
+                                <th class="px-4 py-3">Unterschrift</th>
+                                <th class="px-4 py-3">Versendet</th>
+                                <th class="px-4 py-3">Abgeschlossen</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-[var(--ui-border)]/60">
+                            @foreach($onboarding->onboardingContracts as $contract)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">
+                                        <span class="font-medium">{{ $contract->contractTemplate?->name ?? '—' }}</span>
+                                        @if($contract->contractTemplate?->code)
+                                            <span class="text-xs text-[var(--ui-muted)] ml-1">({{ $contract->contractTemplate->code }})</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @php
+                                            $statusConfig = match($contract->status) {
+                                                'pending' => ['label' => 'Ausstehend', 'variant' => 'secondary'],
+                                                'sent' => ['label' => 'Versendet', 'variant' => 'info'],
+                                                'in_progress' => ['label' => 'In Bearbeitung', 'variant' => 'warning'],
+                                                'completed' => ['label' => 'Abgeschlossen', 'variant' => 'success'],
+                                                'needs_review' => ['label' => 'Prüfung nötig', 'variant' => 'danger'],
+                                                default => ['label' => $contract->status, 'variant' => 'secondary'],
+                                            };
+                                        @endphp
+                                        <x-ui-badge variant="{{ $statusConfig['variant'] }}" size="sm">
+                                            {{ $statusConfig['label'] }}
+                                        </x-ui-badge>
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @if($contract->signature_data)
+                                            <span class="text-green-600 flex items-center gap-1">
+                                                @svg('heroicon-o-check-circle', 'w-4 h-4')
+                                                @if($contract->signed_at)
+                                                    <span class="text-xs">{{ $contract->signed_at->format('d.m.Y') }}</span>
+                                                @endif
+                                            </span>
+                                        @elseif($contract->contractTemplate?->requires_signature)
+                                            <span class="text-[var(--ui-muted)] flex items-center gap-1">
+                                                @svg('heroicon-o-pencil', 'w-4 h-4')
+                                                <span class="text-xs">Ausstehend</span>
+                                            </span>
+                                        @else
+                                            <span class="text-[var(--ui-muted)]">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 text-xs">
+                                        {{ $contract->sent_at?->format('d.m.Y H:i') ?? '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-xs">
+                                        {{ $contract->completed_at?->format('d.m.Y H:i') ?? '—' }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-ui-panel>
+        @endif
+
         <!-- Verknüpfte Kontakte -->
         <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Onboarding verknüpft sind">
             @if($onboarding->crmContactLinks->count() > 0)

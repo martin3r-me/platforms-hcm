@@ -34,6 +34,8 @@ class HcmServiceProvider extends ServiceProvider
             'hcm_employee' => \Platform\Hcm\Models\HcmEmployee::class,
             'hcm_job_title' => \Platform\Hcm\Models\HcmJobTitle::class,
             'hcm_onboarding' => \Platform\Hcm\Models\HcmOnboarding::class,
+            'hcm_contract_template' => \Platform\Hcm\Models\HcmContractTemplate::class,
+            'hcm_onboarding_contract' => \Platform\Hcm\Models\HcmOnboardingContract::class,
         ]);
 
         // Schritt 1: Config laden
@@ -251,6 +253,21 @@ class HcmServiceProvider extends ServiceProvider
             $registry->register(new \Platform\Hcm\Tools\CreateInterviewBookingTool());
             $registry->register(new \Platform\Hcm\Tools\UpdateInterviewBookingTool());
             $registry->register(new \Platform\Hcm\Tools\DeleteInterviewBookingTool());
+
+            // Contract Templates / Vertragsvorlagen (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListContractTemplatesTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateContractTemplateTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateContractTemplateTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteContractTemplateTool());
+
+            // Onboarding Contracts / Onboarding-Verträge (Read + Write)
+            $registry->register(new \Platform\Hcm\Tools\ListOnboardingContractsTool());
+            $registry->register(new \Platform\Hcm\Tools\CreateOnboardingContractTool());
+            $registry->register(new \Platform\Hcm\Tools\UpdateOnboardingContractTool());
+            $registry->register(new \Platform\Hcm\Tools\DeleteOnboardingContractTool());
+
+            // Onboarding Contract Extra Fields
+            $registry->register(new \Platform\Hcm\Tools\FillOnboardingContractFieldsTool());
         } catch (\Throwable $e) {
             \Log::warning('HCM: Tool-Registrierung fehlgeschlagen', ['error' => $e->getMessage()]);
         }

@@ -55,6 +55,7 @@ class Show extends Component
                     ->orderByDesc('is_primary')
                     ->orderBy('id');
             },
+            'onboardingContracts.contractTemplate',
         ]);
 
         $this->loadAvailableContacts();
