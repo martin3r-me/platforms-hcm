@@ -8,11 +8,14 @@ use Platform\Core\Livewire\Concerns\WithExtraFields;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Platform\Core\Models\Team;
+use Platform\Crm\Models\CommsChannel;
+use Platform\Crm\Models\CrmContact;
+use Platform\Crm\Services\Comms\WhatsAppMetaService;
+use Platform\Hcm\Models\HcmApplicantSettings;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
 use Platform\Hcm\Models\HcmContractTemplate;
 use Platform\Hcm\Models\HcmOnboardingContract;
-use Platform\Crm\Models\CrmContact;
 
 class Show extends Component
 {
@@ -72,6 +75,11 @@ class Show extends Component
 
         $this->loadAvailableContacts();
         $this->loadExtraFieldValues($this->onboarding);
+
+        // Show portal link if it already exists
+        if ($this->onboarding->publicFormLink) {
+            $this->portalLinkUrl = route('hcm.public.onboarding-portal', ['token' => $this->onboarding->publicFormLink->token]);
+        }
     }
 
     public function rules(): array
@@ -381,6 +389,207 @@ class Show extends Component
                 'is_active' => $this->onboarding->is_active,
             ],
         ]);
+    }
+
+    public function sendPortalViaWhatsApp(): void
+    {
+        $settings = HcmApplicantSettings::getOrCreateForTeam($this->onboarding->team_id);
+        $templateId = $settings->getSetting('onboarding_wa_template_id');
+        $accountId = $settings->getSetting('onboarding_wa_account_id');
+        $variableMapping = $settings->getSetting('onboarding_wa_template_variables', []);
+
+        if (!$templateId || !$accountId) {
+            session()->flash('error', 'WhatsApp-Einstellungen nicht konfiguriert. Bitte in den Onboarding-Einstellungen Template und Account auswählen.');
+            return;
+        }
+
+        $template = \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::find($templateId);
+        if (!$template || $template->status !== 'APPROVED') {
+            session()->flash('error', 'WhatsApp Template nicht gefunden oder nicht genehmigt.');
+            return;
+        }
+
+        $phoneNumber = $this->findPhoneNumber();
+        if (!$phoneNumber) {
+            session()->flash('error', 'Kein Kontakt mit Telefonnummer gefunden. Bitte zuerst einen Kontakt mit Telefonnummer verknüpfen.');
+            return;
+        }
+
+        $channel = $this->resolveWhatsAppChannel($accountId);
+        if (!$channel) {
+            session()->flash('error', 'Kein aktiver WhatsApp-Kanal konfiguriert.');
+            return;
+        }
+
+        // Ensure portal link exists
+        $link = $this->onboarding->getOrCreatePublicFormLink();
+        $portalUrl = route('hcm.public.onboarding-portal', ['token' => $link->token]);
+        $this->portalLinkUrl = $portalUrl;
+
+        // Resolve template variables
+        $primaryContact = $this->onboarding->crmContactLinks->first()?->contact;
+        $variableValues = [
+            'candidate_name' => $primaryContact?->full_name ?? '',
+            'portal_link' => $portalUrl,
+            'job_title' => $this->onboarding->jobTitle?->name ?? $this->onboarding->source_position_title ?? '',
+        ];
+
+        // Build body parameters from template
+        $bodyParams = $this->parseTemplateBodyParams($template->components ?? []);
+        $components = [];
+
+        if (!empty($bodyParams)) {
+            $bodyParameters = [];
+            foreach ($bodyParams as $param) {
+                $source = $variableMapping[$param['name']] ?? null;
+                $text = $source ? ($variableValues[$source] ?? '') : '';
+                $paramEntry = [
+                    'type' => 'text',
+                    'text' => $text,
+                ];
+                if (!is_numeric($param['name'])) {
+                    $paramEntry['parameter_name'] = $param['name'];
+                }
+                $bodyParameters[] = $paramEntry;
+            }
+            $components[] = [
+                'type' => 'body',
+                'parameters' => $bodyParameters,
+            ];
+        }
+
+        // URL button — pass portal token
+        $hasUrlButton = false;
+        foreach ($template->components ?? [] as $comp) {
+            if (($comp['type'] ?? '') === 'BUTTONS') {
+                foreach ($comp['buttons'] ?? [] as $btn) {
+                    if (($btn['type'] ?? '') === 'URL') {
+                        $hasUrlButton = true;
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        if ($hasUrlButton) {
+            $components[] = [
+                'type' => 'button',
+                'sub_type' => 'url',
+                'index' => 0,
+                'parameters' => [['type' => 'text', 'text' => $link->token]],
+            ];
+        }
+
+        try {
+            $service = app(WhatsAppMetaService::class);
+            $message = $service->sendTemplate(
+                channel: $channel,
+                to: $phoneNumber->international,
+                templateName: $template->name,
+                components: $components,
+                languageCode: $template->language,
+                sender: auth()->user(),
+            );
+
+            // Set pending contracts to sent
+            $this->onboarding->onboardingContracts()
+                ->where('status', 'pending')
+                ->update([
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                ]);
+
+            // Link thread to onboarding
+            $thread = $message->thread ?? null;
+            if ($thread) {
+                if (method_exists($thread, 'addContext')) {
+                    $thread->addContext($this->onboarding->getMorphClass(), $this->onboarding->id, 'onboarding_portal');
+                }
+                if (!$thread->context_model) {
+                    $thread->updateQuietly([
+                        'context_model' => $this->onboarding->getMorphClass(),
+                        'context_model_id' => $this->onboarding->id,
+                    ]);
+                }
+            }
+
+            $this->onboarding->load('onboardingContracts.contractTemplate');
+            session()->flash('message', 'Portal-Link erfolgreich per WhatsApp gesendet.');
+        } catch (\Throwable $e) {
+            session()->flash('error', 'Fehler beim Senden: ' . $e->getMessage());
+        }
+    }
+
+    private function findPhoneNumber(): ?\Platform\Crm\Models\CrmPhoneNumber
+    {
+        $this->onboarding->loadMissing(['crmContactLinks.contact.phoneNumbers']);
+
+        foreach ($this->onboarding->crmContactLinks as $link) {
+            $contact = $link->contact;
+            if (!$contact) continue;
+
+            $primary = $contact->phoneNumbers
+                ->where('is_active', true)
+                ->where('is_primary', true)
+                ->whereNotNull('international')
+                ->first();
+
+            if ($primary) return $primary;
+
+            $fallback = $contact->phoneNumbers
+                ->where('is_active', true)
+                ->whereNotNull('international')
+                ->first();
+
+            if ($fallback) return $fallback;
+        }
+
+        return null;
+    }
+
+    private function resolveWhatsAppChannel($accountId): ?CommsChannel
+    {
+        if (!$accountId || !class_exists(\Platform\Integrations\Models\IntegrationsWhatsAppAccount::class)) {
+            return null;
+        }
+
+        $account = \Platform\Integrations\Models\IntegrationsWhatsAppAccount::find($accountId);
+        if (!$account || !$account->active) {
+            return null;
+        }
+
+        return CommsChannel::where('type', 'whatsapp')
+            ->where('is_active', true)
+            ->where('sender_identifier', $account->phone_number)
+            ->first();
+    }
+
+    private function parseTemplateBodyParams(array $components): array
+    {
+        $params = [];
+        foreach ($components as $component) {
+            if (($component['type'] ?? '') !== 'BODY') {
+                continue;
+            }
+
+            $text = $component['text'] ?? '';
+            $examplesByName = [];
+            $namedParams = $component['example']['body_text_named_params'] ?? [];
+            foreach ($namedParams as $np) {
+                $examplesByName[$np['param_name']] = $np['example'] ?? '';
+            }
+            $positionalExamples = $component['example']['body_text'][0] ?? [];
+
+            preg_match_all('/\{\{(\w+)\}\}/', $text, $matches);
+
+            foreach ($matches[1] as $i => $paramName) {
+                $params[] = [
+                    'name' => $paramName,
+                    'example' => $examplesByName[$paramName] ?? $positionalExamples[$i] ?? '',
+                ];
+            }
+        }
+        return $params;
     }
 
     public function render()

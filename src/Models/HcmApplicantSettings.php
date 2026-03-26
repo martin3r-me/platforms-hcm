@@ -22,6 +22,15 @@ class HcmApplicantSettings extends Model
         'use_informal_address' => false,
         'default_status_id' => null,
         'auto_assign_owner' => false,
+        'onboarding_wa_account_id' => null,
+        'onboarding_wa_template_id' => null,
+        'onboarding_wa_template_variables' => [],
+    ];
+
+    const ONBOARDING_VARIABLE_SOURCES = [
+        'candidate_name' => 'Kandidatenname',
+        'portal_link' => 'Portal-Link (Token)',
+        'job_title' => 'Stellenbezeichnung',
     ];
 
     public function team(): BelongsTo
