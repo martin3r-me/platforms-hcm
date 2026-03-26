@@ -112,7 +112,7 @@ class Show extends Component
             $this->onboarding->delete();
         });
 
-        session()->flash('message', 'Onboarding erfolgreich gelöscht.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Onboarding erfolgreich gelöscht.']);
         $this->redirect(route('hcm.onboardings.index'), navigate: true);
     }
 
@@ -125,7 +125,7 @@ class Show extends Component
         $this->onboarding->progress = $this->onboarding->calculateProgress();
         $this->onboarding->save();
 
-        session()->flash('message', 'Onboarding erfolgreich aktualisiert.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Onboarding erfolgreich aktualisiert.']);
     }
 
     public function updatedOnboardingHcmJobTitleId($value): void
@@ -203,7 +203,7 @@ class Show extends Component
 
         $this->onboarding->load('onboardingContracts.contractTemplate');
         $this->closeAssignContractModal();
-        session()->flash('message', 'Vertrag erfolgreich zugewiesen.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Vertrag erfolgreich zugewiesen.']);
     }
 
     public function toggleCompleted(): void
@@ -211,9 +211,9 @@ class Show extends Component
         $this->onboarding->is_completed = !$this->onboarding->is_completed;
         $this->onboarding->save();
 
-        session()->flash('message', $this->onboarding->is_completed
+        $this->dispatch('notify', ['type' => 'success', 'message' => $this->onboarding->is_completed
             ? 'Onboarding als fertig markiert.'
-            : 'Onboarding als nicht fertig markiert.');
+            : 'Onboarding als nicht fertig markiert.']);
     }
 
     public function generatePortalLink(): void
@@ -304,7 +304,7 @@ class Show extends Component
 
         $this->closeContactLinkModal();
         $this->onboarding->load(['crmContactLinks.contact']);
-        session()->flash('message', 'Kontakt verknüpft.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kontakt verknüpft.']);
     }
 
     public function saveContact(): void
@@ -327,7 +327,7 @@ class Show extends Component
 
         $this->closeContactCreateModal();
         $this->onboarding->load('crmContactLinks.contact');
-        session()->flash('message', 'Kontakt erstellt und verknüpft.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kontakt erstellt und verknüpft.']);
     }
 
     public function unlinkContact($contactId): void
@@ -337,7 +337,7 @@ class Show extends Component
             ->delete();
 
         $this->onboarding->load('crmContactLinks.contact');
-        session()->flash('message', 'Kontakt-Verknüpfung entfernt.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Kontakt-Verknüpfung entfernt.']);
     }
 
     public function closeContactLinkModal(): void
@@ -419,25 +419,25 @@ class Show extends Component
         $variableMapping = $settings->getSetting('onboarding_wa_template_variables', []);
 
         if (!$templateId || !$accountId) {
-            session()->flash('error', 'WhatsApp-Einstellungen nicht konfiguriert. Bitte in den Onboarding-Einstellungen Template und Account auswählen.');
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp-Einstellungen nicht konfiguriert. Bitte in den Onboarding-Einstellungen Template und Account auswählen.']);
             return;
         }
 
         $template = \Platform\Integrations\Models\IntegrationsWhatsAppTemplate::find($templateId);
         if (!$template || $template->status !== 'APPROVED') {
-            session()->flash('error', 'WhatsApp Template nicht gefunden oder nicht genehmigt.');
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'WhatsApp Template nicht gefunden oder nicht genehmigt.']);
             return;
         }
 
         $phoneNumber = $this->findPhoneNumber();
         if (!$phoneNumber) {
-            session()->flash('error', 'Kein Kontakt mit Telefonnummer gefunden. Bitte zuerst einen Kontakt mit Telefonnummer verknüpfen.');
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Kein Kontakt mit Telefonnummer gefunden. Bitte zuerst einen Kontakt mit Telefonnummer verknüpfen.']);
             return;
         }
 
         $channel = $this->resolveWhatsAppChannel($accountId);
         if (!$channel) {
-            session()->flash('error', 'Kein aktiver WhatsApp-Kanal konfiguriert.');
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Kein aktiver WhatsApp-Kanal konfiguriert.']);
             return;
         }
 
@@ -459,9 +459,16 @@ class Show extends Component
         $components = [];
 
         if (!empty($bodyParams)) {
+            // Auto-map if no mapping configured: first param → candidate_name, second → portal_link, third → job_title
+            $autoMapDefaults = ['candidate_name', 'portal_link', 'job_title'];
+
             $bodyParameters = [];
-            foreach ($bodyParams as $param) {
+            foreach ($bodyParams as $i => $param) {
                 $source = $variableMapping[$param['name']] ?? null;
+                // Fallback: auto-map by position
+                if (!$source && isset($autoMapDefaults[$i])) {
+                    $source = $autoMapDefaults[$i];
+                }
                 $text = $source ? ($variableValues[$source] ?? '') : '';
                 $paramEntry = [
                     'type' => 'text',
@@ -534,9 +541,9 @@ class Show extends Component
             }
 
             $this->onboarding->load('onboardingContracts.contractTemplate');
-            session()->flash('message', 'Portal-Link erfolgreich per WhatsApp gesendet.');
+            $this->dispatch('notify', ['type' => 'success', 'message' => 'Portal-Link erfolgreich per WhatsApp gesendet.']);
         } catch (\Throwable $e) {
-            session()->flash('error', 'Fehler beim Senden: ' . $e->getMessage());
+            $this->dispatch('notify', ['type' => 'error', 'message' => 'Fehler beim Senden: ' . $e->getMessage()]);
         }
     }
 
@@ -651,7 +658,7 @@ class Show extends Component
 
         $this->closeContractFieldsModal();
         $this->onboarding->load('onboardingContracts.contractTemplate');
-        session()->flash('message', 'Vertragsfelder erfolgreich aktualisiert.');
+        $this->dispatch('notify', ['type' => 'success', 'message' => 'Vertragsfelder erfolgreich aktualisiert.']);
     }
 
     public function closeContractFieldsModal(): void
