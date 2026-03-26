@@ -762,6 +762,15 @@ class Show extends Component
                 $this->onboarding,
                 $contract
             );
+
+            // For completed contracts: re-append §15/§16 pre-signing data
+            if ($contract->status === 'completed' && !empty($contract->pre_signing_data)) {
+                $preSigningHtml = HcmOnboardingContract::buildPreSigningHtml($contract->pre_signing_data);
+                if ($preSigningHtml) {
+                    $contract->personalized_content .= $preSigningHtml;
+                }
+            }
+
             $contract->save();
         }
 

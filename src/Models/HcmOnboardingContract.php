@@ -79,4 +79,46 @@ class HcmOnboardingContract extends Model implements InheritsExtraFields
     {
         return $query->where('team_id', $teamId);
     }
+
+    /**
+     * Build HTML for §15/§16 pre-signing data (kurzfristige Beschäftigungen / beschäftigungslose Zeiten).
+     */
+    public static function buildPreSigningHtml(array $data): string
+    {
+        $html = '';
+        $tableStyle = 'width:100%;border-collapse:collapse;margin-top:8px;margin-bottom:16px;';
+        $thStyle = 'border:1px solid #d1d5db;padding:6px 10px;background:#f3f4f6;text-align:left;font-size:13px;';
+        $tdStyle = 'border:1px solid #d1d5db;padding:6px 10px;font-size:13px;';
+
+        if (!empty($data['par15_has_previous']) && !empty($data['par15_entries'])) {
+            $html .= '<div style="margin-top:24px;"><h3 style="font-size:15px;font-weight:bold;margin-bottom:4px;">Angaben nach &sect;15 &mdash; Kurzfristige Besch&auml;ftigungen</h3>';
+            $html .= '<table style="' . $tableStyle . '">';
+            $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitgeber</th><th style="' . $thStyle . '">Tage</th></tr></thead><tbody>';
+            foreach ($data['par15_entries'] as $entry) {
+                $html .= '<tr>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitgeber'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['tage'] ?? '') . '</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div>';
+        }
+
+        if (!empty($data['par16_was_jobseeking']) && !empty($data['par16_entries'])) {
+            $html .= '<div style="margin-top:24px;"><h3 style="font-size:15px;font-weight:bold;margin-bottom:4px;">Angaben nach &sect;16 &mdash; Besch&auml;ftigungslose Zeiten</h3>';
+            $html .= '<table style="' . $tableStyle . '">';
+            $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitsagentur</th></tr></thead><tbody>';
+            foreach ($data['par16_entries'] as $entry) {
+                $html .= '<tr>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitsagentur'] ?? '') . '</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div>';
+        }
+
+        return $html;
+    }
 }

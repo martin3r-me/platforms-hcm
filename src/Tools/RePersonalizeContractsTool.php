@@ -22,7 +22,7 @@ class RePersonalizeContractsTool implements ToolContract, ToolMetadataContract
 
     public function getDescription(): string
     {
-        return 'POST /hcm/onboarding-contracts/repersonalize - Re-personalisiert den Vertragstext anhand der aktuellen Extra-Field-Werte und Kontaktdaten. Parameter: onboarding_id (optional, alle Verträge dieses Onboardings) ODER contract_id (optional, einzelner Vertrag). Mindestens einer erforderlich.';
+        return 'POST /hcm/onboarding-contracts/repersonalize - Re-personalisiert den Vertragstext anhand der aktuellen Extra-Field-Werte und Kontaktdaten. Parameter: onboarding_id (optional, alle Verträge dieses Onboardings) ODER contract_id (optional, einzelner Vertrag). Mindestens einer erforderlich. Bereits unterschriebene (completed) Verträge werden übersprungen, es sei denn include_completed=true.';
     }
 
     public function getSchema(): array
@@ -41,6 +41,10 @@ class RePersonalizeContractsTool implements ToolContract, ToolMetadataContract
                     'type' => 'integer',
                     'description' => 'Optional: Einzelner Vertrag re-personalisieren.',
                 ],
+                'include_completed' => [
+                    'type' => 'boolean',
+                    'description' => 'Optional: Auch bereits unterschriebene Verträge re-personalisieren (§15/§16-Daten bleiben erhalten). Default: false.',
+                ],
             ],
         ]);
     }
@@ -56,6 +60,7 @@ class RePersonalizeContractsTool implements ToolContract, ToolMetadataContract
 
             $onboardingId = $arguments['onboarding_id'] ?? null;
             $contractId = $arguments['contract_id'] ?? null;
+            $includeCompleted = $arguments['include_completed'] ?? false;
 
             if (!$onboardingId && !$contractId) {
                 return ToolResult::error('VALIDATION_ERROR', 'Mindestens onboarding_id oder contract_id ist erforderlich.');
@@ -87,10 +92,30 @@ class RePersonalizeContractsTool implements ToolContract, ToolMetadataContract
                     continue;
                 }
 
+                // Skip completed (signed) contracts unless explicitly requested
+                if ($contract->status === 'completed' && !$includeCompleted) {
+                    $results[] = [
+                        'contract_id' => $contract->id,
+                        'template' => $contract->contractTemplate->name,
+                        'status' => 'skipped',
+                        'reason' => 'Bereits unterschrieben. Nutze include_completed=true um trotzdem zu re-personalisieren.',
+                    ];
+                    continue;
+                }
+
                 $contract->personalized_content = $contract->contractTemplate->personalizeContent(
                     $contract->onboarding,
                     $contract
                 );
+
+                // For completed contracts: re-append §15/§16 pre-signing data
+                if ($contract->status === 'completed' && !empty($contract->pre_signing_data)) {
+                    $preSigningHtml = HcmOnboardingContract::buildPreSigningHtml($contract->pre_signing_data);
+                    if ($preSigningHtml) {
+                        $contract->personalized_content .= $preSigningHtml;
+                    }
+                }
+
                 $contract->save();
 
                 $results[] = [

@@ -91,7 +91,12 @@ class HcmContractTemplate extends Model
             $replacements['{{' . $placeholder . '}}'] = $this->resolveSource($source, $onboarding, $contactModel, $contract);
         }
 
-        return str_replace(array_keys($replacements), array_values($replacements), $content);
+        $content = str_replace(array_keys($replacements), array_values($replacements), $content);
+
+        // Strip white/near-white color styles from TinyMCE dark mode artifacts
+        $content = preg_replace('/color:\s*(?:white|#fff(?:fff)?|rgb\(\s*255\s*,\s*255\s*,\s*255\s*\))\s*;?/i', '', $content);
+
+        return $content;
     }
 
     private function resolveSource(string $source, HcmOnboarding $onboarding, $contact, ?HcmOnboardingContract $contract): string
