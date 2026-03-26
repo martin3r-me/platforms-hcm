@@ -27,6 +27,9 @@ class Show extends Component
     // Vertrag versenden
     public ?string $contractLinkUrl = null;
 
+    // Portal-Link
+    public ?string $portalLinkUrl = null;
+
     // Kontakt-Verknüpfungs-Modals
     public $contactLinkModalShow = false;
     public $contactCreateModalShow = false;
@@ -195,6 +198,24 @@ class Show extends Component
         session()->flash('message', $this->onboarding->is_completed
             ? 'Onboarding als fertig markiert.'
             : 'Onboarding als nicht fertig markiert.');
+    }
+
+    public function generatePortalLink(): void
+    {
+        $link = $this->onboarding->getOrCreatePublicFormLink();
+
+        // Set all pending contracts to 'sent'
+        $this->onboarding->onboardingContracts()
+            ->where('status', 'pending')
+            ->update([
+                'status' => 'sent',
+                'sent_at' => now(),
+            ]);
+
+        $this->portalLinkUrl = route('hcm.public.onboarding-portal', ['token' => $link->token]);
+        $this->onboarding->load('onboardingContracts.contractTemplate');
+
+        $this->dispatch('portal-link-generated');
     }
 
     public function sendContract(int $contractId): void

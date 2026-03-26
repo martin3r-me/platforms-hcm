@@ -111,9 +111,14 @@
         <!-- Verträge -->
         <x-ui-panel title="Verträge" subtitle="Zugewiesene Verträge für dieses Onboarding">
             <x-slot name="actions">
-                <x-ui-button variant="primary" size="xs" wire:click="openAssignContractModal">
-                    @svg('heroicon-o-plus', 'w-4 h-4') Vertrag zuweisen
-                </x-ui-button>
+                <div class="flex items-center gap-2">
+                    <x-ui-button variant="secondary" size="xs" wire:click="generatePortalLink">
+                        @svg('heroicon-o-link', 'w-4 h-4') Portal-Link generieren
+                    </x-ui-button>
+                    <x-ui-button variant="primary" size="xs" wire:click="openAssignContractModal">
+                        @svg('heroicon-o-plus', 'w-4 h-4') Vertrag zuweisen
+                    </x-ui-button>
+                </div>
             </x-slot>
 
             @if($onboarding->onboardingContracts->count() > 0)
@@ -207,6 +212,30 @@
                             <button type="button"
                                 x-on:click="navigator.clipboard.writeText('{{ $contractLinkUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
                                 class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-700 bg-white border border-blue-200 rounded hover:bg-blue-100 transition">
+                                <template x-if="!copied">
+                                    <span class="inline-flex items-center gap-1">@svg('heroicon-o-clipboard', 'w-4 h-4') Kopieren</span>
+                                </template>
+                                <template x-if="copied">
+                                    <span class="inline-flex items-center gap-1 text-green-600">@svg('heroicon-o-check', 'w-4 h-4') Kopiert!</span>
+                                </template>
+                            </button>
+                        </div>
+                    </div>
+                @endif
+                @if($portalLinkUrl)
+                    <div class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg" x-data="{ copied: false }"
+                         x-init="$wire.on('portal-link-generated', () => { copied = false; })">
+                        <div class="flex items-center gap-2 mb-2">
+                            @svg('heroicon-o-link', 'w-4 h-4 text-indigo-600')
+                            <span class="text-sm font-medium text-indigo-900">Onboarding-Portal Link</span>
+                        </div>
+                        <p class="text-xs text-indigo-700 mb-2">Kandidat sieht alle Verträge und kann diese einzeln unterschreiben.</p>
+                        <div class="flex items-center gap-2">
+                            <input type="text" value="{{ $portalLinkUrl }}" readonly
+                                class="flex-1 text-xs bg-white border border-indigo-200 rounded px-3 py-2 text-gray-700 font-mono">
+                            <button type="button"
+                                x-on:click="navigator.clipboard.writeText('{{ $portalLinkUrl }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-indigo-700 bg-white border border-indigo-200 rounded hover:bg-indigo-100 transition">
                                 <template x-if="!copied">
                                     <span class="inline-flex items-center gap-1">@svg('heroicon-o-clipboard', 'w-4 h-4') Kopieren</span>
                                 </template>
