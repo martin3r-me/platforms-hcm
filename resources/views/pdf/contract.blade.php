@@ -9,6 +9,10 @@
             box-sizing: border-box;
         }
 
+        @page {
+            margin: 2cm 2.5cm;
+        }
+
         body {
             font-family: "DejaVu Sans", sans-serif;
             font-size: 11pt;
