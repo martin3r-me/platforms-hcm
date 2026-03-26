@@ -488,7 +488,6 @@
             </div>
         </x-slot>
     </x-ui-modal>
-    <livewire:hcm.onboarding.onboarding-settings-modal />
     </x-ui-page-container>
 
     <x-slot name="sidebar">

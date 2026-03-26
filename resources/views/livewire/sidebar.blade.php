@@ -318,4 +318,6 @@
             </div>
         </div>
     </div>
+
+    <livewire:hcm.onboarding.onboarding-settings-modal />
 </div>
