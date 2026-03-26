@@ -77,14 +77,16 @@ class Show extends Component
                     ->orderBy('id');
             },
             'onboardingContracts.contractTemplate',
+            'publicFormLink',
         ]);
 
         $this->loadAvailableContacts();
         $this->loadExtraFieldValues($this->onboarding);
 
-        // Show portal link if it already exists
-        if ($this->onboarding->publicFormLink) {
-            $this->portalLinkUrl = route('hcm.public.onboarding-portal', ['token' => $this->onboarding->publicFormLink->token]);
+        // Auto-generate portal link when contracts exist
+        if ($this->onboarding->onboardingContracts->isNotEmpty()) {
+            $link = $this->onboarding->publicFormLink ?? $this->onboarding->getOrCreatePublicFormLink();
+            $this->portalLinkUrl = route('hcm.public.onboarding-portal', ['token' => $link->token]);
         }
     }
 

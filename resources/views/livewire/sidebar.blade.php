@@ -39,10 +39,6 @@
             @svg('heroicon-o-document-duplicate', 'w-4 h-4 text-[var(--ui-secondary)]')
             <span class="ml-2 text-sm">Vertragsvorlagen</span>
         </x-ui-sidebar-item>
-        <x-ui-sidebar-item @click="$dispatch('open-onboarding-settings')">
-            @svg('heroicon-o-cog-6-tooth', 'w-4 h-4 text-[var(--ui-secondary)]')
-            <span class="ml-2 text-sm">Einstellungen</span>
-        </x-ui-sidebar-item>
     </x-ui-sidebar-list>
 
     {{-- Abschnitt: Organisation --}}
@@ -319,5 +315,4 @@
         </div>
     </div>
 
-    <livewire:hcm.onboarding.onboarding-settings-modal />
 </div>

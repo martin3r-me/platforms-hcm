@@ -11,6 +11,10 @@
                     </span>
                 </span>
             </x-slot>
+            <x-ui-button variant="secondary" size="sm" @click="$dispatch('open-onboarding-settings')">
+                @svg('heroicon-o-cog-6-tooth', 'w-4 h-4')
+                <span class="ml-1">Einstellungen</span>
+            </x-ui-button>
         </x-ui-page-navbar>
     </x-slot>
 
@@ -414,5 +418,6 @@
             </div>
         </x-ui-page-sidebar>
     </x-slot>
+    <livewire:hcm.onboarding.onboarding-settings-modal />
 </x-ui-page>
 </div>
