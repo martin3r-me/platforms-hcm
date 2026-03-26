@@ -231,6 +231,10 @@ class OnboardingPortal extends Component
                 'par16Entries' => $this->par16Entries,
                 'preSigningData' => $preSigningData,
             ],
+            extra: [
+                'team_id' => $contract->onboarding->team_id ?? $contract->team_id,
+                'source' => 'hcm_onboarding_portal',
+            ],
         );
 
         // Embed §15/§16 data at correct positions in contract (after §15/§16 sections)
