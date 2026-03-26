@@ -32,6 +32,9 @@ class OnboardingPortal extends Component
     // Unterschrift
     public ?string $signatureData = null;
 
+    // View-only mode (for viewing completed contracts)
+    public bool $isViewOnly = false;
+
     public function mount(string $token): void
     {
         $link = CorePublicFormLink::where('token', $token)->first();
@@ -73,10 +76,21 @@ class OnboardingPortal extends Component
             return collect();
         }
 
-        return HcmOnboardingContract::where('hcm_onboarding_id', $this->onboardingId)
+        $contracts = HcmOnboardingContract::where('hcm_onboarding_id', $this->onboardingId)
             ->with('contractTemplate')
             ->orderBy('id')
             ->get();
+
+        foreach ($contracts as $contract) {
+            $extraFields = $contract->getExtraFieldsWithLabels();
+            $contract->fieldValues = collect($extraFields)
+                ->filter(fn ($f) => $f['value'] !== null && $f['value'] !== '')
+                ->map(fn ($f) => ['label' => $f['label'], 'value' => $f['value']])
+                ->values()
+                ->toArray();
+        }
+
+        return $contracts;
     }
 
     public function startSigning(int $contractId): void
@@ -85,19 +99,35 @@ class OnboardingPortal extends Component
             ->where('hcm_onboarding_id', $this->onboardingId)
             ->first();
 
-        if (! $contract || ! in_array($contract->status, ['sent', 'in_progress'])) {
+        if (! $contract || ! in_array($contract->status, ['sent', 'in_progress', 'completed'])) {
             return;
         }
 
         $this->activeContractId = $contract->id;
         $this->contractContent = $contract->personalized_content ?? '';
         $this->contractTemplateName = $contract->contractTemplate?->name ?? 'Vertrag';
-        $this->step = 1;
-        $this->par15HasPrevious = false;
-        $this->par15Entries = [];
-        $this->par16WasJobseeking = false;
-        $this->par16Entries = [];
-        $this->signatureData = null;
+
+        if ($contract->status === 'completed') {
+            $this->isViewOnly = true;
+            $this->step = 3;
+            $this->signatureData = $contract->signature_data;
+
+            // Restore pre-signing data for display
+            $preData = $contract->pre_signing_data ?? [];
+            $this->par15HasPrevious = $preData['par15_has_previous'] ?? false;
+            $this->par15Entries = $preData['par15_entries'] ?? [];
+            $this->par16WasJobseeking = $preData['par16_was_jobseeking'] ?? false;
+            $this->par16Entries = $preData['par16_entries'] ?? [];
+        } else {
+            $this->isViewOnly = false;
+            $this->step = 1;
+            $this->par15HasPrevious = false;
+            $this->par15Entries = [];
+            $this->par16WasJobseeking = false;
+            $this->par16Entries = [];
+            $this->signatureData = null;
+        }
+
         $this->state = 'signing';
     }
 
@@ -164,13 +194,23 @@ class OnboardingPortal extends Component
             return;
         }
 
+        $preSigningData = [
+            'par15_has_previous' => $this->par15HasPrevious,
+            'par15_entries' => $this->par15HasPrevious ? $this->par15Entries : [],
+            'par16_was_jobseeking' => $this->par16WasJobseeking,
+            'par16_entries' => $this->par16WasJobseeking ? $this->par16Entries : [],
+        ];
+
+        // Embed §15/§16 data into personalized content
+        $personalizedContent = $contract->personalized_content ?? '';
+        $preSigningHtml = $this->buildPreSigningHtml($preSigningData);
+        if ($preSigningHtml) {
+            $personalizedContent .= $preSigningHtml;
+        }
+
         $contract->update([
-            'pre_signing_data' => [
-                'par15_has_previous' => $this->par15HasPrevious,
-                'par15_entries' => $this->par15HasPrevious ? $this->par15Entries : [],
-                'par16_was_jobseeking' => $this->par16WasJobseeking,
-                'par16_entries' => $this->par16WasJobseeking ? $this->par16Entries : [],
-            ],
+            'pre_signing_data' => $preSigningData,
+            'personalized_content' => $personalizedContent,
             'signature_data' => $this->signatureData,
             'signed_at' => now(),
             'completed_at' => now(),
@@ -179,6 +219,45 @@ class OnboardingPortal extends Component
 
         $this->activeContractId = null;
         $this->state = 'overview';
+    }
+
+    private function buildPreSigningHtml(array $data): string
+    {
+        $html = '';
+        $tableStyle = 'width:100%;border-collapse:collapse;margin-top:8px;margin-bottom:16px;';
+        $thStyle = 'border:1px solid #d1d5db;padding:6px 10px;background:#f3f4f6;text-align:left;font-size:13px;';
+        $tdStyle = 'border:1px solid #d1d5db;padding:6px 10px;font-size:13px;';
+
+        if (! empty($data['par15_has_previous']) && ! empty($data['par15_entries'])) {
+            $html .= '<div style="margin-top:24px;"><h3 style="font-size:15px;font-weight:bold;margin-bottom:4px;">Angaben nach &sect;15 &mdash; Kurzfristige Besch&auml;ftigungen</h3>';
+            $html .= '<table style="' . $tableStyle . '">';
+            $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitgeber</th><th style="' . $thStyle . '">Tage</th></tr></thead><tbody>';
+            foreach ($data['par15_entries'] as $entry) {
+                $html .= '<tr>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitgeber'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['tage'] ?? '') . '</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div>';
+        }
+
+        if (! empty($data['par16_was_jobseeking']) && ! empty($data['par16_entries'])) {
+            $html .= '<div style="margin-top:24px;"><h3 style="font-size:15px;font-weight:bold;margin-bottom:4px;">Angaben nach &sect;16 &mdash; Besch&auml;ftigungslose Zeiten</h3>';
+            $html .= '<table style="' . $tableStyle . '">';
+            $html .= '<thead><tr><th style="' . $thStyle . '">Beginn</th><th style="' . $thStyle . '">Ende</th><th style="' . $thStyle . '">Arbeitsagentur</th></tr></thead><tbody>';
+            foreach ($data['par16_entries'] as $entry) {
+                $html .= '<tr>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['beginn'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['ende'] ?? '') . '</td>';
+                $html .= '<td style="' . $tdStyle . '">' . e($entry['arbeitsagentur'] ?? '') . '</td>';
+                $html .= '</tr>';
+            }
+            $html .= '</tbody></table></div>';
+        }
+
+        return $html;
     }
 
     private function validateStep1(): void

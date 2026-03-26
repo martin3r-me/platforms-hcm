@@ -185,17 +185,20 @@
                                         {{ $contract->completed_at?->format('d.m.Y H:i') ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        @if($contract->status === 'pending')
-                                            <x-ui-button size="xs" variant="primary" wire:click="sendContract({{ $contract->id }})">
-                                                @svg('heroicon-o-paper-airplane', 'w-3.5 h-3.5') Versenden
+                                        <div class="flex items-center gap-1">
+                                            <x-ui-button size="xs" variant="secondary-outline" wire:click="openContractFields({{ $contract->id }})">
+                                                @svg('heroicon-o-adjustments-horizontal', 'w-3.5 h-3.5') Felder
                                             </x-ui-button>
-                                        @elseif($contract->status === 'sent')
-                                            <x-ui-button size="xs" variant="secondary-outline" wire:click="sendContract({{ $contract->id }})">
-                                                @svg('heroicon-o-link', 'w-3.5 h-3.5') Link kopieren
-                                            </x-ui-button>
-                                        @else
-                                            <span class="text-[var(--ui-muted)]">—</span>
-                                        @endif
+                                            @if($contract->status === 'pending')
+                                                <x-ui-button size="xs" variant="primary" wire:click="sendContract({{ $contract->id }})">
+                                                    @svg('heroicon-o-paper-airplane', 'w-3.5 h-3.5') Versenden
+                                                </x-ui-button>
+                                            @elseif($contract->status === 'sent')
+                                                <x-ui-button size="xs" variant="secondary-outline" wire:click="sendContract({{ $contract->id }})">
+                                                    @svg('heroicon-o-link', 'w-3.5 h-3.5') Link kopieren
+                                                </x-ui-button>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -485,6 +488,126 @@
                 <x-ui-button type="button" variant="primary" wire:click="saveContact">
                     Kontakt erstellen
                 </x-ui-button>
+            </div>
+        </x-slot>
+    </x-ui-modal>
+
+    <!-- Contract Extra Fields Modal -->
+    <x-ui-modal size="lg" model="contractFieldsModalShow">
+        <x-slot name="header">Vertragsfelder bearbeiten</x-slot>
+
+        <div class="space-y-4">
+            @if(count($contractFieldDefinitions) > 0)
+                @foreach($contractFieldDefinitions as $index => $field)
+                    <div>
+                        @if($field['type'] === 'text' || $field['type'] === 'email' || $field['type'] === 'phone')
+                            <x-ui-input-text
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                placeholder="{{ $field['description'] ?? $field['label'] }}"
+                                :required="$field['is_required'] ?? false"
+                            />
+                        @elseif($field['type'] === 'number')
+                            <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-1">
+                                {{ $field['label'] }}
+                                @if($field['is_required'] ?? false) <span class="text-red-500">*</span> @endif
+                            </label>
+                            <input type="number" step="any"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                placeholder="{{ $field['description'] ?? $field['label'] }}"
+                                class="w-full rounded-md border border-[var(--ui-border)] bg-white px-3 py-2 text-sm shadow-sm focus:border-[var(--ui-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--ui-primary)]"
+                            />
+                        @elseif($field['type'] === 'date')
+                            <x-ui-input-date
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                :nullable="true"
+                                :required="$field['is_required'] ?? false"
+                            />
+                        @elseif($field['type'] === 'textarea')
+                            <x-ui-input-textarea
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                placeholder="{{ $field['description'] ?? $field['label'] }}"
+                                rows="3"
+                                :required="$field['is_required'] ?? false"
+                            />
+                        @elseif($field['type'] === 'boolean')
+                            <x-ui-input-checkbox
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                            />
+                        @elseif($field['type'] === 'select' && !empty($field['choices'] ?? $field['options']['choices'] ?? []))
+                            @php
+                                $choices = collect($field['choices'] ?? $field['options']['choices'] ?? [])
+                                    ->map(fn($c) => is_array($c) ? $c : ['id' => $c, 'name' => $c])
+                                    ->toArray();
+                            @endphp
+                            <x-ui-input-select
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                :options="$choices"
+                                optionValue="id"
+                                optionLabel="name"
+                                :nullable="true"
+                                nullLabel="— Bitte wählen —"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                :required="$field['is_required'] ?? false"
+                            />
+                        @elseif($field['type'] === 'lookup' && !empty($field['lookup'] ?? []))
+                            @php
+                                $lookupOptions = collect($field['lookup'])
+                                    ->map(fn($item) => ['id' => $item['value'] ?? $item['id'] ?? '', 'name' => $item['label'] ?? $item['name'] ?? ''])
+                                    ->toArray();
+                            @endphp
+                            <x-ui-input-select
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                :options="$lookupOptions"
+                                optionValue="id"
+                                optionLabel="name"
+                                :nullable="true"
+                                nullLabel="— Bitte wählen —"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                :required="$field['is_required'] ?? false"
+                            />
+                        @else
+                            <x-ui-input-text
+                                name="contractFieldValues.{{ $field['name'] }}"
+                                label="{{ $field['label'] }}"
+                                wire:model.live="contractFieldValues.{{ $field['name'] }}"
+                                placeholder="{{ $field['description'] ?? $field['label'] }}"
+                                :required="$field['is_required'] ?? false"
+                            />
+                        @endif
+
+                        @if($field['description'] && !in_array($field['type'], ['text', 'email', 'phone', 'textarea']))
+                            <p class="mt-1 text-xs text-[var(--ui-muted)]">{{ $field['description'] }}</p>
+                        @endif
+                    </div>
+                @endforeach
+            @else
+                <div class="text-center py-6">
+                    @svg('heroicon-o-document-text', 'w-10 h-10 text-[var(--ui-muted)] mx-auto mb-2')
+                    <p class="text-sm text-[var(--ui-muted)]">Keine Felder für diesen Vertrag definiert.</p>
+                </div>
+            @endif
+        </div>
+
+        <x-slot name="footer">
+            <div class="d-flex justify-end gap-2">
+                <x-ui-button type="button" variant="secondary-outline" wire:click="closeContractFieldsModal">
+                    Abbrechen
+                </x-ui-button>
+                @if(count($contractFieldDefinitions) > 0)
+                    <x-ui-button type="button" variant="primary" wire:click="saveContractFields">
+                        Speichern
+                    </x-ui-button>
+                @endif
             </div>
         </x-slot>
     </x-ui-modal>

@@ -30,10 +30,36 @@
 
             {{-- Alle unterschrieben --}}
             @if($allCompleted)
-                <div class="bg-white rounded-lg border border-green-200 p-12 text-center">
+                <div class="bg-white rounded-lg border border-green-200 p-8 mb-6 text-center">
                     @svg('heroicon-o-check-circle', 'w-16 h-16 text-green-500 mx-auto mb-4')
                     <h2 class="text-xl font-bold text-gray-900 mb-2">Alle Verträge unterschrieben</h2>
                     <p class="text-gray-500">Vielen Dank! Sie haben alle Verträge erfolgreich unterschrieben.</p>
+                </div>
+
+                <div class="space-y-4">
+                    @foreach($contracts as $contract)
+                        <div class="bg-white rounded-lg border border-gray-200 p-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="flex-shrink-0">
+                                        @svg('heroicon-o-check-circle', 'w-8 h-8 text-green-500')
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">
+                                            {{ $contract->contractTemplate?->name ?? 'Vertrag' }}
+                                        </h3>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 mt-1">
+                                            Unterschrieben
+                                        </span>
+                                    </div>
+                                </div>
+                                <button type="button" wire:click="startSigning({{ $contract->id }})"
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                    @svg('heroicon-o-eye', 'w-4 h-4') Ansehen
+                                </button>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             @else
                 <div class="bg-white rounded-lg border border-gray-200 p-8 mb-6">
@@ -51,47 +77,64 @@
 
                 <div class="space-y-4">
                     @foreach($contracts as $contract)
-                        <div class="bg-white rounded-lg border border-gray-200 p-6 flex items-center justify-between">
-                            <div class="flex items-center gap-4">
-                                <div class="flex-shrink-0">
-                                    @if($contract->status === 'completed')
-                                        @svg('heroicon-o-check-circle', 'w-8 h-8 text-green-500')
-                                    @else
-                                        @svg('heroicon-o-document-text', 'w-8 h-8 text-gray-400')
-                                    @endif
-                                </div>
-                                <div>
-                                    <h3 class="font-semibold text-gray-900">
-                                        {{ $contract->contractTemplate?->name ?? 'Vertrag' }}
-                                    </h3>
-                                    <div class="mt-1">
-                                        @php
-                                            $statusConfig = match($contract->status) {
-                                                'pending' => ['label' => 'Ausstehend', 'classes' => 'bg-gray-100 text-gray-600'],
-                                                'sent' => ['label' => 'Offen', 'classes' => 'bg-blue-100 text-blue-700'],
-                                                'in_progress' => ['label' => 'In Bearbeitung', 'classes' => 'bg-yellow-100 text-yellow-700'],
-                                                'completed' => ['label' => 'Unterschrieben', 'classes' => 'bg-green-100 text-green-700'],
-                                                default => ['label' => $contract->status, 'classes' => 'bg-gray-100 text-gray-600'],
-                                            };
-                                        @endphp
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusConfig['classes'] }}">
-                                            {{ $statusConfig['label'] }}
-                                        </span>
+                        <div class="bg-white rounded-lg border border-gray-200 p-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-4">
+                                    <div class="flex-shrink-0">
+                                        @if($contract->status === 'completed')
+                                            @svg('heroicon-o-check-circle', 'w-8 h-8 text-green-500')
+                                        @else
+                                            @svg('heroicon-o-document-text', 'w-8 h-8 text-gray-400')
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <h3 class="font-semibold text-gray-900">
+                                            {{ $contract->contractTemplate?->name ?? 'Vertrag' }}
+                                        </h3>
+                                        <div class="mt-1">
+                                            @php
+                                                $statusConfig = match($contract->status) {
+                                                    'pending' => ['label' => 'Ausstehend', 'classes' => 'bg-gray-100 text-gray-600'],
+                                                    'sent' => ['label' => 'Offen', 'classes' => 'bg-blue-100 text-blue-700'],
+                                                    'in_progress' => ['label' => 'In Bearbeitung', 'classes' => 'bg-yellow-100 text-yellow-700'],
+                                                    'completed' => ['label' => 'Unterschrieben', 'classes' => 'bg-green-100 text-green-700'],
+                                                    default => ['label' => $contract->status, 'classes' => 'bg-gray-100 text-gray-600'],
+                                                };
+                                            @endphp
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusConfig['classes'] }}">
+                                                {{ $statusConfig['label'] }}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
+                                <div>
+                                    @if(in_array($contract->status, ['sent', 'in_progress']))
+                                        <button type="button" wire:click="startSigning({{ $contract->id }})"
+                                            class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                                            @svg('heroicon-o-pencil', 'w-4 h-4') Unterschreiben
+                                        </button>
+                                    @elseif($contract->status === 'completed')
+                                        <button type="button" wire:click="startSigning({{ $contract->id }})"
+                                            class="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                            @svg('heroicon-o-eye', 'w-4 h-4') Ansehen
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
-                            <div>
-                                @if(in_array($contract->status, ['sent', 'in_progress']))
-                                    <button type="button" wire:click="startSigning({{ $contract->id }})"
-                                        class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
-                                        @svg('heroicon-o-pencil', 'w-4 h-4') Unterschreiben
-                                    </button>
-                                @elseif($contract->status === 'completed')
-                                    <span class="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                                        @svg('heroicon-o-check', 'w-4 h-4') Erledigt
-                                    </span>
-                                @endif
-                            </div>
+
+                            {{-- Field values mini-dashboard --}}
+                            @if(! empty($contract->fieldValues))
+                                <div class="mt-3 pt-3 border-t border-gray-100">
+                                    <div class="flex flex-wrap gap-2">
+                                        @foreach($contract->fieldValues as $field)
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-50 border border-gray-200 text-xs">
+                                                <span class="text-gray-500">{{ $field['label'] }}:</span>
+                                                <span class="font-medium text-gray-700">{{ $field['value'] }}</span>
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -107,29 +150,31 @@
                 </button>
             </div>
 
-            {{-- Fortschrittsanzeige --}}
-            <div class="mb-8">
-                <div class="flex items-center justify-between mb-2">
-                    @foreach([1 => '§15 Angaben', 2 => '§16 Angaben', 3 => 'Vertrag & Unterschrift'] as $num => $label)
-                        <div class="flex items-center {{ $num < 3 ? 'flex-1' : '' }}">
-                            <div class="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
-                                {{ $step >= $num ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500' }}">
-                                @if($step > $num)
-                                    @svg('heroicon-o-check', 'w-5 h-5')
-                                @else
-                                    {{ $num }}
+            {{-- Fortschrittsanzeige (nur beim Unterschreiben, nicht bei Ansicht) --}}
+            @if(! $isViewOnly)
+                <div class="mb-8">
+                    <div class="flex items-center justify-between mb-2">
+                        @foreach([1 => '§15 Angaben', 2 => '§16 Angaben', 3 => 'Vertrag & Unterschrift'] as $num => $label)
+                            <div class="flex items-center {{ $num < 3 ? 'flex-1' : '' }}">
+                                <div class="flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold
+                                    {{ $step >= $num ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500' }}">
+                                    @if($step > $num)
+                                        @svg('heroicon-o-check', 'w-5 h-5')
+                                    @else
+                                        {{ $num }}
+                                    @endif
+                                </div>
+                                <span class="ml-2 text-sm font-medium {{ $step >= $num ? 'text-gray-900' : 'text-gray-400' }} hidden sm:inline">
+                                    {{ $label }}
+                                </span>
+                                @if($num < 3)
+                                    <div class="flex-1 mx-4 h-0.5 {{ $step > $num ? 'bg-blue-600' : 'bg-gray-200' }}"></div>
                                 @endif
                             </div>
-                            <span class="ml-2 text-sm font-medium {{ $step >= $num ? 'text-gray-900' : 'text-gray-400' }} hidden sm:inline">
-                                {{ $label }}
-                            </span>
-                            @if($num < 3)
-                                <div class="flex-1 mx-4 h-0.5 {{ $step > $num ? 'bg-blue-600' : 'bg-gray-200' }}"></div>
-                            @endif
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
-            </div>
+            @endif
 
             {{-- Step 1: §15 --}}
             @if($step === 1)
@@ -311,36 +356,110 @@
                 <div class="space-y-6">
                     <div class="bg-white rounded-lg border border-gray-200 p-8">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">{{ $contractTemplateName }}</h2>
-                        <div class="prose prose-sm max-w-none border border-gray-100 rounded-lg p-6 bg-gray-50 max-h-[60vh] overflow-y-auto">
+                        <div class="prose prose-sm max-w-none border border-gray-100 rounded-lg p-6 bg-gray-50 max-h-[60vh] overflow-y-auto whitespace-pre-line">
                             {!! $contractContent !!}
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-lg border border-gray-200 p-8">
-                        <h3 class="text-lg font-bold text-gray-900 mb-4">Unterschrift</h3>
-                        <p class="text-sm text-gray-500 mb-4">
-                            Mit Ihrer Unterschrift bestätigen Sie, dass Sie den Vertrag gelesen haben und die oben gemachten Angaben korrekt sind.
-                        </p>
+                    {{-- View-only: Show §15/§16 data if present --}}
+                    @if($isViewOnly)
+                        @if($par15HasPrevious && count($par15Entries) > 0)
+                            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4">Angaben nach &sect;15 &mdash; Kurzfristige Beschäftigungen</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Beginn</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Ende</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Arbeitgeber</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Tage</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($par15Entries as $entry)
+                                                <tr>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['beginn'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['ende'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['arbeitgeber'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['tage'] ?? '' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
 
-                        <x-ui-input-signature
-                            name="signatureData"
-                            label="Ihre Unterschrift"
-                            wire:model="signatureData"
-                            :required="true"
-                            :height="200"
-                        />
+                        @if($par16WasJobseeking && count($par16Entries) > 0)
+                            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4">Angaben nach &sect;16 &mdash; Beschäftigungslose Zeiten</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm border-collapse">
+                                        <thead>
+                                            <tr class="bg-gray-50">
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Beginn</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Ende</th>
+                                                <th class="border border-gray-200 px-3 py-2 text-left font-medium text-gray-600">Arbeitsagentur</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($par16Entries as $entry)
+                                                <tr>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['beginn'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['ende'] ?? '' }}</td>
+                                                    <td class="border border-gray-200 px-3 py-2">{{ $entry['arbeitsagentur'] ?? '' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endif
 
-                        <div class="flex justify-between mt-8">
-                            <button type="button" wire:click="previousStep"
+                        {{-- Show saved signature --}}
+                        @if($signatureData)
+                            <div class="bg-white rounded-lg border border-gray-200 p-8">
+                                <h3 class="text-lg font-bold text-gray-900 mb-4">Unterschrift</h3>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                                    <img src="{{ $signatureData }}" alt="Unterschrift" class="max-h-32 mx-auto">
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="flex justify-start">
+                            <button type="button" wire:click="backToOverview"
                                 class="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
-                                @svg('heroicon-o-arrow-left', 'w-4 h-4') Zurück
-                            </button>
-                            <button type="button" wire:click="sign"
-                                class="inline-flex items-center gap-2 px-8 py-3 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition">
-                                @svg('heroicon-o-check', 'w-5 h-5') Vertrag unterschreiben
+                                @svg('heroicon-o-arrow-left', 'w-4 h-4') Zurück zur Übersicht
                             </button>
                         </div>
-                    </div>
+                    @else
+                        <div class="bg-white rounded-lg border border-gray-200 p-8">
+                            <h3 class="text-lg font-bold text-gray-900 mb-4">Unterschrift</h3>
+                            <p class="text-sm text-gray-500 mb-4">
+                                Mit Ihrer Unterschrift bestätigen Sie, dass Sie den Vertrag gelesen haben und die oben gemachten Angaben korrekt sind.
+                            </p>
+
+                            <x-ui-input-signature
+                                name="signatureData"
+                                label="Ihre Unterschrift"
+                                wire:model="signatureData"
+                                :required="true"
+                                :height="200"
+                            />
+
+                            <div class="flex justify-between mt-8">
+                                <button type="button" wire:click="previousStep"
+                                    class="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
+                                    @svg('heroicon-o-arrow-left', 'w-4 h-4') Zurück
+                                </button>
+                                <button type="button" wire:click="sign"
+                                    class="inline-flex items-center gap-2 px-8 py-3 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition">
+                                    @svg('heroicon-o-check', 'w-5 h-5') Vertrag unterschreiben
+                                </button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
         @endif

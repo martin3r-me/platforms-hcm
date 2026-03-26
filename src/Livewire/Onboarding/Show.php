@@ -33,6 +33,12 @@ class Show extends Component
     // Portal-Link
     public ?string $portalLinkUrl = null;
 
+    // Contract Extra Fields Modal
+    public bool $contractFieldsModalShow = false;
+    public ?int $activeContractId = null;
+    public array $contractFieldDefinitions = [];
+    public array $contractFieldValues = [];
+
     // Kontakt-Verknüpfungs-Modals
     public $contactLinkModalShow = false;
     public $contactCreateModalShow = false;
@@ -590,6 +596,56 @@ class Show extends Component
             }
         }
         return $params;
+    }
+
+    public function openContractFields(int $contractId): void
+    {
+        $contract = HcmOnboardingContract::where('id', $contractId)
+            ->where('hcm_onboarding_id', $this->onboarding->id)
+            ->firstOrFail();
+
+        $this->activeContractId = $contractId;
+        $this->contractFieldDefinitions = $contract->getExtraFieldsWithLabels();
+        $this->contractFieldValues = [];
+
+        foreach ($this->contractFieldDefinitions as $field) {
+            $this->contractFieldValues[$field['name']] = $field['value'];
+        }
+
+        $this->contractFieldsModalShow = true;
+    }
+
+    public function saveContractFields(): void
+    {
+        $contract = HcmOnboardingContract::where('id', $this->activeContractId)
+            ->where('hcm_onboarding_id', $this->onboarding->id)
+            ->firstOrFail();
+
+        foreach ($this->contractFieldDefinitions as $field) {
+            $value = $this->contractFieldValues[$field['name']] ?? null;
+            $contract->setExtraField($field['name'], $value);
+        }
+
+        // Re-personalize contract content with updated extra field values
+        if ($contract->contractTemplate) {
+            $contract->personalized_content = $contract->contractTemplate->personalizeContent(
+                $this->onboarding,
+                $contract
+            );
+            $contract->save();
+        }
+
+        $this->closeContractFieldsModal();
+        $this->onboarding->load('onboardingContracts.contractTemplate');
+        session()->flash('message', 'Vertragsfelder erfolgreich aktualisiert.');
+    }
+
+    public function closeContractFieldsModal(): void
+    {
+        $this->contractFieldsModalShow = false;
+        $this->activeContractId = null;
+        $this->contractFieldDefinitions = [];
+        $this->contractFieldValues = [];
     }
 
     public function render()
