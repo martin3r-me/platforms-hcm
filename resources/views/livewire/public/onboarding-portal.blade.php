@@ -1,8 +1,8 @@
-<style>
-    .onboarding-portal input, .onboarding-portal select, .onboarding-portal textarea { color: #111827 !important; }
-    .onboarding-portal label { color: #4b5563 !important; }
-</style>
 <div class="onboarding-portal min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <style>
+        .onboarding-portal input, .onboarding-portal select, .onboarding-portal textarea { color: #111827 !important; }
+        .onboarding-portal label { color: #4b5563 !important; }
+    </style>
     <div class="max-w-3xl mx-auto">
 
         {{-- Ungültiger Token --}}
