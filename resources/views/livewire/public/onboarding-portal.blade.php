@@ -360,7 +360,10 @@
                 <div class="space-y-6">
                     <div class="bg-white rounded-lg border border-gray-200 p-8">
                         <h2 class="text-xl font-bold text-gray-900 mb-4">{{ $contractTemplateName }}</h2>
-                        <div class="prose prose-sm max-w-none border border-gray-100 rounded-lg p-6 bg-gray-50 max-h-[60vh] overflow-y-auto whitespace-pre-line">
+                        <style>
+                            .contract-content, .contract-content * { color: #111827 !important; }
+                        </style>
+                        <div class="contract-content prose prose-sm max-w-none border border-gray-100 rounded-lg p-6 bg-gray-50 max-h-[60vh] overflow-y-auto whitespace-pre-line">
                             {!! $contractContent !!}
                         </div>
                     </div>
