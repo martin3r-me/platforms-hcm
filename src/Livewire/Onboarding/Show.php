@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\DB;
 use Platform\Core\Models\Team;
 use Platform\Hcm\Models\HcmJobTitle;
 use Platform\Hcm\Models\HcmOnboarding;
+use Platform\Hcm\Models\HcmContractTemplate;
+use Platform\Hcm\Models\HcmOnboardingContract;
 use Platform\Crm\Models\CrmContact;
 
 class Show extends Component
@@ -17,6 +19,10 @@ class Show extends Component
     use WithExtraFields;
 
     public HcmOnboarding $onboarding;
+
+    // Vertrag zuweisen
+    public $assignContractModalShow = false;
+    public $selectedTemplateId = null;
 
     // Kontakt-Verknüpfungs-Modals
     public $contactLinkModalShow = false;
@@ -130,6 +136,52 @@ class Show extends Component
                 'id' => $user->id,
                 'name' => $user->fullname ?? $user->name,
             ]);
+    }
+
+    #[Computed]
+    public function availableTemplates()
+    {
+        return HcmContractTemplate::where('team_id', $this->onboarding->team_id)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($t) => ['id' => $t->id, 'name' => $t->name]);
+    }
+
+    public function openAssignContractModal(): void
+    {
+        $this->selectedTemplateId = null;
+        $this->assignContractModalShow = true;
+    }
+
+    public function closeAssignContractModal(): void
+    {
+        $this->assignContractModalShow = false;
+        $this->selectedTemplateId = null;
+    }
+
+    public function assignContract(): void
+    {
+        $this->validate([
+            'selectedTemplateId' => 'required|exists:hcm_contract_templates,id',
+        ]);
+
+        $template = HcmContractTemplate::findOrFail($this->selectedTemplateId);
+        $personalizedContent = $template->personalizeContent($this->onboarding);
+
+        HcmOnboardingContract::create([
+            'hcm_onboarding_id' => $this->onboarding->id,
+            'hcm_contract_template_id' => $template->id,
+            'team_id' => $this->onboarding->team_id,
+            'personalized_content' => $personalizedContent,
+            'status' => 'pending',
+            'created_by_user_id' => auth()->id(),
+        ]);
+
+        $this->onboarding->load('onboardingContracts.contractTemplate');
+        $this->closeAssignContractModal();
+        session()->flash('message', 'Vertrag erfolgreich zugewiesen.');
     }
 
     #[Computed]

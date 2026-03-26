@@ -109,8 +109,14 @@
         />
 
         <!-- Verträge -->
-        @if($onboarding->onboardingContracts->count() > 0)
-            <x-ui-panel title="Verträge" subtitle="Zugewiesene Verträge für dieses Onboarding">
+        <x-ui-panel title="Verträge" subtitle="Zugewiesene Verträge für dieses Onboarding">
+            <x-slot name="actions">
+                <x-ui-button variant="primary" size="xs" wire:click="openAssignContractModal">
+                    @svg('heroicon-o-plus', 'w-4 h-4') Vertrag zuweisen
+                </x-ui-button>
+            </x-slot>
+
+            @if($onboarding->onboardingContracts->count() > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full table-auto border-collapse text-sm">
                         <thead>
@@ -174,8 +180,17 @@
                         </tbody>
                     </table>
                 </div>
-            </x-ui-panel>
-        @endif
+            @else
+                <div class="text-center py-8">
+                    @svg('heroicon-o-document-duplicate', 'w-12 h-12 text-[var(--ui-muted)] mx-auto mb-4')
+                    <h4 class="text-lg font-medium text-[var(--ui-secondary)] mb-2">Keine Verträge zugewiesen</h4>
+                    <p class="text-[var(--ui-muted)] mb-4">Weisen Sie eine Vertragsvorlage zu, um einen personalisierten Vertrag zu erstellen.</p>
+                    <x-ui-button variant="primary" size="sm" wire:click="openAssignContractModal">
+                        @svg('heroicon-o-plus', 'w-4 h-4') Vertrag zuweisen
+                    </x-ui-button>
+                </div>
+            @endif
+        </x-ui-panel>
 
         <!-- Verknüpfte Kontakte -->
         <x-ui-panel title="Verknüpfte Kontakte" subtitle="CRM-Kontakte die mit diesem Onboarding verknüpft sind">
@@ -245,6 +260,38 @@
                 :key="'inline-comms-' . $onboarding->id"
             />
         @endif
+
+    <!-- Assign Contract Modal -->
+    <x-ui-modal size="sm" model="assignContractModalShow">
+        <x-slot name="header">Vertrag zuweisen</x-slot>
+
+        <div class="space-y-4">
+            <p class="text-sm text-[var(--ui-muted)]">Wählen Sie eine Vertragsvorlage aus. Der Vertragstext wird automatisch mit den Daten des Onboardings personalisiert.</p>
+
+            <x-ui-input-select
+                name="selectedTemplateId"
+                label="Vertragsvorlage"
+                :options="$this->availableTemplates"
+                optionValue="id"
+                optionLabel="name"
+                :nullable="true"
+                nullLabel="– Vorlage auswählen –"
+                wire:model.live="selectedTemplateId"
+                required
+            />
+        </div>
+
+        <x-slot name="footer">
+            <div class="d-flex justify-end gap-2">
+                <x-ui-button type="button" variant="secondary-outline" wire:click="closeAssignContractModal">
+                    Abbrechen
+                </x-ui-button>
+                <x-ui-button type="button" variant="primary" wire:click="assignContract">
+                    Zuweisen
+                </x-ui-button>
+            </div>
+        </x-slot>
+    </x-ui-modal>
 
     <!-- Contact Link Modal -->
     <x-ui-modal
@@ -388,6 +435,12 @@
                                 </span>
                             </x-ui-button>
                         @endif
+                        <x-ui-button variant="secondary" size="sm" wire:click="openAssignContractModal" class="w-full">
+                            <span class="inline-flex items-center gap-2">
+                                @svg('heroicon-o-document-duplicate', 'w-4 h-4')
+                                Vertrag zuweisen
+                            </span>
+                        </x-ui-button>
                         <x-ui-button variant="secondary" size="sm" wire:click="linkContact" class="w-full">
                             <span class="inline-flex items-center gap-2">
                                 @svg('heroicon-o-link', 'w-4 h-4')

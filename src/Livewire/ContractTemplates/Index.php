@@ -19,6 +19,7 @@ class Index extends Component
     public $requires_signature = true;
     public $sort_order = 0;
     public $is_active = true;
+    public $field_mappings = [];
 
     protected $rules = [
         'name' => 'required|string|max:255',
@@ -28,6 +29,8 @@ class Index extends Component
         'requires_signature' => 'boolean',
         'sort_order' => 'integer|min:0',
         'is_active' => 'boolean',
+        'field_mappings.*.placeholder' => 'required|string|max:255',
+        'field_mappings.*.source' => 'required|string|max:255',
     ];
 
     public function render()
@@ -64,6 +67,10 @@ class Index extends Component
         $this->requires_signature = $m->requires_signature;
         $this->sort_order = $m->sort_order;
         $this->is_active = $m->is_active;
+        $this->field_mappings = collect($m->field_mappings ?? [])
+            ->map(fn ($source, $placeholder) => ['placeholder' => $placeholder, 'source' => $source])
+            ->values()
+            ->all();
         $this->showEditModal = true;
     }
 
@@ -71,11 +78,17 @@ class Index extends Component
     {
         $this->validate();
 
+        $mappings = collect($this->field_mappings)
+            ->filter(fn ($row) => filled($row['placeholder']) && filled($row['source']))
+            ->mapWithKeys(fn ($row) => [$row['placeholder'] => $row['source']])
+            ->all();
+
         $data = [
             'name' => $this->name,
             'code' => $this->code,
             'description' => $this->description,
             'content' => $this->content,
+            'field_mappings' => $mappings ?: null,
             'requires_signature' => $this->requires_signature,
             'sort_order' => $this->sort_order,
             'is_active' => $this->is_active,
@@ -109,6 +122,17 @@ class Index extends Component
         session()->flash('success', 'Vertragsvorlage erfolgreich gelöscht!');
     }
 
+    public function addMapping(): void
+    {
+        $this->field_mappings[] = ['placeholder' => '', 'source' => ''];
+    }
+
+    public function removeMapping(int $index): void
+    {
+        unset($this->field_mappings[$index]);
+        $this->field_mappings = array_values($this->field_mappings);
+    }
+
     public function closeModals(): void
     {
         $this->showCreateModal = false;
@@ -126,5 +150,6 @@ class Index extends Component
         $this->requires_signature = true;
         $this->sort_order = 0;
         $this->is_active = true;
+        $this->field_mappings = [];
     }
 }

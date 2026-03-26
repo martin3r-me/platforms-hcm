@@ -131,45 +131,135 @@
     </x-slot>
 
     {{-- Modals --}}
-    <x-ui-modal wire:model="showCreateModal">
-        <x-slot name="header">Neue Vertragsvorlage anlegen</x-slot>
-        <div class="space-y-4">
-            <x-ui-input-text name="name" label="Name *" wire:model="name" required />
-            <x-ui-input-text name="code" label="Code" wire:model="code" />
-            <x-ui-input-textarea name="description" label="Beschreibung" wire:model="description" />
-            <x-ui-input-textarea name="content" label="Vertragstext" wire:model="content" rows="6" />
-            <div class="grid grid-cols-2 gap-4">
-                <x-ui-input-text name="sort_order" label="Sortierung" wire:model="sort_order" type="number" />
-                <div class="space-y-2">
-                    <x-ui-input-checkbox model="requires_signature" name="requires_signature" wire:model="requires_signature" checked-label="Unterschrift erforderlich" unchecked-label="Keine Unterschrift" />
-                    <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
-                </div>
-            </div>
-        </div>
-        <x-slot name="footer">
-            <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
-            <x-ui-button variant="primary" wire:click="save">Speichern</x-ui-button>
-        </x-slot>
-    </x-ui-modal>
+    @php
+        $sourceOptions = [
+            'Kontakt' => [
+                'contact.first_name' => 'Vorname',
+                'contact.last_name' => 'Nachname',
+                'contact.birth_date' => 'Geburtsdatum',
+                'contact.email' => 'E-Mail',
+                'contact.phone' => 'Telefon',
+            ],
+            'Adresse' => [
+                'contact.address.street' => 'Straße',
+                'contact.address.house_number' => 'Hausnummer',
+                'contact.address.postal_code' => 'PLZ',
+                'contact.address.city' => 'Stadt',
+            ],
+            'Onboarding' => [
+                'onboarding.source_position_title' => 'Stellenbezeichnung',
+            ],
+            'Meta' => [
+                'meta.datum_heute' => 'Datum heute',
+            ],
+        ];
+    @endphp
 
-    <x-ui-modal wire:model="showEditModal">
-        <x-slot name="header">Vertragsvorlage bearbeiten</x-slot>
-        <div class="space-y-4">
-            <x-ui-input-text name="name" label="Name *" wire:model="name" required />
-            <x-ui-input-text name="code" label="Code" wire:model="code" />
-            <x-ui-input-textarea name="description" label="Beschreibung" wire:model="description" />
-            <x-ui-input-textarea name="content" label="Vertragstext" wire:model="content" rows="6" />
-            <div class="grid grid-cols-2 gap-4">
-                <x-ui-input-text name="sort_order" label="Sortierung" wire:model="sort_order" type="number" />
-                <div class="space-y-2">
-                    <x-ui-input-checkbox model="requires_signature" name="requires_signature" wire:model="requires_signature" checked-label="Unterschrift erforderlich" unchecked-label="Keine Unterschrift" />
-                    <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+    @foreach(['showCreateModal' => 'Neue Vertragsvorlage anlegen', 'showEditModal' => 'Vertragsvorlage bearbeiten'] as $modalModel => $modalTitle)
+        <x-ui-modal wire:model="{{ $modalModel }}">
+            <x-slot name="header">{{ $modalTitle }}</x-slot>
+            <div class="space-y-4">
+                <x-ui-input-text name="name" label="Name *" wire:model="name" required />
+                <x-ui-input-text name="code" label="Code" wire:model="code" />
+                <x-ui-input-textarea name="description" label="Beschreibung" wire:model="description" />
+                <x-ui-input-textarea name="content" label="Vertragstext" wire:model="content" rows="6" />
+
+                {{-- Field Mappings --}}
+                <div>
+                    <label class="block text-sm font-medium text-[var(--ui-secondary)] mb-2">Platzhalter-Zuordnungen</label>
+                    <p class="text-xs text-[var(--ui-muted)] mb-3">Platzhalter im Vertragstext (z.B. <code class="bg-gray-100 px-1 rounded">&#123;&#123;vorname&#125;&#125;</code>) werden beim Zuweisen automatisch ersetzt.</p>
+
+                    <div class="space-y-2">
+                        @foreach($field_mappings as $index => $mapping)
+                            <div class="flex items-start gap-2" wire:key="mapping-{{ $index }}">
+                                <div class="flex-1">
+                                    <input
+                                        type="text"
+                                        wire:model="field_mappings.{{ $index }}.placeholder"
+                                        placeholder="Platzhalter (z.B. vorname)"
+                                        class="w-full rounded-md border border-[var(--ui-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ui-primary)]/50"
+                                    />
+                                    @error("field_mappings.{$index}.placeholder")
+                                        <span class="text-xs text-red-500">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                                <div class="flex-1">
+                                    @php $currentSource = $field_mappings[$index]['source'] ?? ''; @endphp
+                                    @php
+                                        $isPreset = false;
+                                        foreach ($sourceOptions as $options) {
+                                            if (array_key_exists($currentSource, $options)) { $isPreset = true; break; }
+                                        }
+                                        $isCustom = filled($currentSource) && !$isPreset;
+                                    @endphp
+
+                                    @if($isCustom)
+                                        <div class="flex gap-1">
+                                            <input
+                                                type="text"
+                                                wire:model="field_mappings.{{ $index }}.source"
+                                                placeholder="z.B. onboarding.extra_field.startdatum"
+                                                class="w-full rounded-md border border-[var(--ui-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ui-primary)]/50"
+                                            />
+                                            <button type="button" wire:click="$set('field_mappings.{{ $index }}.source', '')" class="text-[var(--ui-muted)] hover:text-[var(--ui-secondary)] px-1" title="Zur Auswahl wechseln">
+                                                @svg('heroicon-o-list-bullet', 'w-4 h-4')
+                                            </button>
+                                        </div>
+                                    @else
+                                        <div class="flex gap-1">
+                                            <select
+                                                wire:model="field_mappings.{{ $index }}.source"
+                                                class="w-full rounded-md border border-[var(--ui-border)] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ui-primary)]/50"
+                                            >
+                                                <option value="">— Quelle wählen —</option>
+                                                @foreach($sourceOptions as $group => $options)
+                                                    <optgroup label="{{ $group }}">
+                                                        @foreach($options as $value => $label)
+                                                            <option value="{{ $value }}">{{ $label }}</option>
+                                                        @endforeach
+                                                    </optgroup>
+                                                @endforeach
+                                                <optgroup label="Extra Fields">
+                                                    <option value="__custom__">Eigener Pfad…</option>
+                                                </optgroup>
+                                            </select>
+                                            @if($currentSource === '__custom__')
+                                                <script>
+                                                    // Switch to custom input immediately
+                                                    @this.set('field_mappings.{{ $index }}.source', 'onboarding.extra_field.');
+                                                </script>
+                                            @endif
+                                        </div>
+                                    @endif
+                                    @error("field_mappings.{$index}.source")
+                                        <span class="text-xs text-red-500">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                                <button type="button" wire:click="removeMapping({{ $index }})" class="mt-2 text-red-400 hover:text-red-600">
+                                    @svg('heroicon-o-x-mark', 'w-5 h-5')
+                                </button>
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <button type="button" wire:click="addMapping" class="mt-2 inline-flex items-center gap-1 text-sm text-[var(--ui-primary)] hover:text-[var(--ui-primary)]/80">
+                        @svg('heroicon-o-plus', 'w-4 h-4')
+                        Zeile hinzufügen
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <x-ui-input-text name="sort_order" label="Sortierung" wire:model="sort_order" type="number" />
+                    <div class="space-y-2">
+                        <x-ui-input-checkbox model="requires_signature" name="requires_signature" wire:model="requires_signature" checked-label="Unterschrift erforderlich" unchecked-label="Keine Unterschrift" />
+                        <x-ui-input-checkbox model="is_active" name="is_active" wire:model="is_active" checked-label="Aktiv" unchecked-label="Inaktiv" />
+                    </div>
                 </div>
             </div>
-        </div>
-        <x-slot name="footer">
-            <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
-            <x-ui-button variant="primary" wire:click="save">Speichern</x-ui-button>
-        </x-slot>
-    </x-ui-modal>
+            <x-slot name="footer">
+                <x-ui-button variant="secondary" wire:click="closeModals">Abbrechen</x-ui-button>
+                <x-ui-button variant="primary" wire:click="save">Speichern</x-ui-button>
+            </x-slot>
+        </x-ui-modal>
+    @endforeach
 </x-ui-page>
