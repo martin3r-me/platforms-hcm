@@ -224,26 +224,26 @@
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Beginn</label>
-                                                <input type="date" wire:model="par15Entries.{{ $index }}.beginn"
+                                                <input type="date" wire:model.live="par15Entries.{{ $index }}.beginn"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.beginn") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Ende</label>
-                                                <input type="date" wire:model="par15Entries.{{ $index }}.ende"
+                                                <input type="date" wire:model.live="par15Entries.{{ $index }}.ende"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.ende") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Arbeitgeber</label>
-                                                <input type="text" wire:model="par15Entries.{{ $index }}.arbeitgeber"
+                                                <input type="text" wire:model.live="par15Entries.{{ $index }}.arbeitgeber"
                                                     placeholder="Firma, Ort"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.arbeitgeber") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Anzahl Arbeitstage</label>
-                                                <input type="number" wire:model="par15Entries.{{ $index }}.tage" min="1"
+                                                <input type="number" wire:model.live="par15Entries.{{ $index }}.tage" min="1"
                                                     placeholder="z.B. 30"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par15Entries.{$index}.tage") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
@@ -315,19 +315,19 @@
                                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Beginn</label>
-                                                <input type="date" wire:model="par16Entries.{{ $index }}.beginn"
+                                                <input type="date" wire:model.live="par16Entries.{{ $index }}.beginn"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par16Entries.{$index}.beginn") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Ende</label>
-                                                <input type="date" wire:model="par16Entries.{{ $index }}.ende"
+                                                <input type="date" wire:model.live="par16Entries.{{ $index }}.ende"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par16Entries.{$index}.ende") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
                                             </div>
                                             <div>
                                                 <label class="block text-xs font-medium text-gray-600 mb-1">Arbeitsagentur</label>
-                                                <input type="text" wire:model="par16Entries.{{ $index }}.arbeitsagentur"
+                                                <input type="text" wire:model.live="par16Entries.{{ $index }}.arbeitsagentur"
                                                     placeholder="Ort/Name der Agentur"
                                                     class="w-full rounded-md border-gray-300 text-gray-900 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500">
                                                 @error("par16Entries.{$index}.arbeitsagentur") <span class="text-xs text-red-500">{{ $message }}</span> @enderror
