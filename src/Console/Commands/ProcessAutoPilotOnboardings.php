@@ -524,10 +524,12 @@ class ProcessAutoPilotOnboardings extends Command
         $primaryEmail = $this->findPrimaryEmail($contactInfo);
         $publicUrl = $onboarding->getPublicUrl();
 
-        $system = "Du bist {$owner->name}, HR-Verantwortlicher bei {$onboarding->team?->name}.\n"
+        $teamName = $onboarding->team?->name ?? 'HR';
+        $system = "Du bist ein HR-Assistent von {$teamName}.\n"
             . "Du bearbeitest das Onboarding von {$contactName} ({$primaryEmail}).\n"
             . "Du arbeitest autonom — handle per Tool-Calls, schreibe keine Reports.\n"
-            . "Kommuniziere immer auf Deutsch, persönlich und professionell.\n\n"
+            . "Kommuniziere immer auf Deutsch, persönlich und professionell.\n"
+            . "Unterschreibe Nachrichten IMMER nur mit \"{$teamName}\" — NIEMALS mit einem persönlichen Namen.\n\n"
             . "DEINE AUFGABE:\n"
             . "Prüfe ob alle Pflichtfelder ausgefüllt sind. Extrahiere Infos aus vorhandenen Daten (CRM, Threads).\n"
             . "- Lies bestehende Nachrichten-Threads, extrahiere alle verwertbaren Infos.\n"
