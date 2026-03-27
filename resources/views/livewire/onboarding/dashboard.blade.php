@@ -370,6 +370,9 @@
                                 </td>
                                 <td class="px-4 py-2.5 text-right">
                                     <div class="flex items-center justify-end gap-2">
+                                        <x-ui-button size="sm" variant="secondary" href="{{ route('hcm.onboardings.show', $onboarding) }}" wire:navigate title="Onboarding anzeigen">
+                                            @svg('heroicon-o-arrow-right', 'w-4 h-4')
+                                        </x-ui-button>
                                         <button
                                             wire:click="transferToEmployee({{ $onboarding->id }})"
                                             wire:confirm="Onboarding abschließen und als Mitarbeiter übernehmen?"
