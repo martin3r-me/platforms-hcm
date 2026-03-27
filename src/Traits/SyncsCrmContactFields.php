@@ -92,12 +92,18 @@ trait SyncsCrmContactFields
             return;
         }
 
+        $phoneTypeId = \Platform\Crm\Models\CrmPhoneType::where('code', 'MOBILE')->first()?->id;
+        if (!$phoneTypeId) {
+            return;
+        }
+
         $hasPrimary = $contact->phoneNumbers()->where('is_primary', true)->exists();
 
         $contact->phoneNumbers()->create([
             'raw_input' => $value['raw'] ?? $value['e164'],
             'international' => $value['international'] ?? $value['e164'],
             'country_code' => $value['country'] ?? null,
+            'phone_type_id' => $phoneTypeId,
             'is_primary' => !$hasPrimary,
             'is_active' => true,
         ]);
