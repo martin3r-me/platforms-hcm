@@ -38,6 +38,14 @@ class HcmServiceProvider extends ServiceProvider
             'hcm_onboarding_contract' => \Platform\Hcm\Models\HcmOnboardingContract::class,
         ]);
 
+        // EntityLinkProvider registrieren (loose Kopplung mit Organization-Modul)
+        try {
+            resolve(\Platform\Organization\Services\EntityLinkRegistry::class)
+                ->register(new \Platform\Hcm\Organization\HcmEntityLinkProvider());
+        } catch (\Throwable $e) {
+            // Organization-Modul nicht geladen
+        }
+
         // Schritt 1: Config laden
         $this->mergeConfigFrom(__DIR__.'/../config/hcm.php', 'hcm');
         
@@ -50,6 +58,7 @@ class HcmServiceProvider extends ServiceProvider
             PlatformCore::registerModule([
                 'key'        => 'hcm',
                 'title'      => 'HCM',
+                'group'      => 'hr',
                 'routing'    => config('hcm.routing'),
                 'guard'      => config('hcm.guard'),
                 'navigation' => config('hcm.navigation'),
