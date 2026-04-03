@@ -15,7 +15,7 @@ class HcmEntityLinkProvider implements EntityLinkProvider
     public function linkTypeConfig(): array
     {
         return [
-            'hcm_employee' => ['label' => 'Mitarbeiter', 'icon' => 'user', 'route' => null],
+            'hcm_employee' => ['label' => 'Mitarbeiter', 'singular' => 'Mitarbeiter', 'icon' => 'user', 'route' => null],
         ];
     }
 
@@ -43,6 +43,11 @@ class HcmEntityLinkProvider implements EntityLinkProvider
     }
 
     public function timeTrackableCascades(): array
+    {
+        return [];
+    }
+
+    public function activityChildren(string $morphAlias, array $linkableIds): array
     {
         return [];
     }
