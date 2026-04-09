@@ -427,10 +427,7 @@ class Show extends Component
             'context_id' => null,
         ]);
 
-        $this->dispatch('tagging', [
-            'context_type' => get_class($this->onboarding),
-            'context_id' => $this->onboarding->id,
-        ]);
+        $this->dispatch('terminal:app:tags');
 
         $this->dispatch('terminal:app:files');
 
