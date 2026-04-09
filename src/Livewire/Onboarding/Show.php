@@ -432,10 +432,7 @@ class Show extends Component
             'context_id' => $this->onboarding->id,
         ]);
 
-        $this->dispatch('files', [
-            'context_type' => get_class($this->onboarding),
-            'context_id' => $this->onboarding->id,
-        ]);
+        $this->dispatch('terminal:app:files');
 
         $primaryContact = $this->onboarding->crmContactLinks->first()?->contact;
         $subject = 'Onboarding #' . $this->onboarding->id;
