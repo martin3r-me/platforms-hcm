@@ -416,7 +416,7 @@ class ProcessAutoPilotOnboardings extends Command
         if (!$channelId) { return 0; }
 
         try {
-            $updated = CommsEmailThread::query()
+            $threads = CommsEmailThread::query()
                 ->where('comms_channel_id', $channelId)
                 ->whereNull('context_model')
                 ->where(function ($q) use ($emails) {
@@ -426,16 +426,17 @@ class ProcessAutoPilotOnboardings extends Command
                     }
                 })
                 ->where('created_at', '>=', now()->subMinutes(30))
-                ->update([
-                    'context_model' => get_class($onboarding),
-                    'context_model_id' => $onboarding->id,
-                ]);
+                ->get();
 
-            if ($updated > 0) {
-                $this->logAutoPilot($onboarding, 'note', "{$updated} neue(r) Thread(s) mit Onboarding verknüpft");
+            foreach ($threads as $thread) {
+                $thread->addContext(get_class($onboarding), $onboarding->id, 'auto_pilot');
             }
 
-            return $updated;
+            if ($threads->count() > 0) {
+                $this->logAutoPilot($onboarding, 'note', "{$threads->count()} neue(r) Thread(s) mit Onboarding verknüpft");
+            }
+
+            return $threads->count();
         } catch (\Throwable $e) {
             return 0;
         }

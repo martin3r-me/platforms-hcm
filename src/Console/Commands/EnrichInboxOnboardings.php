@@ -330,12 +330,7 @@ class EnrichInboxOnboardings extends Command
                         ->get();
 
                     foreach ($threads as $t) {
-                        if (! $t->context_model) {
-                            $t->update([
-                                'context_model' => $morphClass,
-                                'context_model_id' => $onboarding->id,
-                            ]);
-                        }
+                        $t->addContext($morphClass, $onboarding->id, 'enrichment');
                     }
                 }
             }

@@ -627,13 +627,6 @@ class Show extends Component
 
             if ($thread) {
                 $thread->addContext($this->onboarding->getMorphClass(), $this->onboarding->id, 'onboarding_portal');
-
-                if (!$thread->context_model) {
-                    $thread->updateQuietly([
-                        'context_model' => $this->onboarding->getMorphClass(),
-                        'context_model_id' => $this->onboarding->id,
-                    ]);
-                }
             }
 
             $this->onboarding->load('onboardingContracts.contractTemplate');
