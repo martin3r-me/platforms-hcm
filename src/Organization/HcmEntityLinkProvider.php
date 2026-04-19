@@ -6,8 +6,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Platform\Hcm\Models\HcmEmployee;
 use Platform\Organization\Contracts\EntityLinkProvider;
+use Platform\Organization\Contracts\HasMetricDefinitions;
 
-class HcmEntityLinkProvider implements EntityLinkProvider
+class HcmEntityLinkProvider implements EntityLinkProvider, HasMetricDefinitions
 {
     public function morphAliases(): array
     {
@@ -110,5 +111,14 @@ class HcmEntityLinkProvider implements EntityLinkProvider
         }
 
         return $result;
+    }
+
+    public function metricDefinitions(): array
+    {
+        return [
+            'hcm_employees_total'  => ['label' => 'Mitarbeiter (gesamt)', 'group' => 'hcm', 'direction' => 'neutral', 'unit' => 'count'],
+            'hcm_employees_active' => ['label' => 'Mitarbeiter (aktiv)', 'group' => 'hcm', 'direction' => 'up', 'unit' => 'count', 'pair' => 'hcm_employees_total'],
+            'hcm_contracts_active' => ['label' => 'Vertraege (aktiv)', 'group' => 'hcm', 'direction' => 'neutral', 'unit' => 'count'],
+        ];
     }
 }
