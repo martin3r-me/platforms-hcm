@@ -3,6 +3,8 @@
 namespace Platform\Hcm\Organization;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+use Platform\Hcm\Models\HcmEmployee;
 use Platform\Organization\Contracts\EntityLinkProvider;
 
 class HcmEntityLinkProvider implements EntityLinkProvider
@@ -54,6 +56,59 @@ class HcmEntityLinkProvider implements EntityLinkProvider
 
     public function metrics(string $morphAlias, array $linksByEntity): array
     {
-        return [];
+        if ($morphAlias !== 'hcm_employee') {
+            return [];
+        }
+
+        $allIds = [];
+        foreach ($linksByEntity as $ids) {
+            $allIds = array_merge($allIds, $ids);
+        }
+        $allIds = array_values(array_unique($allIds));
+
+        if (empty($allIds)) {
+            return [];
+        }
+
+        $employees = HcmEmployee::whereIn('id', $allIds)
+            ->select('id', 'is_active')
+            ->get()
+            ->keyBy('id');
+
+        $today = now()->toDateString();
+        $activeContractCounts = DB::table('hcm_employee_contracts')
+            ->whereIn('employee_id', $allIds)
+            ->where('start_date', '<=', $today)
+            ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', $today))
+            ->groupBy('employee_id')
+            ->pluck(DB::raw('count(*)'), 'employee_id')
+            ->all();
+
+        $result = [];
+        foreach ($linksByEntity as $entityId => $ids) {
+            $total = 0;
+            $active = 0;
+            $contractsActive = 0;
+
+            foreach ($ids as $id) {
+                $employee = $employees[$id] ?? null;
+                if (!$employee) {
+                    continue;
+                }
+                $total++;
+                if ($employee->is_active) {
+                    $active++;
+                }
+                $contractsActive += (int) ($activeContractCounts[$id] ?? 0);
+            }
+
+            $result[$entityId] = [
+                'hcm_employees_total' => $total,
+                'hcm_employees_active' => $active,
+                'hcm_contracts_active' => $contractsActive,
+            ];
+        }
+
+        return $result;
     }
 }
