@@ -116,9 +116,9 @@ class HcmEntityLinkProvider implements EntityLinkProvider, HasMetricDefinitions
     public function metricDefinitions(): array
     {
         return [
-            'hcm_employees_total'  => ['label' => 'Mitarbeiter (gesamt)', 'group' => 'hcm', 'direction' => 'neutral', 'unit' => 'count'],
-            'hcm_employees_active' => ['label' => 'Mitarbeiter (aktiv)', 'group' => 'hcm', 'direction' => 'up', 'unit' => 'count', 'pair' => 'hcm_employees_total'],
-            'hcm_contracts_active' => ['label' => 'Vertraege (aktiv)', 'group' => 'hcm', 'direction' => 'neutral', 'unit' => 'count'],
+            'hcm_employees_total'  => ['label' => 'Mitarbeiter (gesamt)', 'group' => 'hcm', 'direction' => 'neutral', 'unit' => 'count', 'dimension' => 'org_capital', 'type' => 'stock'],
+            'hcm_employees_active' => ['label' => 'Mitarbeiter (aktiv)', 'group' => 'hcm', 'direction' => 'up', 'unit' => 'count', 'pair' => 'hcm_employees_total', 'dimension' => 'org_capital', 'type' => 'stock'],
+            'hcm_contracts_active' => ['label' => 'Vertraege (aktiv)', 'group' => 'hcm', 'direction' => 'neutral', 'unit' => 'count', 'dimension' => 'org_capital', 'type' => 'stock'],
         ];
     }
 }
