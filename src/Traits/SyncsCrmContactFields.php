@@ -211,7 +211,7 @@ trait SyncsCrmContactFields
             'fieldable_type' => $morphClass,
             'fieldable_id' => $this->id,
         ]);
-        $value->definition = $def;
+        $value->setRelation('definition', $def);
         $value->setTypedValue([
             'raw' => $raw,
             'country' => $country,
@@ -234,7 +234,7 @@ trait SyncsCrmContactFields
             'fieldable_type' => $morphClass,
             'fieldable_id' => $this->id,
         ]);
-        $value->definition = $def;
+        $value->setRelation('definition', $def);
         $value->setTypedValue($email->email_address);
         $value->save();
     }
@@ -257,7 +257,7 @@ trait SyncsCrmContactFields
             'fieldable_type' => $morphClass,
             'fieldable_id' => $this->id,
         ]);
-        $value->definition = $def;
+        $value->setRelation('definition', $def);
         $value->setTypedValue([
             'street' => $address->street ?: '',
             'street2' => $address->house_number ?: '',
@@ -285,7 +285,7 @@ trait SyncsCrmContactFields
             'fieldable_type' => $morphClass,
             'fieldable_id' => $this->id,
         ]);
-        $value->definition = $def;
+        $value->setRelation('definition', $def);
         $value->setTypedValue($contact->birth_date->format('Y-m-d'));
         $value->save();
     }
