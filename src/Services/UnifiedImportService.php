@@ -28,7 +28,6 @@ use Platform\Hcm\Models\HcmChurchTaxType;
 use Platform\Crm\Models\CrmGender;
 use Platform\Crm\Models\CrmSalutation;
 use Platform\Crm\Models\CrmAcademicTitle;
-use Platform\Organization\Models\OrganizationCostCenter;
 use Platform\Hcm\Models\HcmTariffAgreement;
 use Platform\Hcm\Models\HcmTariffGroup;
 use Platform\Hcm\Models\HcmTariffLevel;
@@ -116,36 +115,10 @@ class UnifiedImportService
                         echo sprintf("\n  → Zeile %d: %s (PersonalNr: %s)", $processed, $employeeName ?: 'unbekannt', $personalNr);
                     }
 
-                    // Ensure cost center - nur globale Cost Centers
+                    // Kostenstelle = freier Code-String am Vertrag (entkoppelt vom Org-Modul)
                     echo "\n      [1/12] Kostenstelle prüfen...";
-                    $costCenterCode = trim((string) ($row['KostenstellenBezeichner'] ?? ''));
-                    $cc = null;
-                    if ($costCenterCode !== '') {
-                        // Suche nur globale Cost Centers
-                        $cc = OrganizationCostCenter::where('team_id', $teamId)
-                            ->where('code', $costCenterCode)
-                            ->where('is_active', true)
-                            ->first();
-                        
-                        if ($cc) {
-                            echo " gefunden";
-                        } else {
-                            // Erstellen wenn nicht gefunden (immer global)
-                            $cc = OrganizationCostCenter::create([
-                                'code' => $costCenterCode,
-                                'name' => $costCenterCode,
-                                'team_id' => $teamId,
-                                'user_id' => $employer->created_by_user_id,
-                                'root_entity_id' => null, // Immer global
-                                'description' => 'Importiert aus unified CSV',
-                                'is_active' => true,
-                            ]);
-                            echo " erstellt";
-                            $stats['cost_centers_created']++;
-                        }
-                    } else {
-                        echo " leer, überspringen";
-                    }
+                    $costCenterCode = trim((string) ($row['KostenstellenBezeichner'] ?? '')) ?: null;
+                    echo $costCenterCode !== null ? " '{$costCenterCode}'" : " leer, überspringen";
 
                     // Upsert employee
                     echo "\n      [2/12] Mitarbeiter suchen...";
@@ -320,7 +293,7 @@ class UnifiedImportService
                         'hours_per_month' => $hoursPerMonth,
                         'team_id' => $teamId,
                         'is_active' => $isActive,
-                        // cost_center_id wird NICHT direkt gesetzt, sondern über Link-Tabelle
+                        'cost_center' => $costCenterCode,
                         'work_days_per_week' => $workDaysPerWeek,
                         'calendar_work_days' => $calendarWorkDays ?: null,
                         // SV-Nummer
@@ -381,45 +354,7 @@ class UnifiedImportService
                         echo "\n      [9/12] Kein Startdatum, Vertrag überspringen";
                     }
 
-                    // Kostenstelle über Link-Tabelle verknüpfen (für bessere Abfragen von Cost Center aus)
-                    if ($contract && $cc) {
-                        echo "\n      [9a/12] Kostenstelle verlinken...";
-                        try {
-                            // Prüfe ob bereits verlinkt (mit gleichem Startdatum)
-                            $existingLink = \Platform\Organization\Models\OrganizationCostCenterLink::where('linkable_type', \Platform\Hcm\Models\HcmEmployeeContract::class)
-                                ->where('linkable_id', $contract->id)
-                                ->where('cost_center_id', $cc->id)
-                                ->where(function ($q) use ($start) {
-                                    if ($start) {
-                                        $q->whereNull('start_date')->orWhere('start_date', '=', $start->toDateString());
-                                    } else {
-                                        $q->whereNull('start_date');
-                                    }
-                                })
-                                ->first();
-                            
-                            if (!$existingLink) {
-                                // Neue Verknüpfung erstellen
-                                \Platform\Organization\Models\OrganizationCostCenterLink::create([
-                                    'cost_center_id' => $cc->id,
-                                    'linkable_type' => \Platform\Hcm\Models\HcmEmployeeContract::class,
-                                    'linkable_id' => $contract->id,
-                                    'start_date' => $start?->toDateString(),
-                                    'end_date' => $end?->toDateString(),
-                                    'is_primary' => true,
-                                    'team_id' => $teamId,
-                                    'created_by_user_id' => $employer->created_by_user_id,
-                                ]);
-                                echo " ✓ ({$cc->code})";
-                                $stats['cost_center_links_created']++;
-                            } else {
-                                echo " bereits verlinkt ({$cc->code})";
-                            }
-                        } catch (\Exception $e) {
-                            echo " FEHLER: " . $e->getMessage();
-                            $stats['errors'][] = "Kostenstellen-Verknüpfung Fehler für {$employee->employee_number}: " . $e->getMessage();
-                        }
-                    }
+                    // Kostenstelle liegt bereits als Code-String am Vertrag (cost_center) — keine Org-Verknüpfung mehr.
 
                     if ($contract) {
                         echo "\n      [10/12] Stellenbezeichnung & Tätigkeiten verknüpfen...";

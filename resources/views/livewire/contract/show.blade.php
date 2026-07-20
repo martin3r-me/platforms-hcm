@@ -95,15 +95,7 @@
                                 </span>
                             @endif
                         @endif
-                        @php
-                            $costCenter = $contract->getCostCenter();
-                        @endphp
-                        @if($costCenter)
-                            <span class="flex items-center gap-2">
-                                @svg('heroicon-o-building-office', 'w-4 h-4')
-                                {{ $costCenter->code }} – {{ $costCenter->name }}
-                            </span>
-                        @elseif($contract->cost_center)
+                        @if($contract->cost_center)
                             <span class="flex items-center gap-2">
                                 @svg('heroicon-o-building-office', 'w-4 h-4')
                                 {{ $contract->cost_center }}

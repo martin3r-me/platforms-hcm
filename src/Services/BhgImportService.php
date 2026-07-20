@@ -18,7 +18,6 @@ use Platform\Crm\Models\CrmPostalAddress;
 use Platform\Crm\Models\CrmContactLink;
 use Platform\Crm\Models\CrmContactRelation;
 use Platform\Crm\Models\CrmCompany;
-use Platform\Organization\Models\OrganizationCostCenter;
 use Carbon\Carbon;
 use libphonenumber\PhoneNumberUtil;
 use libphonenumber\PhoneNumberFormat;
@@ -233,25 +232,8 @@ class BhgImportService
         foreach ($data as $row) {
             $ksSchlüssel = trim($row['ks_schlüssel']);
             if (!empty($ksSchlüssel) && !in_array($ksSchlüssel, $costCenters)) {
+                // Kostenstelle ist ein Code-String am Vertrag (cost_center) — keine Org-Zeilen mehr erzeugen.
                 $costCenters[] = $ksSchlüssel;
-                
-                // Prüfe ob Kostenstelle bereits existiert
-                $existingCostCenter = OrganizationCostCenter::where('team_id', $this->teamId)
-                    ->where('code', $ksSchlüssel)
-                    ->first();
-                
-                if (!$existingCostCenter) {
-                    OrganizationCostCenter::create([
-                        'code' => $ksSchlüssel,
-                        'name' => $ksSchlüssel, // Code und Name gleich halten
-                        'team_id' => $this->teamId,
-                        'user_id' => $this->userId,
-                        'description' => 'Importiert aus Mitarbeiterliste',
-                        'is_active' => true,
-                    ]);
-                    
-                    $this->stats['cost_centers_created']++;
-                }
             }
         }
     }
@@ -1195,16 +1177,8 @@ class BhgImportService
         foreach ($data as $row) {
             $ksSchlüssel = trim($row['ks_schlüssel']);
             if (!empty($ksSchlüssel) && !in_array($ksSchlüssel, $costCenters)) {
+                // Kostenstellen sind Code-Strings am Vertrag — es werden keine Org-Zeilen (mehr) erzeugt.
                 $costCenters[] = $ksSchlüssel;
-                
-                // Prüfe ob Kostenstelle bereits existiert
-                $existingCostCenter = OrganizationCostCenter::where('team_id', $this->teamId)
-                    ->where('code', $ksSchlüssel)
-                    ->first();
-                
-                if (!$existingCostCenter) {
-                    $this->stats['cost_centers_created']++;
-                }
             }
         }
     }

@@ -464,8 +464,8 @@
                                             @svg('heroicon-o-truck', 'w-3 h-3') Dienstwagen
                                         </span>
                                     @endif
-                                    @if($contract->cost_center_id)
-                                        <span class="px-2 py-1 bg-gray-50 text-gray-700 rounded">Kostenstelle: {{ optional($contract->costCenter)->name ?? $contract->cost_center }}</span>
+                                    @if($contract->cost_center)
+                                        <span class="px-2 py-1 bg-gray-50 text-gray-700 rounded">Kostenstelle: {{ $contract->cost_center }}</span>
                                     @endif
                                 </div>
                             </div>

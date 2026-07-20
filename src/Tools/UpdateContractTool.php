@@ -9,8 +9,6 @@ use Platform\Core\Contracts\ToolResult;
 use Platform\Core\Tools\Concerns\HasStandardizedWriteOperations;
 use Platform\Hcm\Models\HcmEmployeeContract;
 use Platform\Hcm\Tools\Concerns\ResolvesHcmTeam;
-use Platform\Organization\Models\OrganizationCostCenter;
-use Platform\Organization\Models\OrganizationCostCenterLink;
 
 class UpdateContractTool implements ToolContract, ToolMetadataContract
 {
@@ -73,13 +71,9 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
                     'type' => 'string',
                     'description' => 'Optional: Monatslohn/Grundgehalt. Sensible Information. Setze auf "" um zu löschen.',
                 ],
-                'cost_center_id' => [
-                    'type' => 'integer',
-                    'description' => 'Optional: Kostenstelle (OrganizationCostCenter.id). Nutze organization.cost_centers.GET (IDs nie raten). Setze auf 0/null um zu entfernen.',
-                ],
                 'cost_center_code' => [
                     'type' => 'string',
-                    'description' => 'Optional: Kostenstelle per Code setzen (Alternative zu cost_center_id). Wird gegen organization.cost_centers.GET (Root/Elterteam) aufgelöst.',
+                    'description' => 'Optional: Kostenstelle als freier Code-String am Vertrag (kein Org-Lookup, keine ID nötig). "" zum Entfernen. Alias: cost_center.',
                 ],
                 'cost_center' => ['type' => 'string'],
                 'is_active' => ['type' => 'boolean'],
@@ -166,68 +160,11 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
                 }
             }
 
-            // Kostenstelle (prefer link table, allow resolving from root/parent team)
-            $wantsCostCenter = array_key_exists('cost_center_id', $arguments) || array_key_exists('cost_center_code', $arguments);
-            if ($wantsCostCenter) {
-                $rootTeamId = (int)$resolved['team']->getRootTeam()->id;
-
-                $targetCostCenter = null;
-                $rawId = $arguments['cost_center_id'] ?? null;
-                $rawCode = $arguments['cost_center_code'] ?? null;
-
-                if ($rawId === 0 || $rawId === '0' || $rawId === null || $rawId === 'null') {
-                    // remove link (and also clear legacy columns for safety)
-                    OrganizationCostCenterLink::where('linkable_type', HcmEmployeeContract::class)
-                        ->where('linkable_id', $contract->id)
-                        ->where('is_primary', true)
-                        ->delete();
-                    $update['cost_center_id'] = null;
-                    $update['cost_center'] = null;
-                } else {
-                    if ($rawId) {
-                        $targetCostCenter = OrganizationCostCenter::query()
-                            ->where('is_active', true)
-                            ->where('id', (int)$rawId)
-                            ->first();
-                    } elseif (is_string($rawCode) && trim($rawCode) !== '') {
-                        $code = trim($rawCode);
-                        $targetCostCenter = OrganizationCostCenter::query()
-                            ->where('is_active', true)
-                            ->where('team_id', $rootTeamId)
-                            ->where('code', $code)
-                            ->first();
-                    }
-
-                    if (!$targetCostCenter) {
-                        return ToolResult::error('VALIDATION_ERROR', 'Kostenstelle nicht gefunden. Nutze hcm.lookup.GET lookup="cost_centers" und wähle eine gültige id/code.');
-                    }
-
-                    // Allow cost centers from root team or current team (safety)
-                    if (!in_array((int)$targetCostCenter->team_id, [$teamId, $rootTeamId], true)) {
-                        return ToolResult::error('ACCESS_DENIED', 'Kostenstelle gehört nicht zum aktuellen Team oder Elterteam.');
-                    }
-
-                    // Replace current primary link
-                    OrganizationCostCenterLink::where('linkable_type', HcmEmployeeContract::class)
-                        ->where('linkable_id', $contract->id)
-                        ->where('is_primary', true)
-                        ->delete();
-
-                    OrganizationCostCenterLink::create([
-                        'cost_center_id' => $targetCostCenter->id,
-                        'linkable_type' => HcmEmployeeContract::class,
-                        'linkable_id' => $contract->id,
-                        'start_date' => $contract->start_date?->toDateString(),
-                        'end_date' => $contract->end_date?->toDateString(),
-                        'is_primary' => true,
-                        'team_id' => $teamId,
-                        'created_by_user_id' => $context->user?->id,
-                    ]);
-
-                    // Keep legacy fields aligned for older UI/exports
-                    $update['cost_center_id'] = $targetCostCenter->id;
-                    $update['cost_center'] = $targetCostCenter->code;
-                }
+            // Kostenstelle als freier Code-String am Vertrag (entkoppelt vom Org-Modul).
+            // cost_center wird bereits über die Standard-Feldschleife übernommen;
+            // cost_center_code ist ein Alias darauf.
+            if (array_key_exists('cost_center_code', $arguments)) {
+                $update['cost_center'] = trim((string)($arguments['cost_center_code'] ?? '')) ?: null;
             }
 
             if (array_key_exists('start_date', $arguments)) {
@@ -248,9 +185,7 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
                 $contract->update($update);
             }
             $contract->refresh();
-            $contract->loadMissing('costCenterLinks.costCenter');
 
-            $ccObj = $contract->getCostCenter();
             return ToolResult::success([
                 'id' => $contract->id,
                 'uuid' => $contract->uuid,
@@ -265,7 +200,7 @@ class UpdateContractTool implements ToolContract, ToolMetadataContract
                 'wage_base_type' => $contract->wage_base_type,
                 'hourly_wage' => $contract->hourly_wage,
                 'base_salary' => $contract->base_salary,
-                'cost_center' => $ccObj ? ['id' => $ccObj->id, 'code' => $ccObj->code, 'name' => $ccObj->name] : ($contract->cost_center ? ['id' => null, 'code' => $contract->cost_center, 'name' => null] : null),
+                'cost_center' => $contract->cost_center ? ['id' => null, 'code' => $contract->cost_center, 'name' => null] : null,
                 'message' => 'Vertrag erfolgreich aktualisiert.',
             ]);
         } catch (\Throwable $e) {

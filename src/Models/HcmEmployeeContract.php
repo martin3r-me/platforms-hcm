@@ -5,16 +5,13 @@ namespace Platform\Hcm\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Platform\Organization\Traits\HasCostCenterLinksTrait;
-use Platform\Organization\Contracts\CostCenterLinkableInterface;
-use Platform\Organization\Models\OrganizationCostCenter;
 use Symfony\Component\Uid\UuidV7;
 use Platform\Core\Traits\Encryptable;
 use Platform\Hcm\Models\HcmJobActivityAlias;
 
-class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
+class HcmEmployeeContract extends Model
 {
-    use HasCostCenterLinksTrait, Encryptable;
+    use Encryptable;
 
     protected $table = 'hcm_employee_contracts';
 
@@ -280,17 +277,6 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
         );
     }
 
-    // CostCenterLinkableInterface
-    public function getCostCenterLinkableId(): int
-    {
-        return $this->id;
-    }
-
-    public function getCostCenterLinkableType(): string
-    {
-        return static::class;
-    }
-
     public function getTeamId(): int
     {
         return $this->team_id;
@@ -469,69 +455,15 @@ class HcmEmployeeContract extends Model implements CostCenterLinkableInterface
     }
 
     /**
-     * Löst eine Cost Center auf (nur globale)
-     * 
-     * @param string $code Cost Center Code
-     * @return OrganizationCostCenter|null
+     * Kostenstelle dieses Vertrags als Code-String.
+     *
+     * Kostenstellen sind entkoppelt vom Organization-Modul: der Vertrag hält
+     * seinen eigenen Code-String (Spalte `cost_center`). Für die Auflösung zur
+     * Org-Person-Entity siehe Phase 2 (Entity-Link + external_ids).
      */
-    public function resolveCostCenter(string $code): ?OrganizationCostCenter
+    public function getCostCenterCode(): ?string
     {
-        return OrganizationCostCenter::where('team_id', $this->team_id)
-            ->where('code', $code)
-            ->where('is_active', true)
-            ->first();
-    }
-
-    /**
-     * Gibt alle verfügbaren Cost Centers für diesen Contract zurück (nur globale)
-     * 
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
-    public function getAvailableCostCenters()
-    {
-        return OrganizationCostCenter::where('team_id', $this->team_id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-    }
-
-    /**
-     * Gibt das verlinkte Cost Center für diesen Contract zurück
-     * (über Link-Tabelle, mit Fallback auf Code-String)
-     * 
-     * @return OrganizationCostCenter|null
-     */
-    public function getCostCenter(): ?OrganizationCostCenter
-    {
-        // 1. Prüfe ob über Link-Tabelle verknüpft (bevorzugt)
-        $link = $this->costCenterLinks()
-            ->where('is_primary', true)
-            ->where(function ($q) {
-                $q->whereNull('start_date')
-                  ->orWhere('start_date', '<=', now()->toDateString());
-            })
-            ->where(function ($q) {
-                $q->whereNull('end_date')
-                  ->orWhere('end_date', '>=', now()->toDateString());
-            })
-            ->with('costCenter')
-            ->first();
-        
-        if ($link && $link->costCenter) {
-            return $link->costCenter;
-        }
-        
-        // 2. Fallback: Direkte FK zu cost_center_id (für Rückwärtskompatibilität)
-        if ($this->cost_center_id) {
-            return OrganizationCostCenter::find($this->cost_center_id);
-        }
-        
-        // 3. Fallback: Auflösung über Code (wenn als String gespeichert)
-        if ($this->cost_center) {
-            return $this->resolveCostCenter($this->cost_center);
-        }
-        
-        return null;
+        return $this->cost_center ?: null;
     }
 }
 

@@ -85,9 +85,7 @@ class ListContractsTool implements ToolContract, ToolMetadataContract
                 $with[] = 'employee.employer';
                 $with[] = 'employee.crmContactLinks.contact';
             }
-            if ($includeCostCenter) {
-                $with[] = 'costCenterLinks.costCenter';
-            }
+            // Kostenstelle liegt als Code-String am Vertrag (cost_center) — kein Eager-Load nötig.
 
             $query = HcmEmployeeContract::query()
                 ->with($with)
@@ -153,13 +151,9 @@ class ListContractsTool implements ToolContract, ToolMetadataContract
                     'wage_base_type' => $c->wage_base_type,
                     'hourly_wage' => $includeComp ? $c->hourly_wage : null,
                     'base_salary' => $includeComp ? $c->base_salary : null,
-                    'cost_center' => $includeCostCenter ? (function () use ($c) {
-                        $cc = $c->getCostCenter();
-                        if ($cc) {
-                            return ['id' => $cc->id, 'code' => $cc->code, 'name' => $cc->name];
-                        }
-                        return $c->cost_center ? ['id' => null, 'code' => $c->cost_center, 'name' => null] : null;
-                    })() : null,
+                    'cost_center' => $includeCostCenter
+                        ? ($c->cost_center ? ['id' => null, 'code' => $c->cost_center, 'name' => null] : null)
+                        : null,
                     'employee' => $employee,
                     'created_at' => $c->created_at?->toISOString(),
                     'updated_at' => $c->updated_at?->toISOString(),

@@ -228,17 +228,8 @@ class EmployeeNostradamusController extends ApiController
             }
         }
 
-        // Stammkostenstelle aus aktuellem Contract
-        $costCenter = null;
-        if ($activeContract) {
-            $costCenterObj = $activeContract->getCostCenter();
-            if ($costCenterObj) {
-                $costCenter = $costCenterObj->code ?? $costCenterObj->name;
-            } else {
-                // Fallback auf cost_center String-Feld
-                $costCenter = $activeContract->cost_center;
-            }
-        }
+        // Stammkostenstelle aus aktuellem Contract (Code-String)
+        $costCenter = $activeContract?->cost_center;
 
         return [
             // Employee Profile

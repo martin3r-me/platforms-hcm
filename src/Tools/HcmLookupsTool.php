@@ -127,8 +127,8 @@ class HcmLookupsTool implements ToolContract, ToolMetadataContract
                     'description' => 'Lohnarten / Payroll Types (team-scoped) – lanr/typ/category/valid_from/to. WICHTIG: Nicht direkt am Vertrag verknüpft; Vertragsvergütung läuft über contracts.wage_base_type (z.B. "Stundenvergütung").',
                     'tool' => 'hcm.lookup.GET',
                 ],
-                // NOTE: Kostenstellen sind im Organization-Modul (cross-module lookup):
-                // Nutze organization.cost_centers.GET (IDs nie raten) und setze danach cost_center_id am Vertrag.
+                // NOTE: Kostenstelle ist ein freier Code-String am Vertrag (Spalte cost_center),
+                // gesetzt via hcm.contracts.POST/PUT (cost_center_code). Kein Cross-Modul-Lookup.
                 [
                     'key' => 'tariff_agreements',
                     'description' => 'Tarifverträge (team-scoped)',
