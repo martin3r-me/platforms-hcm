@@ -23,7 +23,7 @@ class Show extends Component
 
     public function mount(HcmEmployer $employer)
     {
-        $this->employer = $employer->load(['organizationCompanyLinks.company', 'employees.crmContactLinks.contact']);
+        $this->employer = $employer->load(['employees.crmContactLinks.contact']);
         
         // Settings Form initialisieren
         $this->settingsForm = [

@@ -4,13 +4,11 @@ namespace Platform\Hcm\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Platform\ActivityLog\Traits\LogsActivity;
-use Platform\Organization\Contracts\CompanyLinkableInterface;
-use Platform\Organization\Traits\HasCompanyLinksTrait as OrgHasCompanyLinksTrait;
 use Symfony\Component\Uid\UuidV7;
 
-class HcmEmployer extends Model implements CompanyLinkableInterface
+class HcmEmployer extends Model
 {
-    use LogsActivity, OrgHasCompanyLinksTrait;
+    use LogsActivity;
     
     protected $table = 'hcm_employers';
     
@@ -138,19 +136,12 @@ class HcmEmployer extends Model implements CompanyLinkableInterface
         return $query->where('team_id', $teamId);
     }
     
-    public function scopeForCompany($query, $companyId)
-    {
-        return $query->whereHas('organizationCompanyLinks', function($q) use ($companyId) {
-            $q->where('organization_entity_id', $companyId);
-        });
-    }
-    
     /**
      * Accessors
      */
     public function getDisplayNameAttribute(): string
     {
-        return optional($this->organizations()->first()?->company)->name ?? $this->employer_number;
+        return $this->employer_number;
     }
     
     public function getEmployeeCountAttribute(): int
@@ -161,17 +152,6 @@ class HcmEmployer extends Model implements CompanyLinkableInterface
     public function getActiveEmployeeCountAttribute(): int
     {
         return $this->employees()->active()->count();
-    }
-
-    // CompanyLinkableInterface
-    public function getCompanyLinkableId(): int
-    {
-        return $this->getKey();
-    }
-
-    public function getCompanyLinkableType(): string
-    {
-        return $this->getMorphClass();
     }
 
     public function getTeamId(): int

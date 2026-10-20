@@ -115,22 +115,6 @@
                 </div>
             </div>
 
-            <!-- Verknüpfte Organisationseinheit -->
-            @if(optional($employer->organizationCompanyLinks->first()?->company))
-            <div class="bg-white shadow sm:rounded-lg mb-6">
-                <div class="px-4 py-5 sm:p-6">
-                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Verknüpfte Organisationseinheit</h3>
-                    
-                    <div class="d-flex items-center">
-                        @svg('heroicon-o-building-office', 'w-8 h-8 text-gray-400 mr-4')
-                        <div>
-                            <h4 class="font-medium text-gray-900">{{ optional($employer->organizationCompanyLinks->first()?->company)->name }}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @endif
-
             <!-- Mitarbeiter Liste -->
             <div class="bg-white shadow sm:rounded-lg">
                 <div class="px-4 py-5 sm:p-6">

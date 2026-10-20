@@ -44,7 +44,6 @@
         <x-ui-table compact="true">
             <x-ui-table-header>
                 <x-ui-table-header-cell compact="true" sortable="true" sortField="employer_number" :currentSort="$sortField" :sortDirection="$sortDirection">Arbeitgeber-Nr.</x-ui-table-header-cell>
-                <x-ui-table-header-cell compact="true">Unternehmen</x-ui-table-header-cell>
                 <x-ui-table-header-cell compact="true">Mitarbeiter-Nummerierung</x-ui-table-header-cell>
                 <x-ui-table-header-cell compact="true">Mitarbeiter</x-ui-table-header-cell>
                 <x-ui-table-header-cell compact="true" sortable="true" sortField="is_active" :currentSort="$sortField" :sortDirection="$sortDirection">Status</x-ui-table-header-cell>
@@ -61,14 +60,6 @@
                     >
                         <x-ui-table-cell compact="true">
                             <div class="font-medium">{{ $employer->employer_number }}</div>
-                        </x-ui-table-cell>
-                        <x-ui-table-cell compact="true">
-                            <div class="d-flex items-center gap-2">
-                                @svg('heroicon-o-building-office', 'w-4 h-4 text-muted')
-                                <div>
-                                    <div class="font-medium">{{ optional($employer->organizationCompanyLinks->first()?->company)->name ?? 'Kein Unternehmen verknüpft' }}</div>
-                                </div>
-                            </div>
                         </x-ui-table-cell>
                         <x-ui-table-cell compact="true">
                             <div class="text-sm">
@@ -113,7 +104,7 @@
                     </x-ui-table-row>
                 @empty
                     <x-ui-table-row>
-                        <x-ui-table-cell colspan="7" align="center" class="py-12">
+                        <x-ui-table-cell colspan="6" align="center" class="py-12">
                             <div class="flex flex-col items-center">
                                 @svg('heroicon-o-building-office', 'w-12 h-12 text-muted mb-4')
                                 <p class="text-lg font-medium">Keine Arbeitgeber gefunden</p>
@@ -145,17 +136,6 @@
                         placeholder="z.B. EMP001"
                     />
                     
-                    <x-ui-input-select
-                        name="organization_entity_id"
-                        label="Organisationseinheit"
-                        :options="$this->availableCompanies"
-                        optionValue="id"
-                        optionLabel="name"
-                        :nullable="true"
-                        nullLabel="Organisationseinheit auswählen"
-                        wire:model.live="organization_entity_id"
-                        required
-                    />
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">

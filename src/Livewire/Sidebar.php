@@ -31,7 +31,7 @@ class Sidebar extends Component
     #[Computed]
     public function recentEmployers()
     {
-        return HcmEmployer::with(['organizationCompanyLinks.company'])
+        return HcmEmployer::query()
             ->forTeam(auth()->user()->currentTeam->id)
             ->active()
             ->latest()
