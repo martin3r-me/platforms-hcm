@@ -5,7 +5,6 @@ namespace Platform\Hcm;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Platform\Core\PlatformCore;
@@ -53,7 +52,7 @@ class HcmServiceProvider extends ServiceProvider
         if (
             config()->has('hcm.routing') &&
             config()->has('hcm.navigation') &&
-            Schema::hasTable('modules')
+            PlatformCore::modulesTableExists()
         ) {
             PlatformCore::registerModule([
                 'key'        => 'hcm',
